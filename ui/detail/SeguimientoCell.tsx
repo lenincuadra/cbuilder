@@ -14,7 +14,8 @@ export interface SeguimientoCellProps {
 /**
  * Seguimiento column cell. Icons reflect content — sticky-note (notes) and/or
  * file-chart (updates) — and each opens the panel on its tab. With no content,
- * an "Agregar" text link. All stop propagation so the row click stays generic.
+ * an "Agregar" text link. Both branches are h-8 so every row is the same height.
+ * All stop propagation so the row click stays generic.
  */
 export function SeguimientoCell({ row, onOpen }: SeguimientoCellProps) {
   const hasNotes = Boolean(row.notes?.trim());
@@ -25,7 +26,7 @@ export function SeguimientoCell({ row, onOpen }: SeguimientoCellProps) {
       <Button
         variant="link"
         size="sm"
-        className="h-auto p-0"
+        className="h-8 px-0"
         onClick={(event) => {
           event.stopPropagation();
           onOpen("notas");
@@ -37,11 +38,12 @@ export function SeguimientoCell({ row, onOpen }: SeguimientoCellProps) {
   }
 
   return (
-    <div className="flex items-center gap-0.5" onClick={(event) => event.stopPropagation()}>
+    <div className="flex h-8 items-center gap-0.5" onClick={(event) => event.stopPropagation()}>
       {hasNotes && (
         <Button
           variant="ghost"
           size="icon"
+          className="size-8"
           title="Ver notas"
           aria-label="Ver notas"
           onClick={(event) => {
@@ -49,13 +51,14 @@ export function SeguimientoCell({ row, onOpen }: SeguimientoCellProps) {
             onOpen("notas");
           }}
         >
-          <StickyNote className="size-4 text-primary" />
+          <StickyNote className="size-4 fill-primary/30 text-primary" />
         </Button>
       )}
       {hasUpdates && (
         <Button
           variant="ghost"
           size="icon"
+          className="size-8"
           title="Ver actualizaciones"
           aria-label="Ver actualizaciones"
           onClick={(event) => {
