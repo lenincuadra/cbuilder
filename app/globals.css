@@ -127,5 +127,7 @@
   }
   html {
     @apply font-sans;
+    /* App is dark-only: keep native UI (scrollbars, form controls) dark too. */
+    color-scheme: dark;
   }
 }
