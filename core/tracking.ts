@@ -13,8 +13,12 @@ export const CODE_LETTERS = "abcdefghjkmnpqrstuvwxyz";
 /** Digits without ambiguous characters (no 0, 1). */
 export const CODE_DIGITS = "23456789";
 
-/** Codes the generator must never produce. */
-export const RESERVED_CODES = ["me", "li-profile", "organic", "li-cv"] as const;
+/**
+ * Codes the generator must never produce.
+ * `web-cv` ("CV descargable desde la web") comes from the live registry, which
+ * is the source of truth — it is not in the original spec but is reserved too.
+ */
+export const RESERVED_CODES = ["me", "li-profile", "organic", "li-cv", "web-cv"] as const;
 
 const DEFAULT_MAX_ATTEMPTS = 200;
 
