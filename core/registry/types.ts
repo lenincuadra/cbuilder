@@ -20,10 +20,12 @@ export const MAX_UPDATES = 12;
 
 /** One follow-up entry in the application timeline (Seguimiento › Actualizaciones). */
 export interface StatusUpdate {
-  /** ISO timestamp (date + time) when the update was logged. */
+  /** ISO timestamp (date + time) when the update was logged. Editable. */
   at: string;
   /** Free-text note about the application's progress. */
   message: string;
+  /** Marked important / to-do (shown with 🚩). */
+  flag?: boolean;
 }
 
 /**

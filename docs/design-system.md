@@ -31,10 +31,14 @@ de producto/arquitectura va en `docs/decisions.md`.
 - **Activas y Archivado comparten exactamente la misma tabla**: misma estructura, columnas
   y comportamiento siempre. Lo único que cambia es qué filas se muestran (filtradas por
   `archived` en la página). No duplicar componentes ni variar columnas entre vistas.
-- **Fila clickeable**: abre el panel de detalle (tab Notas por default). Click en un ícono
-  de Seguimiento abre el panel en su tab (`notas` / `updates`); el badge de Estado togglea
-  sin abrir (los controles internos hacen `stopPropagation`).
+- **Fila clickeable**: abre el panel de detalle en el **tab por defecto según contenido**
+  (regla genérica): si solo hay actualizaciones → Actualizaciones; si no (hay notas, o
+  ambas, o ninguna) → Notas. Click en un ícono de Seguimiento abre su tab explícito
+  (`notas` / `updates`). El badge de Estado y los íconos hacen `stopPropagation`; el resto
+  de la celda cae al click del row.
 - Seguimiento: el panel tiene tabs **Notas** (markdown) y **Actualizaciones** (timeline,
-  tope 12, más reciente abajo). La celda muestra íconos según contenido, o un link
-  "Agregar" si está vacía.
+  tope 12, más reciente abajo). El `TabsList` es full-width. Cada actualización es un item
+  **editable** (texto, fecha/hora, flag). El **flag 🚩** marca algo por hacer/importante:
+  se muestra en el item y, en la celda de Seguimiento, tras los íconos. La celda muestra
+  íconos según contenido, o un link "Agregar" si está vacía.
 - Referencias: `ui/RegistryTable.tsx`, `ui/detail/*`.

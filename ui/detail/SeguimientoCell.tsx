@@ -13,13 +13,16 @@ export interface SeguimientoCellProps {
 
 /**
  * Seguimiento column cell. Icons reflect content — sticky-note (notes) and/or
- * file-chart (updates) — and each opens the panel on its tab. With no content,
- * an "Agregar" text link. Both branches are h-8 so every row is the same height.
- * All stop propagation so the row click stays generic.
+ * file-chart (updates) — and each opens the panel on its tab; a 🚩 after them
+ * means at least one update is flagged. With no content, an "Agregar" link.
+ *
+ * Only the icons/link stop propagation: empty space in the cell falls through to
+ * the row click (which opens the panel on its default tab).
  */
 export function SeguimientoCell({ row, onOpen }: SeguimientoCellProps) {
   const hasNotes = Boolean(row.notes?.trim());
   const hasUpdates = Boolean(row.updates?.length);
+  const hasFlag = Boolean(row.updates?.some((update) => update.flag));
 
   if (!hasNotes && !hasUpdates) {
     return (
@@ -38,7 +41,7 @@ export function SeguimientoCell({ row, onOpen }: SeguimientoCellProps) {
   }
 
   return (
-    <div className="flex h-8 items-center gap-0.5" onClick={(event) => event.stopPropagation()}>
+    <div className="flex h-8 items-center gap-0.5">
       {hasNotes && (
         <Button
           variant="ghost"
@@ -68,6 +71,15 @@ export function SeguimientoCell({ row, onOpen }: SeguimientoCellProps) {
         >
           <FileChartLine className="size-4 text-primary" />
         </Button>
+      )}
+      {hasFlag && (
+        <span
+          className="flex size-8 items-center justify-center text-base leading-none"
+          title="Tiene pendientes marcados"
+          aria-label="Tiene pendientes marcados"
+        >
+          🚩
+        </span>
       )}
     </div>
   );

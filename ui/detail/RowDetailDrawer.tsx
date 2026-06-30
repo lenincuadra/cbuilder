@@ -144,7 +144,7 @@ export function RowDetailDrawer({
               onValueChange={(value) => setTab(value as DetailTab)}
               className="flex-1"
             >
-              <TabsList>
+              <TabsList className="w-full">
                 <TabsTrigger value="notas">
                   <StickyNote />
                   Notas
@@ -160,11 +160,7 @@ export function RowDetailDrawer({
               <TabsContent value="updates" className="pt-3">
                 <UpdatesTab
                   updates={updates}
-                  onAdd={(message) =>
-                    onUpdate(row.code, {
-                      updates: [...updates, { at: new Date().toISOString(), message }],
-                    })
-                  }
+                  onSave={(next) => onUpdate(row.code, { updates: next })}
                 />
               </TabsContent>
             </Tabs>

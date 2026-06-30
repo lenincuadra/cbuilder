@@ -46,6 +46,16 @@ export interface RegistryTableProps {
   emptyMessage?: string;
 }
 
+/**
+ * Default tab when opening a row generically: the tab with content when only one
+ * has it (updates-only → Actualizaciones), otherwise Notas. Generic rule.
+ */
+function defaultTabFor(row: RegistryRow): DetailTab {
+  const hasNotes = Boolean(row.notes?.trim());
+  const hasUpdates = Boolean(row.updates?.length);
+  return !hasNotes && hasUpdates ? "updates" : "notas";
+}
+
 export function RegistryTable({ rows, loading = false, onUpdate, emptyMessage }: RegistryTableProps) {
   const [detailCode, setDetailCode] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -98,7 +108,7 @@ export function RegistryTable({ rows, loading = false, onUpdate, emptyMessage }:
               rows.map((row) => (
                 <TableRow
                   key={row.code}
-                  onClick={() => openDetail(row.code)}
+                  onClick={() => openDetail(row.code, defaultTabFor(row))}
                   className="cursor-pointer"
                 >
                   <TableCell className="truncate font-mono text-xs">{row.code}</TableCell>
