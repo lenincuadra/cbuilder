@@ -21,5 +21,9 @@ App web que genera el CV de Lenin Cuadra con tracking, fase 2 (app real).
 - **Todo el código va en inglés**: identificadores, comentarios, nombres de archivo, docstrings y mensajes de commit. Sin español en el código.
 - Excepción: los **textos de UI que ve el usuario** van como los define la spec (español): labels de inputs, badges (`Activo`/`Rechazado`), placeholders (`sin notas`), opciones de canal, etc. Son contenido de producto, no código.
 
+## Diseño / DS
+- Convenciones de UI en `docs/design-system.md` (drawers responsive, Markdown, tabla del registro). Leelo antes de construir/ajustar componentes de UI.
+- Regla clave: drawers = right en desktop / bottom en mobile (vaul `Drawer` con `direction` responsive vía `useIsMobile()`).
+
 ## Stack
 Next.js, Tailwind CSS, shadcn/ui. Deploy a Vercel.

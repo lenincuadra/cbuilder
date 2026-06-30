@@ -11,21 +11,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
 import type { ApplicationStatus, EditableFields, RegistryRow } from "@/core/registry/types";
 import { cn } from "@/lib/utils";
+import { NotesButton } from "@/ui/notes/NotesButton";
+import { NotesDrawer } from "@/ui/notes/NotesDrawer";
 
-/** The 7 registry columns, in order. Flat table — no grouping by company. */
-const COLUMNS = ["Código", "Empresa", "Rol", "Canal", "Fecha", "Notas", "Estado"] as const;
+/** The 7 registry columns, in order. Flat table — Notas always last. */
+const COLUMNS = ["Código", "Empresa", "Rol", "Canal", "Fecha", "Estado", "Notas"] as const;
 
 /** Colored badge that toggles Activo <-> Rechazado on click (binary status). */
-function StatusToggle({
-  status,
-  onToggle,
-}: {
-  status: ApplicationStatus;
-  onToggle: () => void;
-}) {
+function StatusToggle({ status, onToggle }: { status: ApplicationStatus; onToggle: () => void }) {
   const next: ApplicationStatus = status === "Activo" ? "Rechazado" : "Activo";
   return (
     <button type="button" onClick={onToggle} title={`Cambiar a ${next}`} className="cursor-pointer">
@@ -43,73 +38,6 @@ function StatusToggle({
   );
 }
 
-/** Notes cell: click to edit inline. Blur or Cmd/Ctrl+Enter saves, Escape cancels. */
-function EditableNotes({
-  value,
-  onSave,
-}: {
-  value?: string;
-  onSave: (next: string | undefined) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value ?? "");
-
-  function start() {
-    setDraft(value ?? "");
-    setEditing(true);
-  }
-
-  function commit() {
-    setEditing(false);
-    const trimmed = draft.trim();
-    const next = trimmed === "" ? undefined : trimmed;
-    if (next !== value) onSave(next);
-  }
-
-  function cancel() {
-    setEditing(false);
-    setDraft(value ?? "");
-  }
-
-  if (editing) {
-    return (
-      <Textarea
-        autoFocus
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={commit}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.preventDefault();
-            cancel();
-          } else if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-            event.preventDefault();
-            commit();
-          }
-        }}
-        rows={2}
-        className="min-h-[56px] text-sm"
-        placeholder="Notas del proceso…"
-      />
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={start}
-      title="Editar notas"
-      className="w-full cursor-text text-left"
-    >
-      {value ? (
-        <span className="line-clamp-2">{value}</span>
-      ) : (
-        <span className="text-muted-foreground italic">sin notas</span>
-      )}
-    </button>
-  );
-}
-
 export interface RegistryTableProps {
   rows: RegistryRow[];
   loading?: boolean;
@@ -117,63 +45,82 @@ export interface RegistryTableProps {
 }
 
 export function RegistryTable({ rows, loading = false, onUpdate }: RegistryTableProps) {
+  // The notes drawer is owned at the table level; `notesRow` is kept during the
+  // close animation, and `notesOpen` drives open/close.
+  const [notesRow, setNotesRow] = useState<RegistryRow | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
+
+  function openNotes(row: RegistryRow) {
+    setNotesRow(row);
+    setNotesOpen(true);
+  }
+
   return (
-    // The table owns its horizontal scroll: columns are never hidden or shrunk.
-    <div className="w-full overflow-x-auto rounded-lg border">
-      <Table className="min-w-[760px]">
-        <TableHeader>
-          <TableRow>
-            {COLUMNS.map((column) => (
-              <TableHead key={column} className="whitespace-nowrap">
-                {column}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {loading ? (
+    <>
+      {/* The table owns its horizontal scroll: columns are never hidden or shrunk. */}
+      <div className="w-full overflow-x-auto rounded-lg border">
+        <Table className="min-w-[760px]">
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={COLUMNS.length} className="h-24 text-center text-muted-foreground">
-                Cargando registro…
-              </TableCell>
+              {COLUMNS.map((column) => (
+                <TableHead key={column} className="whitespace-nowrap">
+                  {column}
+                </TableHead>
+              ))}
             </TableRow>
-          ) : rows.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={COLUMNS.length} className="h-24 text-center text-muted-foreground">
-                Todavía no hay aplicaciones. Generá tu primer CV desde el panel de la derecha.
-              </TableCell>
-            </TableRow>
-          ) : (
-            rows.map((row) => (
-              <TableRow key={row.code}>
-                <TableCell className="font-mono text-xs">{row.code}</TableCell>
-                <TableCell className="whitespace-nowrap font-medium">{row.company}</TableCell>
-                <TableCell className="whitespace-nowrap">{row.role}</TableCell>
-                <TableCell className="whitespace-nowrap text-muted-foreground">
-                  {row.channel ?? "—"}
-                </TableCell>
-                <TableCell className="whitespace-nowrap tabular-nums">{row.date}</TableCell>
-                <TableCell className="max-w-[220px] align-top">
-                  <EditableNotes
-                    value={row.notes}
-                    onSave={(next) => onUpdate(row.code, { notes: next })}
-                  />
-                </TableCell>
-                <TableCell>
-                  <StatusToggle
-                    status={row.status}
-                    onToggle={() =>
-                      onUpdate(row.code, {
-                        status: row.status === "Activo" ? "Rechazado" : "Activo",
-                      })
-                    }
-                  />
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={COLUMNS.length} className="h-24 text-center text-muted-foreground">
+                  Cargando registro…
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+            ) : rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={COLUMNS.length} className="h-24 text-center text-muted-foreground">
+                  Todavía no hay aplicaciones. Generá tu primer CV desde el panel de la derecha.
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows.map((row) => (
+                <TableRow key={row.code}>
+                  <TableCell className="font-mono text-xs">{row.code}</TableCell>
+                  <TableCell className="whitespace-nowrap font-medium">{row.company}</TableCell>
+                  <TableCell className="whitespace-nowrap">{row.role}</TableCell>
+                  <TableCell className="whitespace-nowrap text-muted-foreground">
+                    {row.channel ?? "—"}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap tabular-nums">{row.date}</TableCell>
+                  <TableCell>
+                    <StatusToggle
+                      status={row.status}
+                      onToggle={() =>
+                        onUpdate(row.code, {
+                          status: row.status === "Activo" ? "Rechazado" : "Activo",
+                        })
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <NotesButton
+                      hasNotes={Boolean(row.notes?.trim())}
+                      onClick={() => openNotes(row)}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <NotesDrawer
+        row={notesRow}
+        open={notesOpen}
+        onOpenChange={setNotesOpen}
+        onSave={(code, notes) => onUpdate(code, { notes })}
+      />
+    </>
   );
 }
