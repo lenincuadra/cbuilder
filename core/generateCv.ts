@@ -19,6 +19,8 @@ export interface GenerateCvInput {
   role?: string;
   who?: string;
   channel?: Channel;
+  /** Email applied to — required when channel is "Email". */
+  email?: string;
   jobUrl?: string;
   notes?: string;
   status?: ApplicationStatus;
@@ -91,6 +93,7 @@ export async function generateCv(
     company: input.company.trim(),
     role: cleaned(input.role) ?? DEFAULT_ROLE,
     channel: input.channel,
+    email: input.channel === "Email" ? cleaned(input.email) : undefined,
     date: toISODate(input.date),
     notes: cleaned(input.notes),
     status: input.status ?? DEFAULT_STATUS,

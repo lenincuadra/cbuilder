@@ -17,6 +17,7 @@ interface RegistryRowDb {
   company: string;
   role: string;
   channel: string | null;
+  email: string | null;
   date: string;
   notes: string | null;
   status: string;
@@ -34,6 +35,7 @@ export function dbToRow(db: RegistryRowDb): RegistryRow {
     company: db.company,
     role: db.role,
     channel: (db.channel ?? undefined) as Channel | undefined,
+    email: db.email ?? undefined,
     date: db.date,
     notes: db.notes ?? undefined,
     status: db.status as ApplicationStatus,
@@ -52,6 +54,7 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
     company: row.company,
     role: row.role,
     channel: row.channel ?? null,
+    email: row.email ?? null,
     date: row.date,
     notes: row.notes ?? null,
     status: row.status,

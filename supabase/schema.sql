@@ -6,6 +6,7 @@ create table if not exists public.registry (
   company     text not null,
   role        text not null default 'UX/UI Designer',
   channel     text,
+  email       text,                          -- required (app-side) when channel = 'Email'
   date        text not null,                 -- application date as "YYYY-MM-DD"
   notes       text,
   status      text not null default 'Activo' check (status in ('Activo', 'Rechazado')),

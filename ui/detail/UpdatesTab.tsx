@@ -15,9 +15,9 @@ import {
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Item, ItemContent } from "@/components/ui/item";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { MAX_UPDATES, type StatusUpdate } from "@/core/registry/types";
-import { cn } from "@/lib/utils";
 
 export interface UpdatesTabProps {
   updates: StatusUpdate[];
@@ -113,17 +113,16 @@ export function UpdatesTab({ updates, onSave }: UpdatesTabProps) {
             }}
             className="h-8 w-auto text-sm"
           />
-          <Button
-            type="button"
-            variant={draft.flag ? "secondary" : "ghost"}
-            size="sm"
-            aria-pressed={draft.flag}
+          <label
+            className="flex cursor-pointer items-center gap-2 text-sm select-none"
             title="Marcar como importante / por hacer"
-            onClick={() => setDraft((d) => ({ ...d, flag: !d.flag }))}
-            className={cn("text-base", !draft.flag && "opacity-40 grayscale")}
           >
-            🚩
-          </Button>
+            <Switch
+              checked={draft.flag}
+              onCheckedChange={(checked) => setDraft((d) => ({ ...d, flag: checked }))}
+            />
+            <span>🚩 Por hacer</span>
+          </label>
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={() => setEditing(null)} disabled={saving}>

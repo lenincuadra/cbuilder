@@ -13,7 +13,7 @@ import { StepCompany } from "./StepCompany";
 import { StepConfirm } from "./StepConfirm";
 import { StepLanguageDate } from "./StepLanguageDate";
 import { StepOptional } from "./StepOptional";
-import type { WizardData } from "./types";
+import { emailRequirementMet, type WizardData } from "./types";
 
 const TOTAL_STEPS = 4;
 const STEP_TITLES = ["Empresa", "Idioma y fecha", "Opcionales", "Confirmar"];
@@ -25,6 +25,7 @@ function initialData(): WizardData {
     date: new Date(),
     role: DEFAULT_ROLE,
     channel: "",
+    email: "",
     who: "",
     jobUrl: "",
   };
@@ -47,7 +48,8 @@ export function Wizard({ existingCodes, generating, onGenerate }: WizardProps) {
   const set = (patch: Partial<WizardData>) => setData((current) => ({ ...current, ...patch }));
 
   const companyValid = data.company.trim() !== "";
-  const canAdvance = step === 1 ? companyValid : true;
+  const canAdvance =
+    step === 1 ? companyValid : step === 3 ? emailRequirementMet(data) : true;
 
   function goNext() {
     if (step < 3) {
@@ -78,6 +80,7 @@ export function Wizard({ existingCodes, generating, onGenerate }: WizardProps) {
         role: data.role,
         who: data.who,
         channel: data.channel === "" ? undefined : data.channel,
+        email: data.email,
         jobUrl: data.jobUrl,
         code: previewCode,
       });

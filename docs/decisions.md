@@ -10,6 +10,16 @@ en `docs/design-system.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Canal "Email" exige el email aplicado
+Si en el wizard se elige canal **Email**, aparece un campo de email **requerido** (no se
+puede avanzar sin un email válido). Se guarda en `RegistryRow.email` y solo se persiste
+cuando el canal es Email. Razón: si aplicaste por mail, el dato clave es a qué dirección.
+
+## Componentes: usar siempre el del DS antes que custom
+Regla de proceso (ver `docs/design-system.md`): primero el componente del DS, si no existe
+preguntar por suplente, recién después custom con confirmación. Surgió de haber hecho un
+toggle custom donde correspondía el `Switch` del DS.
+
 ## Tabla: sin scroll horizontal salvo en pantallas chicas
 La tabla usa `table-fixed` y trunca columnas largas para entrar siempre en el contenedor;
 solo por debajo de 640px (sm) se reactiva el scroll. **Reemplaza** la regla original

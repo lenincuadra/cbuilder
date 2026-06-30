@@ -40,6 +40,8 @@ export interface RegistryRow {
   role: string;
   /** Undefined = "omitir". */
   channel?: Channel;
+  /** Email applied to — required when channel is "Email". */
+  email?: string;
   /** Application date as "YYYY-MM-DD". */
   date: string;
   notes?: string;

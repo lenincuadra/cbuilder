@@ -4,6 +4,16 @@ Convenciones de UI a seguir al construir componentes. Referenciado desde `CLAUDE
 para que se detecte automáticamente cuando haga falta. El "por qué" de las decisiones
 de producto/arquitectura va en `docs/decisions.md`.
 
+## Uso de componentes (regla — siempre)
+Antes de crear cualquier componente o comportamiento de UI:
+1. **Buscar si el componente específico ya existe en el DS** (shadcn, en `components/ui/`).
+   Si existe, usarlo — nunca reimplementarlo a mano (ej. `Switch`, `Tabs`, `Empty`, `Item`,
+   `Drawer`, `Badge`, `Select`). Instalar el que falte con `npx shadcn add <comp>`.
+2. Si **no existe el específico**, **preguntar** si está bien usar un componente X o Y del
+   DS como **suplente**.
+3. Si tampoco hay suplente razonable, **proponer** un componente/comportamiento custom y
+   pedir confirmación (con ideas) **antes** de construirlo. No crear custom sin avisar.
+
 ## Drawers / paneles laterales
 - **Desktop: right-drawer (panel a la derecha). Mobile: bottom drawer (sube desde abajo,
   casi hasta el borde superior).**

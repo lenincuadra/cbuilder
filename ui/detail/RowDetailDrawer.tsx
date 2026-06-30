@@ -116,6 +116,11 @@ export function RowDetailDrawer({
             <div className="rounded-lg border px-3 py-1">
               <Field label="Rol">{row.role}</Field>
               <Field label="Canal">{row.channel ?? "—"}</Field>
+              {row.email && (
+                <Field label="Email">
+                  <span className="break-all">{row.email}</span>
+                </Field>
+              )}
               <Field label="Fecha">
                 <span className="tabular-nums">{row.date}</span>
               </Field>

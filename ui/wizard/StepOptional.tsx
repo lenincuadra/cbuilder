@@ -52,6 +52,24 @@ export function StepOptional({ data, set }: StepProps) {
         </Select>
       </div>
 
+      {data.channel === "Email" && (
+        <div className="space-y-2">
+          <Label htmlFor="email">
+            Email al que aplicaste <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="recruiter@empresa.com"
+            value={data.email}
+            onChange={(event) => set({ email: event.target.value })}
+          />
+          <p className="text-xs text-muted-foreground">
+            Requerido porque elegiste el canal Email.
+          </p>
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="who">Quién</Label>
         <Input
