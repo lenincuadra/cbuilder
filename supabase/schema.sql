@@ -12,7 +12,9 @@ create table if not exists public.registry (
   who         text,
   job_url     text,
   language    text,
-  created_at  timestamptz not null default now()
+  created_at  timestamptz not null default now(),
+  updates     jsonb not null default '[]'::jsonb,  -- follow-up timeline [{at, message}]
+  archived    boolean not null default false
 );
 
 -- Newest applications first when listing.

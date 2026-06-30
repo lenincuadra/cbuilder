@@ -5,6 +5,7 @@ import type {
   EditableFields,
   RegistryRow,
   RegistryStore,
+  StatusUpdate,
 } from "../../core/registry/types";
 import type { LanguageChoice } from "../../core/types";
 
@@ -23,6 +24,8 @@ interface RegistryRowDb {
   job_url: string | null;
   language: string | null;
   created_at: string | null;
+  updates: StatusUpdate[] | null;
+  archived: boolean | null;
 }
 
 export function dbToRow(db: RegistryRowDb): RegistryRow {
@@ -38,6 +41,8 @@ export function dbToRow(db: RegistryRowDb): RegistryRow {
     jobUrl: db.job_url ?? undefined,
     language: (db.language ?? undefined) as LanguageChoice | undefined,
     createdAt: db.created_at ?? undefined,
+    updates: db.updates ?? undefined,
+    archived: db.archived ?? undefined,
   };
 }
 
@@ -54,6 +59,8 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
     job_url: row.jobUrl ?? null,
     language: row.language ?? null,
     created_at: row.createdAt ?? null,
+    updates: row.updates ?? null,
+    archived: row.archived ?? null,
   };
 }
 
@@ -61,6 +68,8 @@ export function editableToDb(fields: EditableFields): Partial<RegistryRowDb> {
   const out: Partial<RegistryRowDb> = {};
   if ("notes" in fields) out.notes = fields.notes ?? null;
   if ("status" in fields) out.status = fields.status as string;
+  if ("updates" in fields) out.updates = fields.updates ?? null;
+  if ("archived" in fields) out.archived = fields.archived ?? null;
   return out;
 }
 

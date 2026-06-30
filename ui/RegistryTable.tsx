@@ -1,8 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { Inbox } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -11,55 +18,32 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { ApplicationStatus, EditableFields, RegistryRow } from "@/core/registry/types";
-import { cn } from "@/lib/utils";
-import { NotesButton } from "@/ui/notes/NotesButton";
-import { NotesDrawer } from "@/ui/notes/NotesDrawer";
+import type { EditableFields, RegistryRow } from "@/core/registry/types";
+import { RowDetailDrawer } from "@/ui/detail/RowDetailDrawer";
+import { SeguimientoCell } from "@/ui/detail/SeguimientoCell";
+import { StatusToggle } from "@/ui/StatusToggle";
 
-/** The 7 registry columns, in order. Flat table — Notas always last. */
-const COLUMNS = ["Código", "Empresa", "Rol", "Canal", "Fecha", "Estado", "Notas"] as const;
-
-/** Colored badge that toggles Activo <-> Rechazado on click (binary status). */
-function StatusToggle({ status, onToggle }: { status: ApplicationStatus; onToggle: () => void }) {
-  const next: ApplicationStatus = status === "Activo" ? "Rechazado" : "Activo";
-  return (
-    <button type="button" onClick={onToggle} title={`Cambiar a ${next}`} className="cursor-pointer">
-      <Badge
-        className={cn(
-          "border-transparent transition-colors",
-          status === "Activo"
-            ? "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300"
-            : "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300",
-        )}
-      >
-        {status}
-      </Badge>
-    </button>
-  );
-}
+/** Flat table — Seguimiento always last. */
+const COLUMNS = ["Código", "Empresa", "Rol", "Canal", "Fecha", "Estado", "Seguimiento"] as const;
 
 export interface RegistryTableProps {
   rows: RegistryRow[];
   loading?: boolean;
   onUpdate: (code: string, fields: EditableFields) => void | Promise<void>;
+  emptyMessage?: string;
 }
 
-export function RegistryTable({ rows, loading = false, onUpdate }: RegistryTableProps) {
-  // The notes drawer is owned at the table level; `notesRow` is kept during the
-  // close animation, and `notesOpen` drives open/close.
-  const [notesRow, setNotesRow] = useState<RegistryRow | null>(null);
-  const [notesOpen, setNotesOpen] = useState(false);
-
-  function openNotes(row: RegistryRow) {
-    setNotesRow(row);
-    setNotesOpen(true);
-  }
+export function RegistryTable({ rows, loading = false, onUpdate, emptyMessage }: RegistryTableProps) {
+  // The detail panel resolves its row fresh from `rows` by code, so edits made
+  // inside it (notes, updates, status, archive) reflect immediately.
+  const [detailCode, setDetailCode] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const detailRow = detailCode ? (rows.find((row) => row.code === detailCode) ?? null) : null;
 
   return (
     <>
-      {/* The table owns its horizontal scroll: columns are never hidden or shrunk. */}
       <div className="w-full overflow-x-auto rounded-lg border">
-        <Table className="min-w-[760px]">
+        <Table className="min-w-[820px]">
           <TableHeader>
             <TableRow>
               {COLUMNS.map((column) => (
@@ -78,8 +62,18 @@ export function RegistryTable({ rows, loading = false, onUpdate }: RegistryTable
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={COLUMNS.length} className="h-24 text-center text-muted-foreground">
-                  Todavía no hay aplicaciones. Generá tu primer CV desde el panel de la derecha.
+                <TableCell colSpan={COLUMNS.length} className="py-8">
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <Inbox />
+                      </EmptyMedia>
+                      <EmptyTitle>No hay aplicaciones</EmptyTitle>
+                      <EmptyDescription>
+                        {emptyMessage ?? "Generá tu primer CV desde el panel de la derecha."}
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 </TableCell>
               </TableRow>
             ) : (
@@ -103,10 +97,10 @@ export function RegistryTable({ rows, loading = false, onUpdate }: RegistryTable
                     />
                   </TableCell>
                   <TableCell>
-                    <NotesButton
-                      hasNotes={Boolean(row.notes?.trim())}
-                      onClick={() => openNotes(row)}
-                    />
+                    <SeguimientoCell row={row} onOpen={() => {
+                      setDetailCode(row.code);
+                      setDetailOpen(true);
+                    }} />
                   </TableCell>
                 </TableRow>
               ))
@@ -115,11 +109,11 @@ export function RegistryTable({ rows, loading = false, onUpdate }: RegistryTable
         </Table>
       </div>
 
-      <NotesDrawer
-        row={notesRow}
-        open={notesOpen}
-        onOpenChange={setNotesOpen}
-        onSave={(code, notes) => onUpdate(code, { notes })}
+      <RowDetailDrawer
+        row={detailRow}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onUpdate={onUpdate}
       />
     </>
   );

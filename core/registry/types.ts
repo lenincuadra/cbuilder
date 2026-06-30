@@ -15,6 +15,17 @@ export type ApplicationStatus = "Activo" | "Rechazado";
 export const DEFAULT_ROLE = "UX/UI Designer";
 export const DEFAULT_STATUS: ApplicationStatus = "Activo";
 
+/** Max follow-up updates kept per application. */
+export const MAX_UPDATES = 12;
+
+/** One follow-up entry in the application timeline (Seguimiento › Actualizaciones). */
+export interface StatusUpdate {
+  /** ISO timestamp (date + time) when the update was logged. */
+  at: string;
+  /** Free-text note about the application's progress. */
+  message: string;
+}
+
 /**
  * One registry row per application.
  * The table shows 7 columns (code, company, role, channel, date, notes, status);
@@ -40,10 +51,16 @@ export interface RegistryRow {
   language?: LanguageChoice;
   /** Creation timestamp (ISO). */
   createdAt?: string;
+  /** Follow-up timeline (Seguimiento › Actualizaciones), oldest first. */
+  updates?: StatusUpdate[];
+  /** Archived = moved out of the active searches view. Independent of status. */
+  archived?: boolean;
 }
 
-/** Fields editable from the table after creation. */
-export type EditableFields = Partial<Pick<RegistryRow, "notes" | "status">>;
+/** Fields editable from the detail panel after creation. */
+export type EditableFields = Partial<
+  Pick<RegistryRow, "notes" | "status" | "updates" | "archived">
+>;
 
 /**
  * Storage abstraction for the registry. Local implementation now,

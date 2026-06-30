@@ -14,6 +14,8 @@ const fullRow: RegistryRow = {
   jobUrl: "https://jobs.example/123",
   language: "Ambos",
   createdAt: "2026-06-28T12:00:00.000Z",
+  updates: [{ at: "2026-06-28T13:00:00.000Z", message: "2da entrevista agendada" }],
+  archived: false,
 };
 
 describe("supabase row mapping", () => {
@@ -48,5 +50,8 @@ describe("supabase row mapping", () => {
     expect(editableToDb({ status: "Rechazado" })).toEqual({ status: "Rechazado" });
     expect(editableToDb({ notes: undefined })).toEqual({ notes: null });
     expect(editableToDb({ notes: "x", status: "Activo" })).toEqual({ notes: "x", status: "Activo" });
+    expect(editableToDb({ archived: true })).toEqual({ archived: true });
+    const updates = [{ at: "2026-06-28T13:00:00.000Z", message: "ok" }];
+    expect(editableToDb({ updates })).toEqual({ updates });
   });
 });

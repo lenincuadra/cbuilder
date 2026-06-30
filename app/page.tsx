@@ -15,6 +15,7 @@ import { generateCv, type GenerateCvInput } from "@/core/generateCv";
 import type { EditableFields } from "@/core/registry/types";
 import { downloadBytes } from "@/lib/download";
 import { loadMaster } from "@/lib/masters";
+import { cn } from "@/lib/utils";
 import { RegistryTable } from "@/ui/RegistryTable";
 import { useRegistry } from "@/ui/useRegistry";
 import { Wizard } from "@/ui/wizard/Wizard";
@@ -22,8 +23,12 @@ import { Wizard } from "@/ui/wizard/Wizard";
 export default function Home() {
   const { rows, loading, add, update } = useRegistry();
   const [generating, setGenerating] = useState(false);
+  const [view, setView] = useState<"activas" | "archivado">("activas");
 
   const existingCodes = rows.map((row) => row.code);
+  const activeRows = rows.filter((row) => !row.archived);
+  const archivedRows = rows.filter((row) => row.archived);
+  const visibleRows = view === "archivado" ? archivedRows : activeRows;
 
   async function handleUpdate(code: string, fields: EditableFields) {
     try {
@@ -65,8 +70,45 @@ export default function Home() {
 
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
         {/* Registro: protagonista, ancho, con scroll horizontal propio. */}
-        <section className="min-w-0">
-          <RegistryTable rows={rows} loading={loading} onUpdate={handleUpdate} />
+        <section className="min-w-0 space-y-3">
+          <div className="inline-flex items-center gap-1 rounded-lg border bg-muted/40 p-1 text-sm">
+            <button
+              type="button"
+              onClick={() => setView("activas")}
+              className={cn(
+                "rounded-md px-3 py-1 transition-colors",
+                view === "activas"
+                  ? "bg-background font-medium shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Búsquedas activas{" "}
+              <span className="text-muted-foreground tabular-nums">({activeRows.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("archivado")}
+              className={cn(
+                "rounded-md px-3 py-1 transition-colors",
+                view === "archivado"
+                  ? "bg-background font-medium shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Archivado{" "}
+              <span className="text-muted-foreground tabular-nums">({archivedRows.length})</span>
+            </button>
+          </div>
+          <RegistryTable
+            rows={visibleRows}
+            loading={loading}
+            onUpdate={handleUpdate}
+            emptyMessage={
+              view === "archivado"
+                ? "No hay búsquedas archivadas."
+                : "Generá tu primer CV desde el panel de la derecha."
+            }
+          />
         </section>
 
         {/* Generación: card angosto a la derecha. */}
