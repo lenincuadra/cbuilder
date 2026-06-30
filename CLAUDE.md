@@ -16,5 +16,9 @@ App web que genera el CV de Lenin Cuadra con tracking, fase 2 (app real).
 - El nombre del archivo entregable es siempre `Lenin_Cuadra_CV.docx`, sin datos de tracking. Todo lo identificatorio va en el nombre de la carpeta `[IDIOMA]_[empresa]_[código]`.
 - Separación estricta `core/` (lógica pura) y `ui/` (React). El storage va detrás de una interfaz, con implementación local ahora y puerta abierta a Supabase.
 
+## Convenciones de código
+- **Todo el código va en inglés**: identificadores, comentarios, nombres de archivo, docstrings y mensajes de commit. Sin español en el código.
+- Excepción: los **textos de UI que ve el usuario** van como los define la spec (español): labels de inputs, badges (`Activo`/`Rechazado`), placeholders (`sin notas`), opciones de canal, etc. Son contenido de producto, no código.
+
 ## Stack
 Next.js, Tailwind CSS, shadcn/ui. Deploy a Vercel.
