@@ -7,11 +7,7 @@ import { cn } from "@/lib/utils";
 /** Render markdown (GFM) as formatted content. No raw HTML — safe by default. */
 export function MarkdownView({ source, className }: { source: string; className?: string }) {
   if (!source.trim()) {
-    return (
-      <p className="text-sm text-muted-foreground italic">
-        Nada todavía. Lo que escribas arriba se ve acá.
-      </p>
-    );
+    return <p className="text-sm text-muted-foreground italic">Sin notas todavía.</p>;
   }
 
   return (

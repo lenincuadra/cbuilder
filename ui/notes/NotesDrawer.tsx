@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,17 +26,22 @@ export interface NotesDrawerProps {
 }
 
 /**
- * Notes editor in a responsive drawer (DS: right on desktop, bottom on mobile).
- * Live editor + preview: textarea on top, rendered markdown updating below.
+ * Notes in a responsive drawer (DS: right on desktop, bottom on mobile).
+ * Opens showing the formatted markdown (preview); clicking it switches to the
+ * markdown editor. Save returns to the preview.
  */
 export function NotesDrawer({ row, open, onOpenChange, onSave }: NotesDrawerProps) {
   const isMobile = useIsMobile();
   const [draft, setDraft] = useState("");
+  const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Load the row's notes into the editor each time the drawer opens.
+  // Each time the drawer opens: load the notes and start in preview mode.
   useEffect(() => {
-    if (open && row) setDraft(row.notes ?? "");
+    if (open && row) {
+      setDraft(row.notes ?? "");
+      setEditing(false);
+    }
   }, [open, row]);
 
   async function handleSave() {
@@ -44,10 +50,15 @@ export function NotesDrawer({ row, open, onOpenChange, onSave }: NotesDrawerProp
     try {
       const trimmed = draft.trim();
       await onSave(row.code, trimmed === "" ? undefined : trimmed);
-      onOpenChange(false);
+      setEditing(false); // back to preview, drawer stays open
     } finally {
       setSaving(false);
     }
+  }
+
+  function cancelEdit() {
+    setDraft(row?.notes ?? "");
+    setEditing(false);
   }
 
   return (
@@ -58,33 +69,50 @@ export function NotesDrawer({ row, open, onOpenChange, onSave }: NotesDrawerProp
           <DrawerDescription className="font-mono text-xs">{row?.code}</DrawerDescription>
         </DrawerHeader>
 
-        <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4">
-          <div className="space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Editar (Markdown)</span>
+        <div className="flex flex-1 flex-col overflow-y-auto px-4">
+          {editing ? (
             <Textarea
               autoFocus
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               placeholder={"## Estado\n- 2da entrevista **mañana**\n- pedir feedback"}
-              className="min-h-[140px] font-mono text-sm"
+              className="min-h-[200px] flex-1 font-mono text-sm"
             />
-          </div>
-
-          <div className="space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Vista previa</span>
-            <div className="rounded-lg border bg-muted/30 p-3">
+          ) : (
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setEditing(true)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setEditing(true);
+                }
+              }}
+              title="Click para editar"
+              className="flex-1 cursor-text rounded-lg border border-transparent p-3 text-left transition-colors hover:border-border hover:bg-muted/30"
+            >
               <MarkdownView source={draft} />
             </div>
-          </div>
+          )}
         </div>
 
         <DrawerFooter className="flex-row justify-end gap-2">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Guardando…" : "Guardar"}
-          </Button>
+          {editing ? (
+            <>
+              <Button variant="ghost" onClick={cancelEdit} disabled={saving}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? "Guardando…" : "Guardar"}
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" onClick={() => setEditing(true)}>
+              <Pencil className="size-4" />
+              Editar
+            </Button>
+          )}
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
