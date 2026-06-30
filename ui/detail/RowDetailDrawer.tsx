@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Archive, ArchiveRestore, FileChartLine, StickyNote, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -19,12 +19,17 @@ import { useIsMobile } from "@/ui/useIsMobile";
 import { NotesTab } from "./NotesTab";
 import { UpdatesTab } from "./UpdatesTab";
 
+/** Which Seguimiento tab the panel opens on. */
+export type DetailTab = "notas" | "updates";
+
 export interface RowDetailDrawerProps {
   /** The open row (resolved fresh from the table's rows). */
   row: RegistryRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdate: (code: string, fields: EditableFields) => void | Promise<void>;
+  /** Tab to show when the panel opens. */
+  initialTab?: DetailTab;
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -40,9 +45,21 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
  * Full row detail panel in a responsive drawer (DS: right on desktop, bottom on
  * mobile). Shows all the application data, plus the Seguimiento tabs.
  */
-export function RowDetailDrawer({ row, open, onOpenChange, onUpdate }: RowDetailDrawerProps) {
+export function RowDetailDrawer({
+  row,
+  open,
+  onOpenChange,
+  onUpdate,
+  initialTab = "notas",
+}: RowDetailDrawerProps) {
   const isMobile = useIsMobile();
   const updates = row?.updates ?? [];
+  const [tab, setTab] = useState<DetailTab>(initialTab);
+
+  // Honor the requested tab each time the panel opens.
+  useEffect(() => {
+    if (open) setTab(initialTab);
+  }, [open, initialTab]);
 
   return (
     <Drawer direction={isMobile ? "bottom" : "right"} open={open} onOpenChange={onOpenChange}>
@@ -122,7 +139,11 @@ export function RowDetailDrawer({ row, open, onOpenChange, onUpdate }: RowDetail
 
             <Separator />
 
-            <Tabs defaultValue="notas" className="flex-1">
+            <Tabs
+              value={tab}
+              onValueChange={(value) => setTab(value as DetailTab)}
+              className="flex-1"
+            >
               <TabsList>
                 <TabsTrigger value="notas">
                   <StickyNote />

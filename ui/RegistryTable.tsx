@@ -19,12 +19,25 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
-import { RowDetailDrawer } from "@/ui/detail/RowDetailDrawer";
+import { cn } from "@/lib/utils";
+import { RowDetailDrawer, type DetailTab } from "@/ui/detail/RowDetailDrawer";
 import { SeguimientoCell } from "@/ui/detail/SeguimientoCell";
 import { StatusToggle } from "@/ui/StatusToggle";
 
-/** Flat table — Seguimiento always last. */
-const COLUMNS = ["Código", "Empresa", "Rol", "Canal", "Fecha", "Estado", "Seguimiento"] as const;
+/**
+ * Flat table, fixed layout: columns truncate to fit the container, so there is
+ * no horizontal scroll at normal widths. Seguimiento is always last. Rol is kept
+ * narrow (~21%). Below 640px a min-width re-enables scroll so columns stay legible.
+ */
+const COLUMNS = [
+  { label: "Código", width: "w-[9%]" },
+  { label: "Empresa", width: "w-[15%]" },
+  { label: "Rol", width: "w-[21%]" },
+  { label: "Canal", width: "w-[17%]" },
+  { label: "Fecha", width: "w-[12%]" },
+  { label: "Estado", width: "w-[11%]" },
+  { label: "Seguimiento", width: "w-[15%]" },
+] as const;
 
 export interface RegistryTableProps {
   rows: RegistryRow[];
@@ -34,21 +47,26 @@ export interface RegistryTableProps {
 }
 
 export function RegistryTable({ rows, loading = false, onUpdate, emptyMessage }: RegistryTableProps) {
-  // The detail panel resolves its row fresh from `rows` by code, so edits made
-  // inside it (notes, updates, status, archive) reflect immediately.
   const [detailCode, setDetailCode] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [detailTab, setDetailTab] = useState<DetailTab>("notas");
   const detailRow = detailCode ? (rows.find((row) => row.code === detailCode) ?? null) : null;
+
+  function openDetail(code: string, tab: DetailTab = "notas") {
+    setDetailCode(code);
+    setDetailTab(tab);
+    setDetailOpen(true);
+  }
 
   return (
     <>
       <div className="w-full overflow-x-auto rounded-lg border">
-        <Table className="min-w-[820px]">
+        <Table className="w-full table-fixed max-[639px]:min-w-[720px]">
           <TableHeader>
             <TableRow>
               {COLUMNS.map((column) => (
-                <TableHead key={column} className="whitespace-nowrap">
-                  {column}
+                <TableHead key={column.label} className={cn("whitespace-nowrap", column.width)}>
+                  {column.label}
                 </TableHead>
               ))}
             </TableRow>
@@ -78,14 +96,20 @@ export function RegistryTable({ rows, loading = false, onUpdate, emptyMessage }:
               </TableRow>
             ) : (
               rows.map((row) => (
-                <TableRow key={row.code}>
-                  <TableCell className="font-mono text-xs">{row.code}</TableCell>
-                  <TableCell className="whitespace-nowrap font-medium">{row.company}</TableCell>
-                  <TableCell className="whitespace-nowrap">{row.role}</TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">
+                <TableRow
+                  key={row.code}
+                  onClick={() => openDetail(row.code)}
+                  className="cursor-pointer"
+                >
+                  <TableCell className="truncate font-mono text-xs">{row.code}</TableCell>
+                  <TableCell className="truncate font-medium">{row.company}</TableCell>
+                  <TableCell className="truncate" title={row.role}>
+                    {row.role}
+                  </TableCell>
+                  <TableCell className="truncate text-muted-foreground">
                     {row.channel ?? "—"}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap tabular-nums">{row.date}</TableCell>
+                  <TableCell className="truncate tabular-nums">{row.date}</TableCell>
                   <TableCell>
                     <StatusToggle
                       status={row.status}
@@ -97,10 +121,7 @@ export function RegistryTable({ rows, loading = false, onUpdate, emptyMessage }:
                     />
                   </TableCell>
                   <TableCell>
-                    <SeguimientoCell row={row} onOpen={() => {
-                      setDetailCode(row.code);
-                      setDetailOpen(true);
-                    }} />
+                    <SeguimientoCell row={row} onOpen={(tab) => openDetail(row.code, tab)} />
                   </TableCell>
                 </TableRow>
               ))
@@ -114,6 +135,7 @@ export function RegistryTable({ rows, loading = false, onUpdate, emptyMessage }:
         open={detailOpen}
         onOpenChange={setDetailOpen}
         onUpdate={onUpdate}
+        initialTab={detailTab}
       />
     </>
   );

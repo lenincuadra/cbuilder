@@ -3,7 +3,8 @@
 App web que genera el CV de Lenin Cuadra con tracking, fase 2 (app real).
 
 ## Fuente de verdad
-- La spec completa del producto está en `docs/cv-builder-product-definition.md`. Leela antes de tomar decisiones de producto o arquitectura. Si algo de lo que te pido entra en conflicto con ese documento, preguntá antes de decidir.
+- La spec original del producto está en `docs/cv-builder-product-definition.md`. Es la spec histórica; algunas reglas se actualizaron después (ver `docs/decisions.md`). Si algo entra en conflicto, priorizá `docs/decisions.md` y preguntá ante la duda.
+- **`docs/decisions.md`**: log de decisiones (el "por qué", trade-offs y reglas que cambiaron). Leelo antes de tomar/revertir decisiones de producto o arquitectura, y agregá una entrada cuando tomes una decisión no obvia.
 - El pedido concreto de esta fase está en `docs/claude-code-prompt-fase2.md`.
 - Los CV master están en `assets/` (EN y ES). No los modifiques salvo que se pida explícitamente.
 
@@ -22,8 +23,8 @@ App web que genera el CV de Lenin Cuadra con tracking, fase 2 (app real).
 - Excepción: los **textos de UI que ve el usuario** van como los define la spec (español): labels de inputs, badges (`Activo`/`Rechazado`), placeholders (`sin notas`), opciones de canal, etc. Son contenido de producto, no código.
 
 ## Diseño / DS
-- Convenciones de UI en `docs/design-system.md` (drawers responsive, Markdown, tabla del registro). Leelo antes de construir/ajustar componentes de UI.
-- Regla clave: drawers = right en desktop / bottom en mobile (vaul `Drawer` con `direction` responsive vía `useIsMobile()`).
+- Convenciones de UI en `docs/design-system.md` (drawers responsive, Markdown, tabla del registro, empty states). Leelo antes de construir/ajustar componentes de UI.
+- Reglas clave: drawers = right en desktop / bottom en mobile; tabla `table-fixed` sin scroll horizontal salvo <640px (columnas truncan); Activas/Archivado comparten exactamente la misma tabla.
 
 ## Stack
 Next.js, Tailwind CSS, shadcn/ui. Deploy a Vercel.

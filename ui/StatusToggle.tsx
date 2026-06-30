@@ -16,7 +16,10 @@ export function StatusToggle({ status, onToggle, className }: StatusToggleProps)
   return (
     <button
       type="button"
-      onClick={onToggle}
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle();
+      }}
       title={`Cambiar a ${next}`}
       className={cn("cursor-pointer", className)}
     >
