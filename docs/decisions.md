@@ -10,6 +10,14 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Identificador de link en el `ref` del CV (P / L)
+Los 2 links trackeables del CV llevan, además del código, un identificador de link
+apendeado: portfolio → `ref=<código>P`, LinkedIn → `ref=<código>L`. Así un click se
+atribuye al link específico (no solo a la aplicación): `0628r4P` = abrieron el portfolio
+del CV `0628r4`. Definido en `core/links.ts` (`LINK_ID`), aplicado en `fillMaster`. El
+`go.html`/analytics (repo del portfolio) parsea el sufijo — fuera de esta app. El sufijo
+va en mayúscula para no confundirse con la letra del código (minúscula).
+
 ## Canal "Email" exige el email aplicado
 Si en el wizard se elige canal **Email**, aparece un campo de email **requerido** (no se
 puede avanzar sin un email válido). Se guarda en `RegistryRow.email` y solo se persiste

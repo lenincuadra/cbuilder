@@ -80,6 +80,6 @@ describe("reserved codes and tracking url", () => {
   });
 
   it("builds the direct portfolio tracking url (no go.html)", () => {
-    expect(trackingUrl("0628r4")).toBe("https://lenincuadra.github.io/portfolio/?ref=0628r4");
+    expect(trackingUrl("0628r4")).toBe("https://lenincuadra.github.io/portfolio/?ref=0628r4P");
   });
 });

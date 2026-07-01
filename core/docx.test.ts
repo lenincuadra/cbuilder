@@ -23,18 +23,19 @@ function countOccurrences(haystack: string, needle: string): number {
 
 describe("fillMaster", () => {
   it.each(["EN", "ES"] as const)(
-    "replaces both placeholders in the %s master",
+    "inserts per-link ids (P portfolio, L linkedin) in the %s master",
     async (lang) => {
       const filled = await fillMaster(loadMaster(lang), "0628r4");
       const rels = await readRels(filled);
 
       expect(rels).not.toContain("ref=li-cv");
-      expect(countOccurrences(rels, "ref=0628r4")).toBe(2);
-      // Both header links survive with the real code (portfolio direct, LinkedIn via go.html).
-      expect(rels).toContain("https://lenincuadra.github.io/portfolio/?ref=0628r4");
+      // Portfolio → <code>P (direct); LinkedIn → <code>L (via go.html).
+      expect(rels).toContain("https://lenincuadra.github.io/portfolio/?ref=0628r4P");
       expect(rels).toContain(
-        "https://lenincuadra.github.io/portfolio/go.html?ref=0628r4&amp;dest=linkedin",
+        "https://lenincuadra.github.io/portfolio/go.html?ref=0628r4L&amp;dest=linkedin",
       );
+      expect(countOccurrences(rels, "ref=0628r4P")).toBe(1);
+      expect(countOccurrences(rels, "ref=0628r4L")).toBe(1);
     },
   );
 
