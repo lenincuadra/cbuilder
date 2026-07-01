@@ -1,15 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { FilePlus2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { slugifyCompany } from "@/core/folderName";
 import { generateCv, type GenerateCvInput } from "@/core/generateCv";
 import type { EditableFields } from "@/core/registry/types";
@@ -111,14 +113,21 @@ export default function Home() {
           />
         </section>
 
-        {/* Generación: card angosto a la derecha. */}
+        {/* Generación: card angosto a la derecha, presentada como Empty state. */}
         <aside>
           <Card className="lg:sticky lg:top-6">
-            <CardHeader>
-              <CardTitle>Generar un CV</CardTitle>
-              <CardDescription>Wizard de 4 pasos.</CardDescription>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-5 pt-6">
+              <Empty className="border-0 p-0">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <FilePlus2 />
+                  </EmptyMedia>
+                  <EmptyTitle>Generar un CV</EmptyTitle>
+                  <EmptyDescription>
+                    Creá un CV trackeado y sumalo al registro.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
               <Wizard
                 existingCodes={existingCodes}
                 generating={generating}
