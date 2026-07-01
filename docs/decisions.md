@@ -2,7 +2,7 @@
 
 Log liviano de decisiones de producto/arquitectura y su **por qué**. Formato ADR:
 cada entrada es Decisión + Contexto/razón. Lo más nuevo arriba. El "cómo" de UI vive
-en `docs/design-system.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
+en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 > Cuándo agregar una entrada acá: cuando se toma una decisión que alguien (o Claude en
 > otra sesión) podría querer revertir sin contexto — trade-offs, reglas que cambian, o
@@ -16,7 +16,7 @@ puede avanzar sin un email válido). Se guarda en `RegistryRow.email` y solo se 
 cuando el canal es Email. Razón: si aplicaste por mail, el dato clave es a qué dirección.
 
 ## Componentes: usar siempre el del DS antes que custom
-Regla de proceso (ver `docs/design-system.md`): primero el componente del DS, si no existe
+Regla de proceso (ver `docs/DESIGN.md`): primero el componente del DS, si no existe
 preguntar por suplente, recién después custom con confirmación. Surgió de haber hecho un
 toggle custom donde correspondía el `Switch` del DS.
 

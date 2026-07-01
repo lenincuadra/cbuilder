@@ -14,8 +14,8 @@ export interface StepConfirmProps {
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium">{value}</span>
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className="min-w-0 text-right font-medium break-words">{value}</span>
     </div>
   );
 }
@@ -34,7 +34,11 @@ export function StepConfirm({ data, previewCode }: StepConfirmProps) {
         <SummaryRow label="Fecha" value={data.date.toLocaleDateString("es-AR")} />
         <SummaryRow label="Rol" value={data.role} />
         {data.channel && <SummaryRow label="Canal" value={data.channel} />}
-        {data.who && <SummaryRow label="Quién" value={data.who} />}
+        {data.channel === "Email" && data.email.trim() !== "" && (
+          <SummaryRow label="Email" value={data.email} />
+        )}
+        {data.who.trim() !== "" && <SummaryRow label="Quién" value={data.who} />}
+        {data.jobUrl.trim() !== "" && <SummaryRow label="Link del puesto" value={data.jobUrl} />}
       </div>
 
       <div className="space-y-2">

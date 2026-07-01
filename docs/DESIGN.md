@@ -31,6 +31,13 @@ Antes de crear cualquier componente o comportamiento de UI:
 - Usar el componente `Empty` de shadcn (`components/ui/empty.tsx`) en todos los vacíos
   (registro vacío, actualizaciones vacías, etc.), no texto suelto.
 
+## Wizard
+- **Todo campo que se rellena en el wizard se muestra en el review final** (`StepConfirm`).
+  Al agregar un input al wizard, agregarlo también al resumen del último paso (los opcionales
+  vacíos se omiten).
+- Requeridos condicionales: si un canal/opción exige un dato (ej. canal Email → email),
+  el paso no avanza hasta completarlo.
+
 ## Tabla del registro
 - Tabla plana, 7 columnas. Orden: `Código · Empresa · Rol · Canal · Fecha · Estado · Seguimiento`
   (Seguimiento siempre al final).
