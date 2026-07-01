@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { cn } from "@/lib/utils";
+import { CodeCell } from "@/ui/CodeCell";
 import { RowDetailDrawer, type DetailTab } from "@/ui/detail/RowDetailDrawer";
 import { SeguimientoCell } from "@/ui/detail/SeguimientoCell";
 import { StatusToggle } from "@/ui/StatusToggle";
@@ -111,7 +112,9 @@ export function RegistryTable({ rows, loading = false, onUpdate, emptyMessage }:
                   onClick={() => openDetail(row.code, defaultTabFor(row))}
                   className="cursor-pointer"
                 >
-                  <TableCell className="truncate font-mono text-xs">{row.code}</TableCell>
+                  <TableCell className="truncate">
+                    <CodeCell code={row.code} />
+                  </TableCell>
                   <TableCell className="truncate font-medium">{row.company}</TableCell>
                   <TableCell className="truncate" title={row.role}>
                     {row.role}

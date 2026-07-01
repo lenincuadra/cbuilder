@@ -157,44 +157,55 @@ export function UpdatesTab({ updates, onSave }: UpdatesTabProps) {
           </EmptyContent>
         </Empty>
       ) : (
-        <div className="flex flex-col gap-2">
-          {ordered.map((update, index) =>
-            editing === index ? (
-              <div key={`edit-${index}`}>{form()}</div>
-            ) : (
-              <Item
-                key={`${update.at}-${index}`}
-                variant="outline"
-                size="sm"
-                role="button"
-                tabIndex={0}
-                onClick={() => startEdit(index)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    startEdit(index);
-                  }
-                }}
-                className="cursor-pointer"
-              >
-                <ItemContent className="gap-1.5">
-                  <div className="flex items-start gap-2">
-                    <p className="flex-1 text-sm whitespace-pre-wrap">{update.message}</p>
-                    {update.flag && (
-                      <span className="text-sm leading-none" aria-label="Marcado">
-                        🚩
-                      </span>
-                    )}
-                  </div>
-                  <Badge variant="outline" className="w-fit gap-1 font-normal">
-                    <Calendar className="size-3" />
-                    {formatWhen(update.at)}
-                  </Badge>
-                </ItemContent>
-              </Item>
-            ),
-          )}
-        </div>
+        <ol className="flex flex-col">
+          {ordered.map((update, index) => {
+            const last = index === ordered.length - 1;
+            return (
+              <li key={`${update.at}-${index}`} className="flex gap-3">
+                {/* Timeline gutter: dot + connector line. */}
+                <div className="flex flex-col items-center pt-2">
+                  <span className="size-2.5 shrink-0 rounded-full bg-primary ring-2 ring-background" />
+                  {!last && <span className="w-px flex-1 bg-border" />}
+                </div>
+                <div className={`min-w-0 flex-1 ${last ? "" : "pb-3"}`}>
+                  {editing === index ? (
+                    form()
+                  ) : (
+                    <Item
+                      variant="outline"
+                      size="sm"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => startEdit(index)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          startEdit(index);
+                        }
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <ItemContent className="gap-1.5">
+                        <div className="flex items-start gap-2">
+                          <p className="flex-1 text-sm whitespace-pre-wrap">{update.message}</p>
+                          {update.flag && (
+                            <span className="text-sm leading-none" aria-label="Marcado">
+                              🚩
+                            </span>
+                          )}
+                        </div>
+                        <Badge variant="outline" className="w-fit gap-1 font-normal">
+                          <Calendar className="size-3" />
+                          {formatWhen(update.at)}
+                        </Badge>
+                      </ItemContent>
+                    </Item>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
       )}
 
       {editing === -1 ? (

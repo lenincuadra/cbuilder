@@ -36,7 +36,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-1.5 text-sm">
       <span className="shrink-0 text-muted-foreground">{label}</span>
-      <span className="text-right">{children}</span>
+      <span className="min-w-0 text-right">{children}</span>
     </div>
   );
 }
@@ -114,32 +114,32 @@ export function RowDetailDrawer({
         {row && (
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">
             <div className="rounded-lg border px-3 py-1">
+              {/* Only fields with a value are shown. */}
               <Field label="Rol">{row.role}</Field>
-              <Field label="Canal">{row.channel ?? "—"}</Field>
+              <Field label="Fecha">
+                <span className="tabular-nums">{row.date}</span>
+              </Field>
+              {row.channel && <Field label="Canal">{row.channel}</Field>}
               {row.email && (
                 <Field label="Email">
                   <span className="break-all">{row.email}</span>
                 </Field>
               )}
-              <Field label="Fecha">
-                <span className="tabular-nums">{row.date}</span>
-              </Field>
-              <Field label="Quién">{row.who ?? "—"}</Field>
-              <Field label="Idioma">{row.language ?? "—"}</Field>
-              <Field label="Link del puesto">
-                {row.jobUrl ? (
+              {row.who && <Field label="Quién">{row.who}</Field>}
+              {row.language && <Field label="Idioma">{row.language}</Field>}
+              {row.jobUrl && (
+                <Field label="Link del puesto">
                   <a
                     href={row.jobUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary underline underline-offset-2"
+                    title={row.jobUrl}
+                    className="block max-w-full truncate text-primary underline underline-offset-2"
                   >
-                    Ver puesto
+                    {row.jobUrl}
                   </a>
-                ) : (
-                  "—"
-                )}
-              </Field>
+                </Field>
+              )}
             </div>
 
             <Separator />
