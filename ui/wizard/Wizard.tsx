@@ -11,12 +11,12 @@ import { DEFAULT_ROLE } from "@/core/registry/types";
 import { generateCode } from "@/core/tracking";
 import { StepCompany } from "./StepCompany";
 import { StepConfirm } from "./StepConfirm";
-import { StepLanguageDate } from "./StepLanguageDate";
+import { StepLanguage } from "./StepLanguage";
 import { StepOptional } from "./StepOptional";
 import { emailRequirementMet, type WizardData } from "./types";
 
 const TOTAL_STEPS = 4;
-const STEP_TITLES = ["Empresa", "Idioma y fecha", "Opcionales", "Confirmar"];
+const STEP_TITLES = ["Empresa y fecha", "Opcionales", "Idioma", "Confirmar"];
 
 function initialData(): WizardData {
   return {
@@ -49,7 +49,7 @@ export function Wizard({ existingCodes, generating, onGenerate }: WizardProps) {
 
   const companyValid = data.company.trim() !== "";
   const canAdvance =
-    step === 1 ? companyValid : step === 3 ? emailRequirementMet(data) : true;
+    step === 1 ? companyValid : step === 2 ? emailRequirementMet(data) : true;
 
   function goNext() {
     if (step < 3) {
@@ -107,8 +107,8 @@ export function Wizard({ existingCodes, generating, onGenerate }: WizardProps) {
 
       <div className="min-h-[260px]">
         {step === 1 && <StepCompany data={data} set={set} />}
-        {step === 2 && <StepLanguageDate data={data} set={set} />}
-        {step === 3 && <StepOptional data={data} set={set} />}
+        {step === 2 && <StepOptional data={data} set={set} />}
+        {step === 3 && <StepLanguage data={data} set={set} />}
         {step === 4 && previewCode && <StepConfirm data={data} previewCode={previewCode} />}
       </div>
 
