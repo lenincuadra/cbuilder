@@ -113,18 +113,19 @@ export default function Home() {
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
         {/* Registro: protagonista, ancho, con scroll horizontal propio. */}
         <section className="min-w-0 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <SegmentedControl
-              aria-label="Archivadas o no"
-              value={view}
-              onChange={setView}
-              options={viewOptions}
-            />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {/* Estado a la izquierda; Vigentes/Archivado a la derecha. */}
             <SegmentedControl
               aria-label="Filtrar por estado"
               value={statusFilter}
               onChange={setStatusFilter}
               options={statusOptions}
+            />
+            <SegmentedControl
+              aria-label="Archivadas o no"
+              value={view}
+              onChange={setView}
+              options={viewOptions}
             />
           </div>
           <RegistryTable
