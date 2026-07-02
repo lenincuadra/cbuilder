@@ -142,22 +142,22 @@ export function RowEditForm({ row, onSave, onCancel }: RowEditFormProps) {
 
       <div className="space-y-1.5">
         <Label>Idioma</Label>
-        <InputGroup>
-          <InputGroupInput
-            value={languageLabel(row.language)}
-            readOnly
-            disabled
-            aria-label="Idioma"
-          />
-          <InputGroupAddon align="inline-end">
-            <Tooltip>
-              <TooltipTrigger tabIndex={-1} className="cursor-default text-muted-foreground">
-                <Lock className="size-4" />
-              </TooltipTrigger>
-              <TooltipContent>No editable · el CV ya está generado</TooltipContent>
-            </Tooltip>
-          </InputGroupAddon>
-        </InputGroup>
+        <Tooltip>
+          <TooltipTrigger render={<div className="cursor-default" />}>
+            <InputGroup>
+              <InputGroupInput
+                value={languageLabel(row.language)}
+                readOnly
+                disabled
+                aria-label="Idioma"
+              />
+              <InputGroupAddon align="inline-end">
+                <Lock />
+              </InputGroupAddon>
+            </InputGroup>
+          </TooltipTrigger>
+          <TooltipContent>No editable · el CV ya está generado</TooltipContent>
+        </Tooltip>
       </div>
 
       <div className="space-y-1.5">
