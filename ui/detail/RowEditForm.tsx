@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -20,9 +23,8 @@ import {
   type EditableFields,
   type RegistryRow,
 } from "@/core/registry/types";
-import type { LanguageChoice } from "@/core/types";
+import { languageLabel } from "@/core/types";
 import { DatePicker } from "@/ui/wizard/DatePicker";
-import { LanguageToggle } from "@/ui/wizard/LanguageToggle";
 import { CHANNEL_OMIT } from "@/ui/wizard/types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -51,7 +53,6 @@ export function RowEditForm({ row, onSave, onCancel }: RowEditFormProps) {
   const [date, setDate] = useState<Date>(parseDate(row.date));
   const [who, setWho] = useState(row.who ?? "");
   const [jobUrl, setJobUrl] = useState(row.jobUrl ?? "");
-  const [language, setLanguage] = useState<LanguageChoice>(row.language ?? "EN");
   const [saving, setSaving] = useState(false);
 
   const companyOk = company.trim() !== "";
@@ -70,7 +71,7 @@ export function RowEditForm({ row, onSave, onCancel }: RowEditFormProps) {
         date: toISODate(date),
         who: cleaned(who),
         jobUrl: cleaned(jobUrl),
-        language,
+        // language is intentionally not editable: the CV is already generated.
       });
     } finally {
       setSaving(false);
@@ -141,7 +142,22 @@ export function RowEditForm({ row, onSave, onCancel }: RowEditFormProps) {
 
       <div className="space-y-1.5">
         <Label>Idioma</Label>
-        <LanguageToggle value={language} onChange={setLanguage} />
+        <InputGroup>
+          <InputGroupInput
+            value={languageLabel(row.language)}
+            readOnly
+            disabled
+            aria-label="Idioma"
+          />
+          <InputGroupAddon align="inline-end">
+            <Tooltip>
+              <TooltipTrigger tabIndex={-1} className="cursor-default text-muted-foreground">
+                <Lock className="size-4" />
+              </TooltipTrigger>
+              <TooltipContent>No editable · el CV ya está generado</TooltipContent>
+            </Tooltip>
+          </InputGroupAddon>
+        </InputGroup>
       </div>
 
       <div className="space-y-1.5">

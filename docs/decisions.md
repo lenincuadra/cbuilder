@@ -11,10 +11,11 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 ---
 
 ## Filas editables post-creación (todo menos el código)
-Desde el panel de detalle se puede editar **todo** de una fila después de creada
-(empresa, rol, canal, email, fecha, quién, idioma, link, + estado/notas/actualizaciones/
-archivado que ya lo eran). **Excepción: el `código`** — es la identidad y ya está metido
-en el CV enviado y en los links P/L, así que queda fijo. Editar **solo actualiza el
+Desde el panel de detalle se puede editar casi todo de una fila después de creada
+(empresa, rol, canal, email, fecha, quién, link, + estado/notas/actualizaciones/archivado
+que ya lo eran). **No editables: el `código`** (identidad, ya está en el CV enviado y en
+los links P/L) y el **`idioma`** (el CV ya se generó en ese idioma; cambiarlo no haría nada
+y sería engañoso) — el idioma se muestra read-only en el form. Editar **solo actualiza el
 registro** (no regenera el `.docx` ya generado). `EditableFields` = todo `RegistryRow`
 menos `code`/`createdAt`. Form en `ui/detail/RowEditForm.tsx`.
 

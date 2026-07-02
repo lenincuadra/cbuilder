@@ -14,6 +14,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
+import { languageLabel } from "@/core/types";
 import { StatusToggle } from "@/ui/StatusToggle";
 import { useIsMobile } from "@/ui/useIsMobile";
 import { NotesTab } from "./NotesTab";
@@ -151,7 +152,7 @@ export function RowDetailDrawer({
                     </Field>
                   )}
                   {row.who && <Field label="Quién">{row.who}</Field>}
-                  {row.language && <Field label="Idioma">{row.language}</Field>}
+                  {row.language && <Field label="Idioma">{languageLabel(row.language)}</Field>}
                   {row.jobUrl && (
                     <Field label="Link del puesto">
                       <a

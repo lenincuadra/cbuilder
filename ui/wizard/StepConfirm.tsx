@@ -3,6 +3,7 @@
 import { FolderIcon } from "lucide-react";
 
 import { folderName } from "@/core/folderName";
+import { languageLabel } from "@/core/types";
 import { CV_FILENAME } from "@/core/zip";
 import { languagesFor, type WizardData } from "./types";
 
@@ -30,7 +31,7 @@ export function StepConfirm({ data, previewCode }: StepConfirmProps) {
     <div className="space-y-4">
       <div className="space-y-1.5 rounded-lg border p-3">
         <SummaryRow label="Empresa" value={data.company} />
-        <SummaryRow label="Idioma" value={data.language} />
+        <SummaryRow label="Idioma" value={languageLabel(data.language)} />
         <SummaryRow label="Fecha" value={data.date.toLocaleDateString("es-AR")} />
         <SummaryRow label="Rol" value={data.role} />
         {data.channel && <SummaryRow label="Canal" value={data.channel} />}

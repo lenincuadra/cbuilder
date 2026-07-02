@@ -31,6 +31,13 @@ Antes de crear cualquier componente o comportamiento de UI:
 - Usar el componente `Empty` de shadcn (`components/ui/empty.tsx`) en todos los vacíos
   (registro vacío, actualizaciones vacías, etc.), no texto suelto.
 
+## Inputs
+- Usar `InputGroup` (`components/ui/input-group.tsx`) para inputs con addon (íconos,
+  botones). Campos **read-only/disabled** en un form: `InputGroup` con el valor + un
+  `Lock` en `InputGroupAddon align="inline-end"`, y el "por qué no editable" como
+  **tooltip** (no texto inline). Ref: `ui/detail/RowEditForm.tsx` (idioma).
+- Mostrar el idioma con `languageLabel()` — "Ambos" se muestra como "EN · ES", no la palabra.
+
 ## Wizard
 - **Todo campo que se rellena en el wizard se muestra en el review final** (`StepConfirm`).
   Al agregar un input al wizard, agregarlo también al resumen del último paso (los opcionales
