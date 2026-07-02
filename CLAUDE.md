@@ -26,7 +26,7 @@ App web que genera el CV de Lenin Cuadra con tracking, fase 2 (app real).
 ## Diseño / DS
 - Convenciones de UI en `docs/DESIGN.md` (drawers responsive, Markdown, tabla del registro, empty states). Leelo antes de construir/ajustar componentes de UI.
 - **Regla de componentes**: antes de crear UI, (1) usar el componente del DS si existe (`components/ui/`, instalar con `npx shadcn add` el que falte); (2) si no existe el específico, preguntar por un suplente del DS; (3) recién ahí proponer custom y pedir confirmación. Nunca reimplementar a mano algo que el DS ya tiene (ej. Switch).
-- Reglas clave: drawers = right en desktop / bottom en mobile; tabla `table-fixed` sin scroll horizontal salvo <640px (columnas truncan); Activas/Archivado comparten exactamente la misma tabla.
+- Reglas clave: drawers = right en desktop / bottom en mobile; tabla `table-fixed` sin scroll horizontal salvo <640px (columnas truncan); todas las vistas comparten la misma tabla. Filtros: archivado (Vigentes/Archivado) + estado (Todos/Activo/Rechazado), ortogonales. "Vigentes" (no archivadas) ≠ estado "Activo".
 
 ## Stack
 Next.js, Tailwind CSS, shadcn/ui. Deploy a Vercel.

@@ -52,9 +52,13 @@ Antes de crear cualquier componente o comportamiento de UI:
   columna; las celdas largas (Empresa, Rol, Canal) **truncan**. `Rol` va angosto (~21%).
   Solo **por debajo de 640px (sm)** se reactiva el scroll horizontal (`min-w`) para que
   las columnas no queden ilegibles. (Reemplaza la regla vieja "si no entran, scroll".)
-- **Activas y Archivado comparten exactamente la misma tabla**: misma estructura, columnas
-  y comportamiento siempre. Lo único que cambia es qué filas se muestran (filtradas por
-  `archived` en la página). No duplicar componentes ni variar columnas entre vistas.
+- **Filtros (dos dimensiones ortogonales, arriba de la tabla, con `SegmentedControl`)**:
+  (1) archivado — **Vigentes** (no archivadas) / **Archivado**; (2) estado — Todos / Activo /
+  Rechazado. Se combinan. Ojo con la semántica: "Vigentes" ≠ estado "Activo" (por eso no se
+  llama "Activas").
+- **Todas las vistas comparten exactamente la misma tabla**: misma estructura, columnas y
+  comportamiento; lo único que cambia es qué filas se muestran (filtradas por `archived` +
+  `status` en la página). No duplicar componentes ni variar columnas entre vistas.
 - **Fila clickeable**: abre el panel de detalle en el **tab por defecto según contenido**
   (regla genérica): si solo hay actualizaciones → Actualizaciones; si no (hay notas, o
   ambas, o ninguna) → Notas. Click en un ícono de Seguimiento abre su tab explícito

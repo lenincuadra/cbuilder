@@ -43,10 +43,13 @@ solo por debajo de 640px (sm) se reactiva el scroll. **Reemplaza** la regla orig
 ("si no entran, scroll horizontal; nunca ocultar/reducir columnas"). Razón: el scroll
 lateral permanente molestaba; truncar + tooltip da mejor lectura en desktop.
 
-## Activas y Archivado comparten la misma tabla
-Una sola `RegistryTable`; la página filtra por `archived` y pasa las filas. Estructura,
-columnas y comportamiento 100% idénticos entre vistas. Razón: evitar drift entre dos
-tablas y mantener consistencia.
+## Filtros: archivado + estado (ortogonales); "Vigentes" ≠ "Activo"
+Dos filtros arriba de la tabla que se combinan: (1) archivado — **Vigentes** (no archivadas)
+/ Archivado; (2) estado — Todos / Activo / Rechazado. Son dimensiones distintas: una fila
+Activa o Rechazada puede estar archivada o no. Se renombró la vista no-archivada de
+"Búsquedas activas" a **"Vigentes"** porque "Activas" chocaba con el estado "Activo". Una
+sola `RegistryTable` para todas las vistas (la página filtra por `archived` + `status` y le
+pasa las filas) — misma estructura/columnas siempre, sin drift.
 
 ## Archivar es un flag independiente del estado
 `archived: boolean` separado de `status` (Activo/Rechazado). Se puede archivar sin importar
