@@ -19,6 +19,12 @@ y sería engañoso) — el idioma se muestra read-only en el form. Editar **solo
 registro** (no regenera el `.docx` ya generado). `EditableFields` = todo `RegistryRow`
 menos `code`/`createdAt`. Form en `ui/detail/RowEditForm.tsx`.
 
+## Links de tracking en el panel: texto plano, no clickeables
+El panel muestra los 2 links trackeables de la fila (portfolio `?ref=<code>P`, LinkedIn
+`go.html?ref=<code>L&dest=linkedin`) como **texto plano (no `<a>`)** + botón de copiar.
+Razón: clickearlos dispararía el tracker con una visita/mail falsos (auto-contaminación).
+Helper `trackedLinks()` en `core/links.ts`; componente `ui/detail/TrackedLinks.tsx`.
+
 ## Identificador de link en el `ref` del CV (P / L)
 Los 2 links trackeables del CV llevan, además del código, un identificador de link
 apendeado: portfolio → `ref=<código>P`, LinkedIn → `ref=<código>L`. Así un click se

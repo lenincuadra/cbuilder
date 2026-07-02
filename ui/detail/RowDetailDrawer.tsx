@@ -28,6 +28,7 @@ import { StatusToggle } from "@/ui/StatusToggle";
 import { useIsMobile } from "@/ui/useIsMobile";
 import { NotesTab } from "./NotesTab";
 import { RowEditForm } from "./RowEditForm";
+import { TrackedLinks } from "./TrackedLinks";
 import { UpdatesTab } from "./UpdatesTab";
 
 /** Which Seguimiento tab the panel opens on. */
@@ -219,6 +220,7 @@ export function RowDetailDrawer({
                     </Field>
                   )}
                 </div>
+                <TrackedLinks code={row.code} />
               </div>
             )}
 
