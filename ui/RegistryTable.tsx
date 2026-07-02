@@ -62,11 +62,18 @@ export function RegistryTable({ rows, loading = false, onUpdate, emptyMessage }:
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailTab, setDetailTab] = useState<DetailTab>("notas");
   const detailRow = detailCode ? (rows.find((row) => row.code === detailCode) ?? null) : null;
+  const detailIndex = detailCode ? rows.findIndex((row) => row.code === detailCode) : -1;
 
   function openDetail(code: string, tab: DetailTab = "notas") {
     setDetailCode(code);
     setDetailTab(tab);
     setDetailOpen(true);
+  }
+
+  // Navigate to another row (by table order) without closing the panel.
+  function goToRow(index: number) {
+    const target = rows[index];
+    if (target) openDetail(target.code, defaultTabFor(target));
   }
 
   return (
@@ -149,6 +156,12 @@ export function RegistryTable({ rows, loading = false, onUpdate, emptyMessage }:
         onOpenChange={setDetailOpen}
         onUpdate={onUpdate}
         initialTab={detailTab}
+        position={detailIndex + 1}
+        total={rows.length}
+        hasPrev={detailIndex > 0}
+        hasNext={detailIndex >= 0 && detailIndex < rows.length - 1}
+        onPrev={() => goToRow(detailIndex - 1)}
+        onNext={() => goToRow(detailIndex + 1)}
       />
     </>
   );

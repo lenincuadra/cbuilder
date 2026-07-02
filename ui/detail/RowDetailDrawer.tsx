@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Archive, ArchiveRestore, FileChartLine, Pencil, StickyNote, X } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  ChevronLeft,
+  ChevronRight,
+  FileChartLine,
+  Pencil,
+  StickyNote,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +41,14 @@ export interface RowDetailDrawerProps {
   onUpdate: (code: string, fields: EditableFields) => void | Promise<void>;
   /** Tab to show when the panel opens. */
   initialTab?: DetailTab;
+  // --- navigation between table rows ---
+  /** 1-based position of the open row in the table. */
+  position?: number;
+  total?: number;
+  hasPrev?: boolean;
+  hasNext?: boolean;
+  onPrev?: () => void;
+  onNext?: () => void;
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -53,6 +70,12 @@ export function RowDetailDrawer({
   onOpenChange,
   onUpdate,
   initialTab = "notas",
+  position,
+  total,
+  hasPrev,
+  hasNext,
+  onPrev,
+  onNext,
 }: RowDetailDrawerProps) {
   const isMobile = useIsMobile();
   const updates = row?.updates ?? [];
@@ -73,6 +96,35 @@ export function RowDetailDrawer({
     <Drawer direction={isMobile ? "bottom" : "right"} open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
         <DrawerHeader className="relative pr-12">
+          {(onPrev || onNext) && (
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                onClick={onPrev}
+                disabled={!hasPrev}
+                title="Fila anterior"
+                aria-label="Fila anterior"
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="text-xs tabular-nums">
+                {position} / {total}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                onClick={onNext}
+                disabled={!hasNext}
+                title="Fila siguiente"
+                aria-label="Fila siguiente"
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          )}
           <DrawerTitle>{row?.company}</DrawerTitle>
           <DrawerDescription className="font-mono text-xs">{row?.code}</DrawerDescription>
           <Button
