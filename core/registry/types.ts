@@ -61,10 +61,11 @@ export interface RegistryRow {
   archived?: boolean;
 }
 
-/** Fields editable from the detail panel after creation. */
-export type EditableFields = Partial<
-  Pick<RegistryRow, "notes" | "status" | "updates" | "archived">
->;
+/**
+ * Fields editable from the detail panel after creation — everything except the
+ * tracking code (identity, already baked into the sent CV) and createdAt.
+ */
+export type EditableFields = Partial<Omit<RegistryRow, "code" | "createdAt">>;
 
 /**
  * Storage abstraction for the registry. Local implementation now,

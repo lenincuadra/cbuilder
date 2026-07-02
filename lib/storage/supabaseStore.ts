@@ -69,6 +69,14 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
 
 export function editableToDb(fields: EditableFields): Partial<RegistryRowDb> {
   const out: Partial<RegistryRowDb> = {};
+  if ("company" in fields) out.company = fields.company as string;
+  if ("role" in fields) out.role = fields.role as string;
+  if ("channel" in fields) out.channel = fields.channel ?? null;
+  if ("email" in fields) out.email = fields.email ?? null;
+  if ("date" in fields) out.date = fields.date as string;
+  if ("who" in fields) out.who = fields.who ?? null;
+  if ("jobUrl" in fields) out.job_url = fields.jobUrl ?? null;
+  if ("language" in fields) out.language = fields.language ?? null;
   if ("notes" in fields) out.notes = fields.notes ?? null;
   if ("status" in fields) out.status = fields.status as string;
   if ("updates" in fields) out.updates = fields.updates ?? null;

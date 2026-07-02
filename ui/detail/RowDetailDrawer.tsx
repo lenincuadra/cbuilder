@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Archive, ArchiveRestore, FileChartLine, StickyNote, X } from "lucide-react";
+import { Archive, ArchiveRestore, FileChartLine, Pencil, StickyNote, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,7 @@ import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { StatusToggle } from "@/ui/StatusToggle";
 import { useIsMobile } from "@/ui/useIsMobile";
 import { NotesTab } from "./NotesTab";
+import { RowEditForm } from "./RowEditForm";
 import { UpdatesTab } from "./UpdatesTab";
 
 /** Which Seguimiento tab the panel opens on. */
@@ -55,11 +56,17 @@ export function RowDetailDrawer({
   const isMobile = useIsMobile();
   const updates = row?.updates ?? [];
   const [tab, setTab] = useState<DetailTab>(initialTab);
+  const [editing, setEditing] = useState(false);
 
   // Honor the requested tab each time the panel opens.
   useEffect(() => {
     if (open) setTab(initialTab);
   }, [open, initialTab]);
+
+  // Leave edit mode when the panel opens or switches rows.
+  useEffect(() => {
+    setEditing(false);
+  }, [open, row?.code]);
 
   return (
     <Drawer direction={isMobile ? "bottom" : "right"} open={open} onOpenChange={onOpenChange}>
@@ -113,34 +120,54 @@ export function RowDetailDrawer({
 
         {row && (
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">
-            <div className="rounded-lg border px-3 py-1">
-              {/* Only fields with a value are shown. */}
-              <Field label="Rol">{row.role}</Field>
-              <Field label="Fecha">
-                <span className="tabular-nums">{row.date}</span>
-              </Field>
-              {row.channel && <Field label="Canal">{row.channel}</Field>}
-              {row.email && (
-                <Field label="Email">
-                  <span className="break-all">{row.email}</span>
-                </Field>
-              )}
-              {row.who && <Field label="Quién">{row.who}</Field>}
-              {row.language && <Field label="Idioma">{row.language}</Field>}
-              {row.jobUrl && (
-                <Field label="Link del puesto">
-                  <a
-                    href={row.jobUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={row.jobUrl}
-                    className="block max-w-full truncate text-primary underline underline-offset-2"
-                  >
-                    {row.jobUrl}
-                  </a>
-                </Field>
-              )}
-            </div>
+            {editing ? (
+              <RowEditForm
+                row={row}
+                onCancel={() => setEditing(false)}
+                onSave={async (fields) => {
+                  await onUpdate(row.code, fields);
+                  setEditing(false);
+                }}
+              />
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">Datos</span>
+                  <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+                    <Pencil className="size-4" />
+                    Editar
+                  </Button>
+                </div>
+                <div className="rounded-lg border px-3 py-1">
+                  {/* Only fields with a value are shown. */}
+                  <Field label="Rol">{row.role}</Field>
+                  <Field label="Fecha">
+                    <span className="tabular-nums">{row.date}</span>
+                  </Field>
+                  {row.channel && <Field label="Canal">{row.channel}</Field>}
+                  {row.email && (
+                    <Field label="Email">
+                      <span className="break-all">{row.email}</span>
+                    </Field>
+                  )}
+                  {row.who && <Field label="Quién">{row.who}</Field>}
+                  {row.language && <Field label="Idioma">{row.language}</Field>}
+                  {row.jobUrl && (
+                    <Field label="Link del puesto">
+                      <a
+                        href={row.jobUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={row.jobUrl}
+                        className="block max-w-full truncate text-primary underline underline-offset-2"
+                      >
+                        {row.jobUrl}
+                      </a>
+                    </Field>
+                  )}
+                </div>
+              </div>
+            )}
 
             <Separator />
 

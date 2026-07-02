@@ -10,6 +10,14 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Filas editables post-creación (todo menos el código)
+Desde el panel de detalle se puede editar **todo** de una fila después de creada
+(empresa, rol, canal, email, fecha, quién, idioma, link, + estado/notas/actualizaciones/
+archivado que ya lo eran). **Excepción: el `código`** — es la identidad y ya está metido
+en el CV enviado y en los links P/L, así que queda fijo. Editar **solo actualiza el
+registro** (no regenera el `.docx` ya generado). `EditableFields` = todo `RegistryRow`
+menos `code`/`createdAt`. Form en `ui/detail/RowEditForm.tsx`.
+
 ## Identificador de link en el `ref` del CV (P / L)
 Los 2 links trackeables del CV llevan, además del código, un identificador de link
 apendeado: portfolio → `ref=<código>P`, LinkedIn → `ref=<código>L`. Así un click se
