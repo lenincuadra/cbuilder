@@ -10,6 +10,21 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Select del drawer: portalear el popup DENTRO del drawer
+El `Select` (base-ui) de canal en el form de edición estaba roto adentro del `Drawer`
+(vaul): el popup se portalea a `body`, vaul lo dejaba con `pointer-events: none` y su foco
+lo atrapaba de vuelta el focus-trap del drawer, así que el menú no se abría / no se podía
+seleccionar. Fix: el popup se portalea **dentro del nodo del drawer** (`container` = ref del
+`DrawerContent`, ver `drawerNode` en `RowDetailDrawer` → `RowEditForm` → `SelectContent`),
+así queda en el mismo scope de pointer-events/stacking/foco. Ojo: adentro del drawer, que
+tiene `will-change: transform` (bloque contenedor), el modo `alignItemWithTrigger` de
+base-ui posiciona mal (popup fuera de pantalla) → se usa `alignItemWithTrigger={false}`
+(posiciona debajo del trigger vía floating-ui, que sí es transform-aware). Además
+`modal={false}` en el `Select` para no pelear el scroll-lock/foco con el drawer, y en el
+componente `select.tsx` se dejan `pointer-events-auto` + `z-[60]` como refuerzo (no-op
+fuera del drawer). Contraste con el `AlertDialog`, que va al revés: se portalea a `body`
+para quedar centrado en viewport (ver esa entrada) porque no está anclado a un trigger.
+
 ## File store: acceso serializado + escritura atómica (fix de pérdida de datos)
 `FileRegistryStore` hacía read-modify-write sin lock y `writeFile` trunca-y-escribe. Con
 requests concurrentes (toggles rápidos, autosave de notas + un delete, un write stale en

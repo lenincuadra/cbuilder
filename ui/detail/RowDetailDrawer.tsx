@@ -97,6 +97,10 @@ export function RowDetailDrawer({
   const [tab, setTab] = useState<DetailTab>(initialTab);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // The edit form's Select portals its popup into this node (the drawer) so it stays inside
+  // the drawer's pointer-events / stacking / focus scope — a base-ui popup portaled to <body>
+  // gets vaul's `pointer-events: none` and its focus gets trapped back, breaking selection.
+  const [drawerNode, setDrawerNode] = useState<HTMLDivElement | null>(null);
 
   // The confirm dialog renders at its default (viewport-centered) position, so it portals
   // to <body> — outside the drawer. vaul would read a click on it as an outside click and
@@ -128,6 +132,7 @@ export function RowDetailDrawer({
     <>
     <Drawer direction={isMobile ? "bottom" : "right"} open={open} onOpenChange={onOpenChange}>
       <DrawerContent
+        ref={setDrawerNode}
         onPointerDownOutside={keepDrawerOnDialogInteraction}
         onInteractOutside={keepDrawerOnDialogInteraction}
         onEscapeKeyDown={(event) => {
@@ -226,6 +231,7 @@ export function RowDetailDrawer({
             {editing ? (
               <RowEditForm
                 row={row}
+                portalContainer={drawerNode}
                 onCancel={() => setEditing(false)}
                 onSave={async (fields) => {
                   await onUpdate(row.code, fields);

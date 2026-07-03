@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { cn } from "@/lib/utils";
+import { ChannelIcon } from "@/ui/ChannelIcon";
 import { CodeCell } from "@/ui/CodeCell";
 import { RowDetailDrawer, type DetailTab } from "@/ui/detail/RowDetailDrawer";
 import { SeguimientoCell } from "@/ui/detail/SeguimientoCell";
@@ -27,17 +28,18 @@ import { StatusToggle } from "@/ui/StatusToggle";
 
 /**
  * Flat table, fixed layout: columns truncate to fit the container, so there is
- * no horizontal scroll at normal widths. Seguimiento is always last. Rol is kept
- * narrow (~21%). Below 640px a min-width re-enables scroll so columns stay legible.
+ * no horizontal scroll at normal widths. Seguimiento is always last. Canal is
+ * icon-only so it stays narrow; the freed width goes to Empresa/Rol/Seguimiento.
+ * Below 640px a min-width re-enables scroll so columns stay legible.
  */
 const COLUMNS = [
   { label: "Código", width: "w-[9%]" },
-  { label: "Empresa", width: "w-[15%]" },
-  { label: "Rol", width: "w-[21%]" },
-  { label: "Canal", width: "w-[17%]" },
+  { label: "Empresa", width: "w-[18%]" },
+  { label: "Rol", width: "w-[24%]" },
+  { label: "Canal", width: "w-[8%]" },
   { label: "Fecha", width: "w-[12%]" },
   { label: "Estado", width: "w-[11%]" },
-  { label: "Seguimiento", width: "w-[15%]" },
+  { label: "Seguimiento", width: "w-[18%]" },
 ] as const;
 
 export interface RegistryTableProps {
@@ -133,8 +135,18 @@ export function RegistryTable({
                   <TableCell className="truncate" title={row.role}>
                     {row.role}
                   </TableCell>
-                  <TableCell className="truncate text-muted-foreground">
-                    {row.channel ?? "—"}
+                  <TableCell className="text-muted-foreground">
+                    {row.channel ? (
+                      <span
+                        className="inline-flex"
+                        title={row.channel}
+                        aria-label={row.channel}
+                      >
+                        <ChannelIcon channel={row.channel} />
+                      </span>
+                    ) : (
+                      "—"
+                    )}
                   </TableCell>
                   <TableCell className="truncate tabular-nums">{row.date}</TableCell>
                   <TableCell>

@@ -42,10 +42,12 @@ export interface RowEditFormProps {
   row: RegistryRow;
   onSave: (fields: EditableFields) => void | Promise<void>;
   onCancel: () => void;
+  /** Node the Select popup portals into (the drawer) so it stays in its focus/pe scope. */
+  portalContainer?: HTMLElement | null;
 }
 
 /** Edit a row's metadata (everything except the tracking code). Registry only. */
-export function RowEditForm({ row, onSave, onCancel }: RowEditFormProps) {
+export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditFormProps) {
   const [company, setCompany] = useState(row.company);
   const [role, setRole] = useState(row.role);
   const [channel, setChannel] = useState<Channel | "">(row.channel ?? "");
@@ -99,6 +101,10 @@ export function RowEditForm({ row, onSave, onCancel }: RowEditFormProps) {
       <div className="space-y-1.5">
         <Label htmlFor="edit-channel">Canal</Label>
         <Select
+          // Non-modal so base-ui's focus management doesn't fight the vaul drawer's focus
+          // trap (which was closing the popup the instant it opened). See the pointer-events
+          // / z-index fix in components/ui/select.tsx for the rest of the drawer interplay.
+          modal={false}
           value={channel === "" ? CHANNEL_OMIT : channel}
           onValueChange={(value) =>
             setChannel(value == null || value === CHANNEL_OMIT ? "" : (value as Channel))
@@ -109,7 +115,7 @@ export function RowEditForm({ row, onSave, onCancel }: RowEditFormProps) {
               {(value: unknown) => (value && value !== CHANNEL_OMIT ? (value as string) : "Omitir")}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent container={portalContainer} alignItemWithTrigger={false}>
             <SelectItem value={CHANNEL_OMIT}>Omitir</SelectItem>
             {CHANNELS.map((option) => (
               <SelectItem key={option} value={option}>
