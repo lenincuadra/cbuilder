@@ -61,6 +61,10 @@ export class LocalStorageRegistryStore implements RegistryStore {
     this.write(rows);
   }
 
+  async remove(code: string): Promise<void> {
+    this.write(this.read().filter((row) => row.code !== code));
+  }
+
   async existingCodes(): Promise<string[]> {
     return this.read().map((row) => row.code);
   }

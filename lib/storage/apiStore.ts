@@ -37,6 +37,11 @@ export class ApiRegistryStore implements RegistryStore {
     await ensureOk(response);
   }
 
+  async remove(code: string): Promise<void> {
+    const response = await fetch(`${BASE}/${encodeURIComponent(code)}`, { method: "DELETE" });
+    await ensureOk(response);
+  }
+
   async existingCodes(): Promise<string[]> {
     return (await this.list()).map((row) => row.code);
   }

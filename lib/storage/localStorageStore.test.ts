@@ -66,6 +66,21 @@ describe("LocalStorageRegistryStore", () => {
     );
   });
 
+  it("removes a row by code and leaves the rest", async () => {
+    const store = new LocalStorageRegistryStore(memoryStorage());
+    await store.add(row("0628a2"));
+    await store.add(row("0628b3"));
+    await store.remove("0628a2");
+    expect(await store.existingCodes()).toEqual(["0628b3"]);
+  });
+
+  it("removing a missing code is a no-op", async () => {
+    const store = new LocalStorageRegistryStore(memoryStorage());
+    await store.add(row("0628a2"));
+    await store.remove("nope12");
+    expect(await store.existingCodes()).toEqual(["0628a2"]);
+  });
+
   it("persists across store instances sharing the same storage", async () => {
     const storage = memoryStorage();
     await new LocalStorageRegistryStore(storage).add(row("0628a2"));

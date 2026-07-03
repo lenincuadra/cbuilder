@@ -10,6 +10,48 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## File store: acceso serializado + escritura atómica (fix de pérdida de datos)
+`FileRegistryStore` hacía read-modify-write sin lock y `writeFile` trunca-y-escribe. Con
+requests concurrentes (toggles rápidos, autosave de notas + un delete, un write stale en
+vuelo) dos operaciones leían el mismo snapshot y **el último write pisaba al otro (filas
+perdidas)**, o un read caía en medio de un write y agarraba JSON parcial → **archivo
+corrupto**. Esto explicó filas que desaparecían "solas" (varias archivadas se perdieron).
+Fix: (1) **cola serial** — cada op corre después de que la anterior termina, así el
+read-modify-write es atómico; (2) **escritura atómica** — se escribe a `registry.json.<pid>.tmp`
+y se hace `rename` (atómico en POSIX), así un lector nunca ve un archivo a medio escribir.
+Además `read()` **nunca** convierte un error de parseo en `[]` (eso borraría todo en el
+próximo write): ante archivo corrupto tira error. Test de concurrencia en
+`lib/storage/fileStore.test.ts`. `FileRegistryStore` ahora acepta el path por constructor
+(para testear con un archivo temporal); el singleton `fileStore` sigue usando `data/`.
+
+## Borrar fila con confirmación (AlertDialog, no undo)
+Cada fila se puede borrar de forma permanente desde el panel de detalle. El botón
+"Borrar" (destructivo) abre un `AlertDialog` que muestra qué se va a borrar (empresa,
+rol, código, fecha) y avisa que no se puede deshacer; recién al confirmar se borra y se
+cierra el panel. Razón: borrar es irreversible (el file store no versiona), así que el DS
+pide confirmación explícita para acciones destructivas. Se sumó `remove(code)` a la
+interfaz `RegistryStore` (todas las impls) + `DELETE /api/registry/[code]`. No hay
+papelera/undo por ahora: si se necesita, sería un `archived`-like o soft-delete.
+
+El botón de confirmar usa el **destructive solid** (`bg-destructive text-white`), no el
+destructive tenue del DS (`bg-destructive/10`), porque es una acción irreversible y tiene
+que leerse como peligrosa (ver shadcn destructive).
+
+**Detalle técnico (no "simplificar" sin leer esto):** el `AlertDialog` (base-ui) se abre
+arriba de un `Drawer` (vaul); son dos capas modales de librerías distintas que no se
+coordinan. El diálogo se portalea a `body` para quedar **centrado en el viewport** (su
+posición por defecto). Eso trae tres problemas que hay que atender:
+(1) vaul pone `body { pointer-events: none }` y solo re-habilita su subárbol → el diálogo
+en `body` hereda `pointer-events: none` y los clicks lo atraviesan. Fix: `pointer-events-auto`
+en overlay + content del `AlertDialog`. (2) el overlay del drawer es `z-50` y tapaba el
+diálogo. Fix: `z-[60]` en overlay + content. (3) clickear el diálogo cuenta como "outside
+click" y vaul cierra el drawer. Fix: en `DrawerContent`, `onPointerDownOutside`/
+`onInteractOutside` cancelan el dismiss **cuando el target del evento está dentro del
+`[data-slot="alert-dialog-*"]`** (chequeo por DOM target, sin estado de React — clave: la
+versión con `if (confirmDelete)` fallaba por *stale closure*, no porque vaul ignore el
+`preventDefault`). `onEscapeKeyDown` hace lo mismo si hay un alert-dialog montado. Así
+Cancelar vuelve al drawer y Borrar cierra vía `onOpenChange` explícito.
+
 ## Filas editables post-creación (todo menos el código)
 Desde el panel de detalle se puede editar casi todo de una fila después de creada
 (empresa, rol, canal, email, fecha, quién, link, + estado/notas/actualizaciones/archivado

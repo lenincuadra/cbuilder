@@ -110,6 +110,11 @@ export class SupabaseRegistryStore implements RegistryStore {
     if (error) throw new Error(`Supabase update failed: ${error.message}`);
   }
 
+  async remove(code: string): Promise<void> {
+    const { error } = await this.client.from(TABLE).delete().eq("code", code);
+    if (error) throw new Error(`Supabase remove failed: ${error.message}`);
+  }
+
   async existingCodes(): Promise<string[]> {
     const { data, error } = await this.client.from(TABLE).select("code");
     if (error) throw new Error(`Supabase existingCodes failed: ${error.message}`);

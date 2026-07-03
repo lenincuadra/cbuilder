@@ -9,9 +9,21 @@ import {
   FileChartLine,
   Pencil,
   StickyNote,
+  Trash2,
   X,
 } from "lucide-react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -40,6 +52,7 @@ export interface RowDetailDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdate: (code: string, fields: EditableFields) => void | Promise<void>;
+  onDelete: (code: string) => void | Promise<void>;
   /** Tab to show when the panel opens. */
   initialTab?: DetailTab;
   // --- navigation between table rows ---
@@ -70,6 +83,7 @@ export function RowDetailDrawer({
   open,
   onOpenChange,
   onUpdate,
+  onDelete,
   initialTab = "notas",
   position,
   total,
@@ -82,20 +96,45 @@ export function RowDetailDrawer({
   const updates = row?.updates ?? [];
   const [tab, setTab] = useState<DetailTab>(initialTab);
   const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // The confirm dialog renders at its default (viewport-centered) position, so it portals
+  // to <body> — outside the drawer. vaul would read a click on it as an outside click and
+  // dismiss the drawer. Keep the drawer open by inspecting the event's DOM target (no React
+  // state, so no stale-closure races): if the interaction is inside the alert dialog, cancel
+  // the dismissal. Explicit closes (X, Archivar, confirm) still call onOpenChange directly.
+  const keepDrawerOnDialogInteraction = (event: { detail?: { originalEvent?: Event }; target?: EventTarget | null; preventDefault: () => void }) => {
+    const target = event.detail?.originalEvent?.target ?? event.target;
+    if (
+      target instanceof Element &&
+      target.closest('[data-slot="alert-dialog-content"], [data-slot="alert-dialog-overlay"]')
+    ) {
+      event.preventDefault();
+    }
+  };
 
   // Honor the requested tab each time the panel opens.
   useEffect(() => {
     if (open) setTab(initialTab);
   }, [open, initialTab]);
 
-  // Leave edit mode when the panel opens or switches rows.
+  // Leave edit mode (and drop any pending delete) when the panel opens or switches rows.
   useEffect(() => {
     setEditing(false);
+    setConfirmDelete(false);
   }, [open, row?.code]);
 
   return (
+    <>
     <Drawer direction={isMobile ? "bottom" : "right"} open={open} onOpenChange={onOpenChange}>
-      <DrawerContent>
+      <DrawerContent
+        onPointerDownOutside={keepDrawerOnDialogInteraction}
+        onInteractOutside={keepDrawerOnDialogInteraction}
+        onEscapeKeyDown={(event) => {
+          // Escape while confirming should close only the dialog, not the drawer.
+          if (document.querySelector('[data-slot="alert-dialog-content"]')) event.preventDefault();
+        }}
+      >
         <DrawerHeader className="relative pr-12">
           {(onPrev || onNext) && (
             <div className="flex items-center gap-1 text-muted-foreground">
@@ -138,7 +177,8 @@ export function RowDetailDrawer({
             <X className="size-4" />
           </Button>
           {row && (
-            <div className="mt-2 flex items-center gap-2">
+            // -mr-8 cancels the header's pr-12 so "Borrar" lines up with the body's right edge.
+            <div className="mt-2 -mr-8 flex items-center gap-2">
               <StatusToggle
                 status={row.status}
                 onToggle={() =>
@@ -167,6 +207,15 @@ export function RowDetailDrawer({
                     Archivar
                   </>
                 )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="size-4" />
+                Borrar
               </Button>
             </div>
           )}
@@ -255,5 +304,38 @@ export function RowDetailDrawer({
         )}
       </DrawerContent>
     </Drawer>
+
+      {row && (
+        <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogMedia className="bg-destructive/10">
+                <Trash2 className="text-destructive" />
+              </AlertDialogMedia>
+              <AlertDialogTitle>Borrar registro</AlertDialogTitle>
+              <AlertDialogDescription>
+                Se va a borrar la aplicación a <strong>{row.company}</strong>
+                {row.role ? <> · {row.role}</> : null} (código{" "}
+                <span className="font-mono">{row.code}</span>, {row.date}). Esta acción no se
+                puede deshacer.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-white hover:bg-destructive/90 focus-visible:border-destructive/40 focus-visible:ring-destructive/20"
+                onClick={async () => {
+                  await onDelete(row.code);
+                  setConfirmDelete(false);
+                  onOpenChange(false);
+                }}
+              >
+                Borrar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </>
   );
 }

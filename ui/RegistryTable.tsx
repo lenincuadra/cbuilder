@@ -44,6 +44,7 @@ export interface RegistryTableProps {
   rows: RegistryRow[];
   loading?: boolean;
   onUpdate: (code: string, fields: EditableFields) => void | Promise<void>;
+  onDelete: (code: string) => void | Promise<void>;
   emptyMessage?: string;
 }
 
@@ -57,7 +58,13 @@ function defaultTabFor(row: RegistryRow): DetailTab {
   return !hasNotes && hasUpdates ? "updates" : "notas";
 }
 
-export function RegistryTable({ rows, loading = false, onUpdate, emptyMessage }: RegistryTableProps) {
+export function RegistryTable({
+  rows,
+  loading = false,
+  onUpdate,
+  onDelete,
+  emptyMessage,
+}: RegistryTableProps) {
   const [detailCode, setDetailCode] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailTab, setDetailTab] = useState<DetailTab>("notas");
@@ -155,6 +162,7 @@ export function RegistryTable({ rows, loading = false, onUpdate, emptyMessage }:
         open={detailOpen}
         onOpenChange={setDetailOpen}
         onUpdate={onUpdate}
+        onDelete={onDelete}
         initialTab={detailTab}
         position={detailIndex + 1}
         total={rows.length}

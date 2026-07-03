@@ -20,3 +20,19 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ code: string }> },
+) {
+  const { code } = await params;
+  try {
+    await fileStore.remove(code);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Delete failed." },
+      { status: 400 },
+    );
+  }
+}

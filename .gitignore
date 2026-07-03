@@ -27,6 +27,7 @@ docs/*tracking-registry*.md
 # misc
 .DS_Store
 *.pem
+docs/registro-en-screenshots
 
 # debug
 npm-debug.log*

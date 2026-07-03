@@ -75,5 +75,7 @@ export interface RegistryStore {
   list(): Promise<RegistryRow[]>;
   add(row: RegistryRow): Promise<void>;
   update(code: string, fields: EditableFields): Promise<void>;
+  /** Permanently delete a row by code. */
+  remove(code: string): Promise<void>;
   existingCodes(): Promise<string[]>;
 }

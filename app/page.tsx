@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { FilePlus2 } from "lucide-react";
+import { useState, type CSSProperties } from "react";
+import { FilePlus2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,7 +26,7 @@ type ArchiveView = "vigentes" | "archivado";
 type StatusFilter = "todos" | ApplicationStatus;
 
 export default function Home() {
-  const { rows, loading, add, update } = useRegistry();
+  const { rows, loading, add, update, remove } = useRegistry();
   const [generating, setGenerating] = useState(false);
   // Two orthogonal filters: archived-or-not (view) and status.
   const [view, setView] = useState<ArchiveView>("vigentes");
@@ -77,6 +77,22 @@ export default function Home() {
       await update(code, fields);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo actualizar la fila.");
+    }
+  }
+
+  async function handleDelete(code: string) {
+    try {
+      await remove(code);
+      // Destructive action → destructive-styled toast (red icon/text/border), not a success check.
+      toast(`Registro ${code} borrado.`, {
+        icon: <Trash2 className="size-4 text-destructive" />,
+        style: {
+          "--normal-text": "var(--destructive)",
+          "--normal-border": "var(--destructive)",
+        } as CSSProperties,
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo borrar la fila.");
     }
   }
 
@@ -132,6 +148,7 @@ export default function Home() {
             rows={visibleRows}
             loading={loading}
             onUpdate={handleUpdate}
+            onDelete={handleDelete}
             emptyMessage={
               statusFilter !== "todos"
                 ? `No hay ${statusFilter === "Activo" ? "activas" : "rechazadas"} en ${view === "archivado" ? "Archivado" : "Vigentes"}.`

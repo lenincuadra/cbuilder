@@ -9,6 +9,7 @@ export interface UseRegistry {
   loading: boolean;
   add: (row: RegistryRow) => Promise<void>;
   update: (code: string, fields: EditableFields) => Promise<void>;
+  remove: (code: string) => Promise<void>;
   reload: () => Promise<void>;
 }
 
@@ -41,5 +42,13 @@ export function useRegistry(): UseRegistry {
     [reload],
   );
 
-  return { rows, loading, add, update, reload };
+  const remove = useCallback(
+    async (code: string) => {
+      await getRegistryStore().remove(code);
+      await reload();
+    },
+    [reload],
+  );
+
+  return { rows, loading, add, update, remove, reload };
 }
