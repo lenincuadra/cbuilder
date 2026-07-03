@@ -19,6 +19,15 @@ y sería engañoso) — el idioma se muestra read-only en el form. Editar **solo
 registro** (no regenera el `.docx` ya generado). `EditableFields` = todo `RegistryRow`
 menos `code`/`createdAt`. Form en `ui/detail/RowEditForm.tsx`.
 
+## Alerta de inactividad (clock-alert amber, 14 días)
+Si una fila lleva **14+ días sin actividad**, la celda de Seguimiento muestra un
+`clock-alert` en amber (`text-amber-500`) con tooltip ("pedí feedback o cerrá la
+búsqueda"). El contador es desde la **última actividad**: la última actualización de
+seguimiento, o la fecha de aplicación si no hay ninguna (agregar un update reinicia el
+reloj). Aplica a **todas** las filas (cualquier estado/archivado). Un solo nivel de alerta
+(no escalonado). Lógica pura en `core/staleness.ts` (`isStale`, `STALE_AFTER_DAYS=14`).
+Nota de color: shadcn solo trae `destructive`; para amber/warning se usan colores Tailwind.
+
 ## Links de tracking en el panel: texto plano, no clickeables
 El panel muestra los 2 links trackeables de la fila (portfolio `?ref=<code>P`, LinkedIn
 `go.html?ref=<code>L&dest=linkedin`) como **texto plano (no `<a>`)** + botón de copiar.
