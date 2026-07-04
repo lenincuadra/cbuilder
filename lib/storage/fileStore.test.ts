@@ -60,6 +60,17 @@ describe("FileRegistryStore", () => {
     expect(JSON.parse(raw)).toHaveLength(28);
   });
 
+  it("clears a field when the update sends null (as the JSON API does)", async () => {
+    await store.add({ ...row("0601a2"), notes: "2da entrevista" });
+    // The apiStore serializes a cleared field as null (JSON can't carry undefined).
+    await store.update("0601a2", { notes: null } as unknown as Parameters<typeof store.update>[1]);
+    const [updated] = await store.list();
+    expect(updated.notes).toBeUndefined();
+    // And it must not resurrect on the next read (not persisted as null).
+    const raw = await fs.readFile(path.join(dir, "registry.json"), "utf8");
+    expect(JSON.parse(raw)[0].notes).toBeUndefined();
+  });
+
   it("throws (does not wipe) when the file is corrupt", async () => {
     await fs.writeFile(path.join(dir, "registry.json"), "{ not json", "utf8");
     await expect(store.list()).rejects.toThrow();

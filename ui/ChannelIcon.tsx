@@ -1,4 +1,4 @@
-import { Mail, Newspaper, SquareMousePointer } from "lucide-react";
+import { Mail, Newspaper, PanelsTopLeft } from "lucide-react";
 import type { Channel } from "@/core/registry/types";
 
 /** Official LinkedIn mark — lucide dropped its brand icons, so we inline the logo. */
@@ -20,7 +20,7 @@ export function ChannelIcon({ channel, className = "size-4" }: { channel: Channe
     case "Bolsa de trabajo":
       return <Newspaper className={className} />;
     case "Sitio de la empresa":
-      return <SquareMousePointer className={className} />;
+      return <PanelsTopLeft className={className} />;
     default:
       return null;
   }

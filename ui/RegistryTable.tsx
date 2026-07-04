@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Inbox } from "lucide-react";
+import { Inbox, Send, type LucideIcon } from "lucide-react";
 
 import {
   Empty,
@@ -32,15 +32,16 @@ import { StatusToggle } from "@/ui/StatusToggle";
  * icon-only so it stays narrow; the freed width goes to Empresa/Rol/Seguimiento.
  * Below 640px a min-width re-enables scroll so columns stay legible.
  */
-const COLUMNS = [
+type Column = { label: string; width: string; icon?: LucideIcon };
+const COLUMNS: Column[] = [
   { label: "Código", width: "w-[9%]" },
   { label: "Empresa", width: "w-[18%]" },
   { label: "Rol", width: "w-[24%]" },
-  { label: "Canal", width: "w-[8%]" },
+  { label: "Canal", width: "w-[8%]", icon: Send },
   { label: "Fecha", width: "w-[12%]" },
   { label: "Estado", width: "w-[11%]" },
   { label: "Seguimiento", width: "w-[18%]" },
-] as const;
+];
 
 export interface RegistryTableProps {
   rows: RegistryRow[];
@@ -91,11 +92,20 @@ export function RegistryTable({
         <Table className="w-full table-fixed max-[639px]:min-w-[720px]">
           <TableHeader>
             <TableRow>
-              {COLUMNS.map((column) => (
-                <TableHead key={column.label} className={cn("whitespace-nowrap", column.width)}>
-                  {column.label}
-                </TableHead>
-              ))}
+              {COLUMNS.map((column) => {
+                const Icon = column.icon;
+                return (
+                  <TableHead key={column.label} className={cn("whitespace-nowrap", column.width)}>
+                    {Icon ? (
+                      <span className="inline-flex" title={column.label} aria-label={column.label}>
+                        <Icon className="size-4 text-muted-foreground" />
+                      </span>
+                    ) : (
+                      column.label
+                    )}
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>

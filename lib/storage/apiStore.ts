@@ -29,10 +29,16 @@ export class ApiRegistryStore implements RegistryStore {
   }
 
   async update(code: string, fields: EditableFields): Promise<void> {
+    // JSON drops undefined-valued keys, so a "clear this field" edit (e.g. emptying
+    // notes) would serialize to {} and be silently ignored. Send undefined as null so
+    // the intent survives the wire; the server treats null as "clear".
+    const payload = Object.fromEntries(
+      Object.entries(fields).map(([key, value]) => [key, value === undefined ? null : value]),
+    );
     const response = await fetch(`${BASE}/${encodeURIComponent(code)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(fields),
+      body: JSON.stringify(payload),
     });
     await ensureOk(response);
   }

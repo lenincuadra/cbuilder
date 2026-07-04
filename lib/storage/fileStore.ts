@@ -81,7 +81,13 @@ export class FileRegistryStore implements RegistryStore {
       if (index === -1) {
         throw new Error(`No registry row with code "${code}".`);
       }
-      rows[index] = { ...rows[index], ...fields };
+      // A cleared field arrives as null over the JSON API (JSON can't carry undefined);
+      // apply it as undefined so the key drops out of the stored row.
+      const next = { ...rows[index] } as Record<string, unknown>;
+      for (const [key, value] of Object.entries(fields as Record<string, unknown>)) {
+        next[key] = value === null ? undefined : value;
+      }
+      rows[index] = next as unknown as RegistryRow;
       await this.write(rows);
     });
   }
