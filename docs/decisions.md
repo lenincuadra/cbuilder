@@ -10,6 +10,63 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Foco del portfolio por aplicación (`&focus=` en los links trackeados)
+El wizard (paso 3, "Idioma y foco") permite elegir un **perfil de foco** opcional que se
+appendea a los DOS links trackeados del CV (`&focus=<id>`): el portfolio reordena/destaca
+sus casos para ese visitante (regla del portfolio: **ordenar, no ocultar**). El contrato lo
+define el repo del portfolio (`data/profiles.js`, público — precedencia: `?focus=` directo
+en el index / sessionStorage vía go.html / mapeo por ref): esta app **solo emite el param**.
+`FOCUS_PROFILES` en `core/links.ts` es un espejo manual de los perfiles del portfolio
+(`payments`, `ai`, `conversion` al 2026-07-07) con sus labels ES — **al agregar un perfil
+en el portfolio hay que agregarlo acá** (se descartó fetchear `profiles.js` en runtime por
+simplicidad; es un archivo JS, no JSON). El foco va también en el link de LinkedIn porque
+go.html lo guarda en sessionStorage y sobrevive a un CV→LinkedIn→portfolio en el mismo tab.
+Se persiste en `RegistryRow.focus` y, como `language`/`code`, **no es editable** post-creación
+(ya viaja en el CV enviado; editarlo desincronizaría los links del panel de los reales).
+Columna `focus` agregada a `supabase/schema.sql` + mapeos del store (si ya corriste el
+schema viejo: `alter table public.registry add column focus text;`).
+
+## Dominio propio `lenincuadra.com` + mails `hola@`/`hi@` (masters v14)
+El portfolio pasó a servirse desde **`https://lenincuadra.com`** (dominio custom sobre el
+mismo GitHub Pages, DNS en Cloudflare). Los masters **v14** (EN y ES, generados por script
+desde los v13, que quedan intactos en `assets/`) usan la base nueva en los hyperlinks y en
+el texto visible (`lenincuadra.com`), y cambian el email impreso: **`hi@lenincuadra.com`
+en el master EN, `hola@lenincuadra.com` en el ES** — aliases de una misma casilla
+(Cloudflare Email Routing → reenvío a Gmail + "Send mail as" para responder). Se eligió
+saludo-por-idioma en vez de `lenin@` (repetía el nombre) o un neutral único. `PORTFOLIO_BASE`
+vive en `core/links.ts` (ahora exportado; `trackingUrl` lo reusa — antes duplicaba la URL).
+**El tracking no se pierde**: mismos `?ref=` params, y los links viejos
+`lenincuadra.github.io/portfolio/...` hacen 301 al dominio nuevo preservando los query
+params (verificado), así que los CVs ya enviados siguen trackeando. Se descartó un
+acortador tipo Bitly: el dominio propio ya es corto, es primera parte (sin dependencia de
+terceros ni destino oculto) y no requiere un link por aplicación.
+
+## Notas generales: card propio + store separado (misma infra, DB futura)
+Se sumó un card **"Notas generales"** en la columna derecha: notas markdown
+**genéricas del proceso** (no atadas a ninguna fila del registro). Reusa `NotesTab`
+(preview-first, click para editar, Guardar) con un `placeholder` propio. Una flecha
+(`ArrowRight`) en el header abre el **mismo editor en un `Drawer`** (right en desktop /
+bottom en mobile, mismo patrón que el panel de detalle); card y drawer comparten una sola
+instancia de `useGeneralNotes`, así que quedan sincronizados. Persistencia
+detrás de una interfaz nueva **`GeneralNotesStore`** (`core/notes/types.ts`, `get()/set()`),
+espejo de `RegistryStore`: file store local (`FileGeneralNotesStore` → `data/notes.json`,
+gitignoreado, misma cola serial + escritura atómica que el registro) + `PUT/GET /api/notes`
++ `ApiGeneralNotesStore` cliente, elegidos por `getGeneralNotesStore()`. Se modeló como
+**documento/tabla propia** (un solo string markdown, no una fila del registro) para mapear
+limpio a una tabla de Supabase a futuro. Por ahora el factory devuelve siempre el api store
+(no hay tabla Supabase de notas todavía; el branch va acá cuando exista, igual que
+`SupabaseRegistryStore`). Razón del pedido: "mantener la misma infra por ahora".
+
+## Card "Generar un CV": empty state como entrada (gate al wizard)
+El card de generación ahora **arranca mostrando el `Empty` del DS** (icono + título +
+descripción + botón CTA "Generar CV"); el `Wizard` se abre **in place** al clickear y
+**colapsa de vuelta al empty state** al cancelar o tras una generación exitosa. Antes el
+wizard estaba siempre visible debajo del header. Se agregó `onCancel?` opcional al `Wizard`:
+cuando está presente, en el paso 1 el botón "Atrás" (que estaba deshabilitado) pasa a ser
+**"Cancelar"** (icono X) y cierra el wizard. Lógica de open/close encapsulada en
+`ui/GenerateCard.tsx` (no en `page.tsx`). Razón: pedido explícito de presentar el card como
+empty state primero.
+
 ## Select del drawer: portalear el popup DENTRO del drawer
 El `Select` (base-ui) de canal en el form de edición estaba roto adentro del `Drawer`
 (vaul): el popup se portalea a `body`, vaul lo dejaba con `pointer-events: none` y su foco

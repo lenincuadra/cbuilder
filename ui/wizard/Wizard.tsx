@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import { StepOptional } from "./StepOptional";
 import { emailRequirementMet, type WizardData } from "./types";
 
 const TOTAL_STEPS = 4;
-const STEP_TITLES = ["Empresa y fecha", "Opcionales", "Idioma", "Confirmar"];
+const STEP_TITLES = ["Empresa y fecha", "Opcionales", "Idioma y foco", "Confirmar"];
 
 function initialData(): WizardData {
   return {
@@ -28,6 +28,7 @@ function initialData(): WizardData {
     email: "",
     who: "",
     jobUrl: "",
+    focus: "",
   };
 }
 
@@ -38,9 +39,11 @@ export interface WizardProps {
   generating: boolean;
   /** Runs the generation; rejects on error (the caller surfaces the message). */
   onGenerate: (input: GenerateCvInput) => Promise<void>;
+  /** Optional: dismiss the wizard from step 1 (turns "Atrás" into "Cancelar"). */
+  onCancel?: () => void;
 }
 
-export function Wizard({ existingCodes, generating, onGenerate }: WizardProps) {
+export function Wizard({ existingCodes, generating, onGenerate, onCancel }: WizardProps) {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>(initialData);
   const [previewCode, setPreviewCode] = useState<string | null>(null);
@@ -82,6 +85,7 @@ export function Wizard({ existingCodes, generating, onGenerate }: WizardProps) {
         channel: data.channel === "" ? undefined : data.channel,
         email: data.email,
         jobUrl: data.jobUrl,
+        focus: data.focus === "" ? undefined : data.focus,
         code: previewCode,
       });
       // Success: reset for the next application.
@@ -113,16 +117,29 @@ export function Wizard({ existingCodes, generating, onGenerate }: WizardProps) {
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={goBack}
-          disabled={step === 1 || generating}
-        >
-          <ChevronLeft className="size-4" />
-          Atrás
-        </Button>
+        {step === 1 && onCancel ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onCancel}
+            disabled={generating}
+          >
+            <X className="size-4" />
+            Cancelar
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={goBack}
+            disabled={step === 1 || generating}
+          >
+            <ChevronLeft className="size-4" />
+            Atrás
+          </Button>
+        )}
 
         {step < TOTAL_STEPS ? (
           <Button type="button" size="sm" onClick={goNext} disabled={!canAdvance}>

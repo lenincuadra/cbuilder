@@ -30,14 +30,25 @@ describe("fillMaster", () => {
 
       expect(rels).not.toContain("ref=li-cv");
       // Portfolio → <code>P (direct); LinkedIn → <code>L (via go.html).
-      expect(rels).toContain("https://lenincuadra.github.io/portfolio/?ref=0628r4P");
+      expect(rels).toContain("https://lenincuadra.com/?ref=0628r4P");
       expect(rels).toContain(
-        "https://lenincuadra.github.io/portfolio/go.html?ref=0628r4L&amp;dest=linkedin",
+        "https://lenincuadra.com/go.html?ref=0628r4L&amp;dest=linkedin",
       );
       expect(countOccurrences(rels, "ref=0628r4P")).toBe(1);
       expect(countOccurrences(rels, "ref=0628r4L")).toBe(1);
     },
   );
+
+  it("appends the focus profile to both links when given", async () => {
+    const filled = await fillMaster(loadMaster("EN"), "0628r4", "payments");
+    const rels = await readRels(filled);
+
+    expect(rels).toContain("https://lenincuadra.com/?ref=0628r4P&amp;focus=payments");
+    expect(rels).toContain(
+      "https://lenincuadra.com/go.html?ref=0628r4L&amp;dest=linkedin&amp;focus=payments",
+    );
+    expect(countOccurrences(rels, "focus=payments")).toBe(2);
+  });
 
   it("throws when the relationships part is missing", async () => {
     const zip = new JSZip();

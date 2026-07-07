@@ -1,5 +1,5 @@
 import JSZip from "jszip";
-import { LINK_ID } from "./links";
+import { LINK_ID, type FocusProfileId } from "./links";
 
 /** Relationships part of the .docx where the header hyperlink URLs live. */
 const RELS_PATH = "word/_rels/document.xml.rels";
@@ -20,6 +20,9 @@ function countOccurrences(haystack: string, needle: string): number {
  *   - portfolio link  -> ref=<code>P
  *   - LinkedIn link    -> ref=<code>L
  *
+ * An optional focus profile is appended to both links (`&focus=<id>`) so the
+ * portfolio personalizes its case order for that application's visitors.
+ *
  * Throws if the master is missing the relationships part, or does not contain
  * exactly two `ref=li-cv` placeholders with exactly one being the LinkedIn link
  * (signals a malformed master).
@@ -29,6 +32,7 @@ function countOccurrences(haystack: string, needle: string): number {
 export async function fillMaster(
   masterBytes: Uint8Array | ArrayBuffer,
   code: string,
+  focus?: FocusProfileId,
 ): Promise<Uint8Array> {
   const zip = await JSZip.loadAsync(masterBytes);
   const relsFile = zip.file(RELS_PATH);
@@ -46,11 +50,12 @@ export async function fillMaster(
   }
 
   // Replace the LinkedIn link first (more specific), then the remaining portfolio one.
+  const focusParam = focus ? `&amp;focus=${focus}` : "";
   const filled = xml
     .split(LINKEDIN_PLACEHOLDER)
-    .join(`ref=${code}${LINK_ID.linkedin}&amp;dest=linkedin`)
+    .join(`ref=${code}${LINK_ID.linkedin}&amp;dest=linkedin${focusParam}`)
     .split(PLACEHOLDER)
-    .join(`ref=${code}${LINK_ID.portfolio}`);
+    .join(`ref=${code}${LINK_ID.portfolio}${focusParam}`);
 
   zip.file(RELS_PATH, filled);
   return zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });

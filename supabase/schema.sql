@@ -13,6 +13,7 @@ create table if not exists public.registry (
   who         text,
   job_url     text,
   language    text,
+  focus       text,                          -- portfolio focus profile baked into the CV links
   created_at  timestamptz not null default now(),
   updates     jsonb not null default '[]'::jsonb,  -- follow-up timeline [{at, message}]
   archived    boolean not null default false

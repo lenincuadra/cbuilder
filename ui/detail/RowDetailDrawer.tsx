@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Archive,
   ArchiveRestore,
@@ -117,16 +117,29 @@ export function RowDetailDrawer({
     }
   };
 
-  // Honor the requested tab each time the panel opens.
-  useEffect(() => {
+  // Sync transient panel state during render instead of in an effect: React
+  // re-renders synchronously after a set-in-render, so each key matches on the
+  // next pass and it settles at once — no extra committed paint, no
+  // react-hooks/set-state-in-effect. (See "storing information from previous
+  // renders" in the React docs.)
+
+  // Honor the requested tab when the panel opens or the requested tab changes —
+  // e.g. prev/next navigation, or clicking another Seguimiento icon while open.
+  const tabSyncKey = `${open}:${initialTab}`;
+  const [prevTabSyncKey, setPrevTabSyncKey] = useState(tabSyncKey);
+  if (tabSyncKey !== prevTabSyncKey) {
+    setPrevTabSyncKey(tabSyncKey);
     if (open) setTab(initialTab);
-  }, [open, initialTab]);
+  }
 
   // Leave edit mode (and drop any pending delete) when the panel opens or switches rows.
-  useEffect(() => {
+  const rowSyncKey = `${open}:${row?.code ?? ""}`;
+  const [prevRowSyncKey, setPrevRowSyncKey] = useState(rowSyncKey);
+  if (rowSyncKey !== prevRowSyncKey) {
+    setPrevRowSyncKey(rowSyncKey);
     setEditing(false);
     setConfirmDelete(false);
-  }, [open, row?.code]);
+  }
 
   return (
     <>
@@ -275,7 +288,7 @@ export function RowDetailDrawer({
                     </Field>
                   )}
                 </div>
-                <TrackedLinks code={row.code} />
+                <TrackedLinks code={row.code} focus={row.focus} />
               </div>
             )}
 

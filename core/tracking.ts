@@ -7,7 +7,7 @@
  * - digit: from 2-9 (no 0, 1) to avoid confusion with letters.
  */
 
-import { LINK_ID } from "./links";
+import { LINK_ID, PORTFOLIO_BASE } from "./links";
 
 /** Letters without ambiguous characters (no i, l, o). */
 export const CODE_LETTERS = "abcdefghjkmnpqrstuvwxyz";
@@ -37,7 +37,7 @@ export function isReservedCode(code: string): boolean {
 
 /** Direct portfolio tracking URL (never via go.html), with the portfolio link id. */
 export function trackingUrl(code: string): string {
-  return `https://lenincuadra.github.io/portfolio/?ref=${code}${LINK_ID.portfolio}`;
+  return `${PORTFOLIO_BASE}/?ref=${code}${LINK_ID.portfolio}`;
 }
 
 function pick(chars: string, rng: () => number): string {

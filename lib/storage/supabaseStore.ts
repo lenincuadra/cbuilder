@@ -7,6 +7,7 @@ import type {
   RegistryStore,
   StatusUpdate,
 } from "../../core/registry/types";
+import type { FocusProfileId } from "../../core/links";
 import type { LanguageChoice } from "../../core/types";
 
 const TABLE = "registry";
@@ -24,6 +25,7 @@ interface RegistryRowDb {
   who: string | null;
   job_url: string | null;
   language: string | null;
+  focus: string | null;
   created_at: string | null;
   updates: StatusUpdate[] | null;
   archived: boolean | null;
@@ -42,6 +44,7 @@ export function dbToRow(db: RegistryRowDb): RegistryRow {
     who: db.who ?? undefined,
     jobUrl: db.job_url ?? undefined,
     language: (db.language ?? undefined) as LanguageChoice | undefined,
+    focus: (db.focus ?? undefined) as FocusProfileId | undefined,
     createdAt: db.created_at ?? undefined,
     updates: db.updates ?? undefined,
     archived: db.archived ?? undefined,
@@ -61,6 +64,7 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
     who: row.who ?? null,
     job_url: row.jobUrl ?? null,
     language: row.language ?? null,
+    focus: row.focus ?? null,
     created_at: row.createdAt ?? null,
     updates: row.updates ?? null,
     archived: row.archived ?? null,
@@ -77,6 +81,7 @@ export function editableToDb(fields: EditableFields): Partial<RegistryRowDb> {
   if ("who" in fields) out.who = fields.who ?? null;
   if ("jobUrl" in fields) out.job_url = fields.jobUrl ?? null;
   if ("language" in fields) out.language = fields.language ?? null;
+  if ("focus" in fields) out.focus = fields.focus ?? null;
   if ("notes" in fields) out.notes = fields.notes ?? null;
   if ("status" in fields) out.status = fields.status as string;
   if ("updates" in fields) out.updates = fields.updates ?? null;

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { trackedLinks } from "@/core/links";
+import { trackedLinks, type FocusProfileId } from "@/core/links";
 
 /** One tracked link shown as plain text (never an <a>, so clicking never fires the
  *  tracker) with a copy button to grab it without visiting. */
@@ -46,8 +46,8 @@ function LinkRow({ label, url }: { label: string; url: string }) {
 }
 
 /** The row's tracked links (portfolio + LinkedIn), read-only. */
-export function TrackedLinks({ code }: { code: string }) {
-  const links = trackedLinks(code);
+export function TrackedLinks({ code, focus }: { code: string; focus?: FocusProfileId }) {
+  const links = trackedLinks(code, focus);
   return (
     <div className="space-y-2 rounded-lg border px-3 py-2">
       <span className="text-xs font-medium text-muted-foreground">Links de tracking</span>

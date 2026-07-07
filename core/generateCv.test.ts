@@ -85,6 +85,23 @@ describe("generateCv", () => {
     expect(result.code).toBe("0628b3");
   });
 
+  it("persists the focus profile and bakes it into the CV links", async () => {
+    const result = await generateCv(
+      { company: "Acme", languageChoice: "EN", date: new Date(2026, 5, 28), focus: "payments" },
+      { existingCodes: [], loadMaster: masterLoader(), rng: fixedRng, now: fixedNow },
+    );
+
+    expect(result.row.focus).toBe("payments");
+
+    const zip = await JSZip.loadAsync(result.zip);
+    const docx = await zip.file("EN_acme_0628a2/Lenin_Cuadra_CV.docx")!.async("uint8array");
+    const rels = await (await JSZip.loadAsync(docx))
+      .file("word/_rels/document.xml.rels")!
+      .async("string");
+    expect(rels).toContain("ref=0628a2P&amp;focus=payments");
+    expect(rels).toContain("ref=0628a2L&amp;dest=linkedin&amp;focus=payments");
+  });
+
   it("uses a precomputed code verbatim (preview path)", async () => {
     const result = await generateCv(
       { company: "GlobalLogic", languageChoice: "EN", date: new Date(2026, 5, 28), code: "0628z9" },

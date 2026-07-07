@@ -1,6 +1,7 @@
 import { toISODate } from "./dates";
 import { fillMaster } from "./docx";
 import { folderName } from "./folderName";
+import type { FocusProfileId } from "./links";
 import { generateCode } from "./tracking";
 import type { Language, LanguageChoice } from "./types";
 import { packageCvs, type CvEntry } from "./zip";
@@ -24,6 +25,8 @@ export interface GenerateCvInput {
   jobUrl?: string;
   notes?: string;
   status?: ApplicationStatus;
+  /** Portfolio focus profile appended to the CV's tracked links (`&focus=`). */
+  focus?: FocusProfileId;
   /**
    * Precomputed tracking code (e.g. from the wizard's folder-name preview).
    * When provided it is used as-is; otherwise a fresh, collision-checked code
@@ -81,7 +84,7 @@ export async function generateCv(
   const entries: CvEntry[] = [];
   for (const language of languagesFor(input.languageChoice)) {
     const master = await deps.loadMaster(language);
-    const docx = await fillMaster(master, code);
+    const docx = await fillMaster(master, code, input.focus);
     entries.push({ folder: folderName({ language, company: input.company, code }), docx });
   }
 
@@ -100,6 +103,7 @@ export async function generateCv(
     who: cleaned(input.who),
     jobUrl: cleaned(input.jobUrl),
     language: input.languageChoice,
+    focus: input.focus,
     createdAt: now().toISOString(),
   };
 

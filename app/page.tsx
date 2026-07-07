@@ -1,26 +1,19 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { FilePlus2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { slugifyCompany } from "@/core/folderName";
 import { generateCv, type GenerateCvInput } from "@/core/generateCv";
 import type { ApplicationStatus, EditableFields, RegistryRow } from "@/core/registry/types";
 import { downloadBytes } from "@/lib/download";
 import { loadMaster } from "@/lib/masters";
+import { GenerateCard } from "@/ui/GenerateCard";
+import { GeneralNotesCard } from "@/ui/GeneralNotesCard";
 import { RegistryTable } from "@/ui/RegistryTable";
 import { SegmentedControl, type SegmentedOption } from "@/ui/SegmentedControl";
 import { useRegistry } from "@/ui/useRegistry";
-import { Wizard } from "@/ui/wizard/Wizard";
 
 type ArchiveView = "vigentes" | "archivado";
 type StatusFilter = "todos" | ApplicationStatus;
@@ -159,28 +152,14 @@ export default function Home() {
           />
         </section>
 
-        {/* Generación: card angosto a la derecha, presentada como Empty state. */}
-        <aside>
-          <Card className="lg:sticky lg:top-6">
-            <CardContent className="space-y-5 pt-6">
-              <Empty className="border-0 p-0">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <FilePlus2 />
-                  </EmptyMedia>
-                  <EmptyTitle>Generar un CV</EmptyTitle>
-                  <EmptyDescription>
-                    Creá un CV trackeado y sumalo al registro.
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-              <Wizard
-                existingCodes={existingCodes}
-                generating={generating}
-                onGenerate={handleGenerate}
-              />
-            </CardContent>
-          </Card>
+        {/* Columna derecha angosta: generar un CV (empty state → wizard) + notas generales. */}
+        <aside className="space-y-5 lg:sticky lg:top-6 lg:self-start">
+          <GenerateCard
+            existingCodes={existingCodes}
+            generating={generating}
+            onGenerate={handleGenerate}
+          />
+          <GeneralNotesCard />
         </aside>
       </div>
     </main>

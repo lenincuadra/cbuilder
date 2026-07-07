@@ -22,9 +22,22 @@ export function useRegistry(): UseRegistry {
     setRows(await getRegistryStore().list());
   }, []);
 
+  // Initial load on mount. Inlined (not routed through `reload`) so the setState
+  // lives in an async callback, and guarded so it can't set state after unmount.
   useEffect(() => {
-    void reload().finally(() => setLoading(false));
-  }, [reload]);
+    let active = true;
+    getRegistryStore()
+      .list()
+      .then((initial) => {
+        if (active) setRows(initial);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const add = useCallback(
     async (row: RegistryRow) => {

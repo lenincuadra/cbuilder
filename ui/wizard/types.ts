@@ -1,8 +1,12 @@
+import type { FocusProfileId } from "@/core/links";
 import type { Channel } from "@/core/registry/types";
 import type { LanguageChoice } from "@/core/types";
 
 /** Sentinel select value meaning "omitir" (no channel). */
 export const CHANNEL_OMIT = "__omit__";
+
+/** Sentinel select value meaning "sin foco" (default portfolio order). */
+export const FOCUS_NONE = "__none__";
 
 /** Mutable wizard state. Notes and status are not set here — they live in the table. */
 export interface WizardData {
@@ -16,6 +20,8 @@ export interface WizardData {
   email: string;
   who: string;
   jobUrl: string;
+  /** Portfolio focus profile for the tracked links. "" = sin foco. */
+  focus: FocusProfileId | "";
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

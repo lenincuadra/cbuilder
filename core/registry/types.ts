@@ -1,3 +1,4 @@
+import type { FocusProfileId } from "../links";
 import type { LanguageChoice } from "../types";
 
 /** Application channels (no "Referido" — a referral can apply via any channel). */
@@ -53,6 +54,11 @@ export interface RegistryRow {
   jobUrl?: string;
   /** Language choice the user picked (EN / ES / Ambos). */
   language?: LanguageChoice;
+  /**
+   * Portfolio focus profile baked into the CV's tracked links (`&focus=`).
+   * Like `language`, not editable post-creation: the sent CV already carries it.
+   */
+  focus?: FocusProfileId;
   /** Creation timestamp (ISO). */
   createdAt?: string;
   /** Follow-up timeline (Seguimiento › Actualizaciones), oldest first. */

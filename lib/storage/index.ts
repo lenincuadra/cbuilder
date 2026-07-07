@@ -1,9 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
+import type { GeneralNotesStore } from "@/core/notes/types";
 import type { RegistryStore } from "@/core/registry/types";
+import { ApiGeneralNotesStore } from "./apiNotesStore";
 import { ApiRegistryStore } from "./apiStore";
 import { SupabaseRegistryStore } from "./supabaseStore";
 
 let store: RegistryStore | null = null;
+let notesStore: GeneralNotesStore | null = null;
 
 /**
  * Single entry point to the registry store. Swap the implementation here
@@ -30,4 +33,16 @@ export function getRegistryStore(): RegistryStore {
 
   store = new ApiRegistryStore();
   return store;
+}
+
+/**
+ * Single entry point to the general-notes store. Same shape as
+ * getRegistryStore: for now always the local file/API path. A Supabase-backed
+ * notes store would slot in here later (mirroring SupabaseRegistryStore) once
+ * there's a table for it — the UI/core don't change.
+ */
+export function getGeneralNotesStore(): GeneralNotesStore {
+  if (notesStore) return notesStore;
+  notesStore = new ApiGeneralNotesStore();
+  return notesStore;
 }
