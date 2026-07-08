@@ -23,10 +23,12 @@ editarlo a mano** — el pre-commit hook de ese repo lo valida). Acá: `LINK_ID.
 **Masters v15** (desde v14, que queda intacto): hyperlink `github.com/lenincuadra`
 insertado después del de LinkedIn en el header, azul canónico + underline. Verificado
 E2E en producción: `go.html?ref=me&dest=github` → `github.com/lenincuadra`.
-El link extra hacía **wrap accidental** de la línea de contacto (el teléfono se partía):
-se resolvió con un **salto de línea deliberado** (`<w:br/>`) — línea 1: email · teléfono;
-línea 2: linkedin · github · `Portfolio: lenincuadra.com` (se mantuvo el label "Portfolio:"
-a pedido). Elegido sobre sacar el teléfono o achicar separadores (quedaba al límite).
+El link extra hacía **wrap accidental** de la línea de contacto (el teléfono se partía).
+Primer intento: dos líneas con `<w:br/>` — descartado por el usuario. **Layout final (diseño
+del usuario): una sola línea con pipes** — `Portfolio: lenincuadra.com | <email> |
+linkedin.com/in/lenincuadra | github.com/lenincuadra | +54 9 351-376-6049`. El label
+"Portfolio:" va **bold `111827`**, los pipes y el teléfono en muted `6B7280`, links en el
+azul canónico. Entra en una línea porque ` | ` es más angosto que los `  ·  ` anteriores.
 
 ## Archivo local de los .zip generados (`data/cvs/`)
 Cada generación, además de descargarse, se **archiva en `data/cvs/<zipName>`** (gitignoreado
