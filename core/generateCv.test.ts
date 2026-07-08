@@ -35,6 +35,10 @@ describe("generateCv", () => {
 
     expect(result.code).toBe("0628a2");
     expect(result.folderNames).toEqual(["EN_globallogic_0628a2"]);
+    // Entries expose the per-language docx for extra sinks (Google Docs).
+    expect(result.entries).toHaveLength(1);
+    expect(result.entries[0].folder).toBe("EN_globallogic_0628a2");
+    expect(result.entries[0].docx.length).toBeGreaterThan(0);
     expect(result.row.role).toBe("UX/UI Designer");
     expect(result.row.status).toBe("Activo");
     expect(result.row.date).toBe("2026-06-28");

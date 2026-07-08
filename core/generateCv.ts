@@ -49,6 +49,8 @@ export interface GenerateCvDeps {
 export interface GenerateCvResult {
   code: string;
   folderNames: string[];
+  /** Per-language filled CVs (also inside the zip) — for extra sinks like Google Docs. */
+  entries: CvEntry[];
   /** Final delivery .zip bytes. */
   zip: Uint8Array;
   /** Registry row to persist (caller decides when to store it). */
@@ -107,5 +109,5 @@ export async function generateCv(
     createdAt: now().toISOString(),
   };
 
-  return { code, folderNames: entries.map((entry) => entry.folder), zip, row };
+  return { code, folderNames: entries.map((entry) => entry.folder), entries, zip, row };
 }

@@ -10,6 +10,20 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## PDF vía Google Docs sink (Apps Script), no conversión local
+Para el pedido de "exportar a PDF" se eligió **no convertir localmente** (no hay
+docx→PDF fiel sin instalar LibreOffice, y el flujo real del usuario ya pasa por Google
+Docs) sino un **sink a Drive**: cada generación crea además el CV en el Drive del usuario
+como **Google Doc nativo** (`CV Builder/<carpeta>/Lenin_Cuadra_CV`), desde donde se baja
+el PDF con fidelidad de Google (su editor de siempre). Integración vía **webhook de Apps
+Script** (sin OAuth/Cloud Console): `POST /api/gdocs` reenvía `{folder, docxBase64}` al
+script del usuario con un token compartido — URL y token viven server-side en `.env.local`
+(`GDOCS_SCRIPT_URL`/`GDOCS_TOKEN`; ausentes = feature apagado en silencio, HTTP 501).
+Setup en `docs/gdocs-setup.md`. El Doc se llama `Lenin_Cuadra_CV` (sin tracking) para que
+el PDF descargado herede el nombre correcto; el código va en la carpeta. `GenerateCvResult`
+ahora expone `entries` (docx por idioma) para este tipo de sinks. No bloquea nada: zip y
+archivado salen igual si el script falla (toast warning).
+
 ## Link de GitHub trackeado en el CV (sufijo `G`, masters v15)
 El CV suma un tercer link trackeado: **GitHub** (`github.com/lenincuadra` como texto
 visible). Como GitHub no acepta `?ref=`, va **vía `go.html?ref=<código>G&dest=github`**

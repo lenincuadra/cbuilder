@@ -9,6 +9,7 @@ import { generateCv, type GenerateCvInput } from "@/core/generateCv";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { archiveCvZip } from "@/lib/archive";
 import { downloadBytes } from "@/lib/download";
+import { createGoogleDoc } from "@/lib/gdocs";
 import { loadMaster } from "@/lib/masters";
 import { GenerateCard } from "@/ui/GenerateCard";
 import { GeneralNotesCard } from "@/ui/GeneralNotesCard";
@@ -105,6 +106,23 @@ export default function Home() {
         toast.warning(
           `CV ${result.code} generado y descargado, pero no se pudo archivar la copia en data/cvs.`,
         );
+      }
+
+      // Extra sink: create each CV in the user's Google Drive as a native
+      // Google Doc (via Apps Script). Feature-off (501) is silent; a real
+      // failure only warns — the zip was already delivered.
+      for (const entry of result.entries) {
+        try {
+          const url = await createGoogleDoc(entry.folder, entry.docx);
+          if (url) {
+            toast.success(`${entry.folder} creado en Google Docs`, {
+              action: { label: "Abrir", onClick: () => window.open(url, "_blank") },
+              duration: 10000,
+            });
+          }
+        } catch {
+          toast.warning(`No se pudo crear ${entry.folder} en Google Docs.`);
+        }
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al generar el CV.");
