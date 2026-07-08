@@ -52,10 +52,14 @@ Antes de crear cualquier componente o comportamiento de UI:
   columna; las celdas largas (Empresa, Rol, Canal) **truncan**. `Rol` va angosto (~21%).
   Solo **por debajo de 640px (sm)** se reactiva el scroll horizontal (`min-w`) para que
   las columnas no queden ilegibles. (Reemplaza la regla vieja "si no entran, scroll".)
-- **Filtros (dos dimensiones ortogonales, arriba de la tabla, con `SegmentedControl`)**:
-  (1) archivado — **Vigentes** (no archivadas) / **Archivado**; (2) estado — Todos / Activo /
-  Rechazado. Se combinan. Ojo con la semántica: "Vigentes" ≠ estado "Activo" (por eso no se
-  llama "Activas").
+- **Filtros (dos dimensiones ortogonales, arriba de la tabla)**:
+  (1) archivado — **Vigentes** (no archivadas) / **Archivado**, con `SegmentedControl`;
+  (2) estado — Todos / Activo / Rechazado, como **dropdown con icono de embudo**
+  (`ui/StatusFilterDropdown.tsx`): botón siempre icon-only; con filtro activo aparece **al
+  lado** un badge coloreado (paleta de `StatusToggle`) con una `X`, y clickearlo **quita el
+  filtro** (vuelve a Todos); items `DropdownMenuCheckboxItem` con icono. Se combinan. Ojo
+  con la semántica: "Vigentes" ≠
+  estado "Activo" (por eso no se llama "Activas").
 - **Todas las vistas comparten exactamente la misma tabla**: misma estructura, columnas y
   comportamiento; lo único que cambia es qué filas se muestran (filtradas por `archived` +
   `status` en la página). No duplicar componentes ni variar columnas entre vistas.

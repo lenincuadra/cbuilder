@@ -10,6 +10,30 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Filtro de estado como dropdown-embudo; foco visible junto al código
+Dos cambios de UI de la tabla: (1) el filtro de **estado** dejó de ser `SegmentedControl`
+y pasó a un **dropdown** (`ui/StatusFilterDropdown.tsx`) con botón de icono embudo
+(`Funnel`), siempre icon-only; con filtro activo aparece **al lado** un **badge-chip
+coloreado** (verde/rojo, paleta compartida `statusBadgeClass()` extraída de `StatusToggle`)
+con una `X`: clickearlo quita el filtro (vuelve a Todos). Items `DropdownMenuCheckboxItem`
+con iconos (componente `dropdown-menu` del DS, instalado con shadcn). El filtro de
+archivado sigue como `SegmentedControl`. Pedido explícito con referencia a los ejemplos de
+shadcn (button#icon y dropdown-menu#checkboxes-icons). (2) El **foco** de cada fila se
+muestra como **icono por perfil junto al código** (`ui/FocusIcon.tsx`: payments →
+CreditCard, ai → Sparkles, conversion → TrendingUp; tooltip con el label ES) — se eligió
+sobre una columna nueva icon-only y sobre un badge bajo la empresa para no gastar ancho de
+la tabla fija. Ojo: el icono lleva `shrink-0` — dentro de la celda `truncate` de 9% el flex
+lo aplastaba horizontalmente hasta romperlo.
+
+## Links del CV: un solo azul canónico (1A56DB)
+Los masters v14 editados a mano traían 5 azules levemente distintos en los links/título
+(`1B5ADE`, `1B58DD`, `1B57DC`, `1B58DC`, `1A56DC`) — typos de color del editor. Regla: **todo
+link del CV usa el azul canónico `1A56DB`** (el mismo de headers de sección y empresas) +
+underline. Paleta final del documento: `111827` (títulos), `1A56DB` (accent/links),
+`374151` (body), `6B7280` (muted). Ojo al editar masters: el editor del usuario además
+**elimina los hyperlinks** (hubo que reinsertarlos con el placeholder `ref=li-cv`); después
+de cualquier edición de master hay que revalidar placeholders y recopiar a `public/masters/`.
+
 ## Foco del portfolio por aplicación (`&focus=` en los links trackeados)
 El wizard (paso 3, "Idioma y foco") permite elegir un **perfil de foco** opcional que se
 appendea a los DOS links trackeados del CV (`&focus=<id>`): el portfolio reordena/destaca

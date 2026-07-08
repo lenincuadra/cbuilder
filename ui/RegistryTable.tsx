@@ -34,9 +34,11 @@ import { StatusToggle } from "@/ui/StatusToggle";
  */
 type Column = { label: string; width: string; icon?: LucideIcon };
 const COLUMNS: Column[] = [
-  { label: "Código", width: "w-[9%]" },
+  // Código fits code + copy affordance + focus icon (~97px); below 11% the
+  // truncate overflow clips the focus icon into an unreadable half-glyph.
+  { label: "Código", width: "w-[11%]" },
   { label: "Empresa", width: "w-[18%]" },
-  { label: "Rol", width: "w-[24%]" },
+  { label: "Rol", width: "w-[22%]" },
   { label: "Canal", width: "w-[8%]", icon: Send },
   { label: "Fecha", width: "w-[12%]" },
   { label: "Estado", width: "w-[11%]" },
@@ -139,7 +141,7 @@ export function RegistryTable({
                   className="cursor-pointer"
                 >
                   <TableCell className="truncate">
-                    <CodeCell code={row.code} />
+                    <CodeCell code={row.code} focus={row.focus} />
                   </TableCell>
                   <TableCell className="truncate font-medium">{row.company}</TableCell>
                   <TableCell className="truncate" title={row.role}>

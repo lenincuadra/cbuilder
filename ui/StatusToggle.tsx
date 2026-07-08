@@ -10,6 +10,13 @@ export interface StatusToggleProps {
   className?: string;
 }
 
+/** Shared badge palette for a status (also used by the status filter dropdown). */
+export function statusBadgeClass(status: ApplicationStatus): string {
+  return status === "Activo"
+    ? "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300"
+    : "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300";
+}
+
 /** Colored status badge that toggles Activo <-> Rechazado on click. */
 export function StatusToggle({ status, onToggle, className }: StatusToggleProps) {
   const next: ApplicationStatus = status === "Activo" ? "Rechazado" : "Activo";
@@ -23,14 +30,7 @@ export function StatusToggle({ status, onToggle, className }: StatusToggleProps)
       title={`Cambiar a ${next}`}
       className={cn("cursor-pointer", className)}
     >
-      <Badge
-        className={cn(
-          "border-transparent transition-colors",
-          status === "Activo"
-            ? "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300"
-            : "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300",
-        )}
-      >
+      <Badge className={cn("border-transparent transition-colors", statusBadgeClass(status))}>
         {status}
       </Badge>
     </button>

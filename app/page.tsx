@@ -6,17 +6,17 @@ import { toast } from "sonner";
 
 import { slugifyCompany } from "@/core/folderName";
 import { generateCv, type GenerateCvInput } from "@/core/generateCv";
-import type { ApplicationStatus, EditableFields, RegistryRow } from "@/core/registry/types";
+import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { downloadBytes } from "@/lib/download";
 import { loadMaster } from "@/lib/masters";
 import { GenerateCard } from "@/ui/GenerateCard";
 import { GeneralNotesCard } from "@/ui/GeneralNotesCard";
 import { RegistryTable } from "@/ui/RegistryTable";
 import { SegmentedControl, type SegmentedOption } from "@/ui/SegmentedControl";
+import { StatusFilterDropdown, type StatusFilter } from "@/ui/StatusFilterDropdown";
 import { useRegistry } from "@/ui/useRegistry";
 
 type ArchiveView = "vigentes" | "archivado";
-type StatusFilter = "todos" | ApplicationStatus;
 
 export default function Home() {
   const { rows, loading, add, update, remove } = useRegistry();
@@ -59,12 +59,6 @@ export default function Home() {
       ),
     },
   ];
-  const statusOptions: SegmentedOption<StatusFilter>[] = [
-    { value: "todos", label: "Todos" },
-    { value: "Activo", label: "Activo" },
-    { value: "Rechazado", label: "Rechazado" },
-  ];
-
   async function handleUpdate(code: string, fields: EditableFields) {
     try {
       await update(code, fields);
@@ -123,13 +117,8 @@ export default function Home() {
         {/* Registro: protagonista, ancho, con scroll horizontal propio. */}
         <section className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            {/* Estado a la izquierda; Vigentes/Archivado a la derecha. */}
-            <SegmentedControl
-              aria-label="Filtrar por estado"
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={statusOptions}
-            />
+            {/* Estado a la izquierda (dropdown con badge); Vigentes/Archivado a la derecha. */}
+            <StatusFilterDropdown value={statusFilter} onChange={setStatusFilter} />
             <SegmentedControl
               aria-label="Archivadas o no"
               value={view}
