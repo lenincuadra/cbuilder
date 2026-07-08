@@ -10,6 +10,32 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Link de GitHub trackeado en el CV (sufijo `G`, masters v15)
+El CV suma un tercer link trackeado: **GitHub** (`github.com/lenincuadra` como texto
+visible). Como GitHub no acepta `?ref=`, va **vía `go.html?ref=<código>G&dest=github`**
+(mismo mecanismo que LinkedIn). Cambios cross-repo en el portfolio (commit `7a6a30f`):
+destino `github` en `DESTINATIONS`, sufijo `G` en los tres parsers (`go.html`,
+`tracker.js`, `404.html` → links cortos `/r/<código>G`) y en el generador del contrato
+(`scripts/seo-build.js` → `link-spec.json`; **ojo: `link-spec.json` es generado, nunca
+editarlo a mano** — el pre-commit hook de ese repo lo valida). Acá: `LINK_ID.github`,
+`trackedLinks().github`, `fillMaster` ahora exige **exactamente 3 placeholders**
+(1 portfolio, 1 `dest=linkedin`, 1 `dest=github`) y el foco se appendea a los tres.
+**Masters v15** (desde v14, que queda intacto): hyperlink `github.com/lenincuadra`
+insertado después del de LinkedIn en el header, azul canónico + underline. Verificado
+E2E en producción: `go.html?ref=me&dest=github` → `github.com/lenincuadra`.
+Pendiente visual: chequear en Word que el header no haga wrap con el link extra.
+
+## Archivo local de los .zip generados (`data/cvs/`)
+Cada generación, además de descargarse, se **archiva en `data/cvs/<zipName>`** (gitignoreado
+vía `/data/`, misma regla de privacidad que el registro). Razón: los masters evolucionan
+(v13 → v14 → …), así que un delivery pasado **no se puede regenerar idéntico** — el archivo
+es el único registro fiel de lo que se envió. Ruta `POST /api/cvs?name=` (body binario) →
+`saveCvArchive()` en `lib/storage/cvArchive.ts` (nombre validado por allowlist contra path
+traversal; escritura atómica tmp+rename como los otros stores; mismo nombre sobreescribe).
+El archivado **nunca bloquea la entrega**: si falla, el zip igual se descarga y un toast
+warning lo avisa. En Vercel el filesystem es efímero — mismo caveat ya asumido por el file
+store del registro (para deploy real, Supabase Storage sería el equivalente).
+
 ## Filtro de estado como dropdown-embudo; foco visible junto al código
 Dos cambios de UI de la tabla: (1) el filtro de **estado** dejó de ser `SegmentedControl`
 y pasó a un **dropdown** (`ui/StatusFilterDropdown.tsx`) con botón de icono embudo

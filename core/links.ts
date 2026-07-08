@@ -7,6 +7,7 @@
 export const LINK_ID = {
   portfolio: "P",
   linkedin: "L",
+  github: "G",
 } as const;
 
 /**
@@ -37,18 +38,20 @@ export function focusLabel(id: string): string {
 }
 
 /**
- * The two tracked links embedded in the CV for a code (with their link ids):
- * portfolio goes direct, LinkedIn via go.html. Shown read-only in the panel.
- * An optional focus profile is appended to both: the index reads `?focus=`
+ * The three tracked links embedded in the CV for a code (with their link ids):
+ * portfolio goes direct; LinkedIn and GitHub via go.html (their hosts strip or
+ * disallow query params). Shown read-only in the panel.
+ * An optional focus profile is appended to all: the index reads `?focus=`
  * directly, and go.html stores it for a later same-tab portfolio visit.
  */
 export function trackedLinks(
   code: string,
   focus?: FocusProfileId,
-): { portfolio: string; linkedin: string } {
+): { portfolio: string; linkedin: string; github: string } {
   const focusParam = focus ? `&focus=${focus}` : "";
   return {
     portfolio: `${PORTFOLIO_BASE}/?ref=${code}${LINK_ID.portfolio}${focusParam}`,
     linkedin: `${PORTFOLIO_BASE}/go.html?ref=${code}${LINK_ID.linkedin}&dest=linkedin${focusParam}`,
+    github: `${PORTFOLIO_BASE}/go.html?ref=${code}${LINK_ID.github}&dest=github${focusParam}`,
   };
 }

@@ -62,6 +62,7 @@ export function TrackedLinks({ code, focus }: { code: string; focus?: FocusProfi
       )}
       <LinkRow label="Portfolio" url={links.portfolio} />
       <LinkRow label="LinkedIn" url={links.linkedin} />
+      <LinkRow label="GitHub" url={links.github} />
     </div>
   );
 }

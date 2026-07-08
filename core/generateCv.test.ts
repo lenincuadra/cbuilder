@@ -100,6 +100,7 @@ describe("generateCv", () => {
       .async("string");
     expect(rels).toContain("ref=0628a2P&amp;focus=payments");
     expect(rels).toContain("ref=0628a2L&amp;dest=linkedin&amp;focus=payments");
+    expect(rels).toContain("ref=0628a2G&amp;dest=github&amp;focus=payments");
   });
 
   it("uses a precomputed code verbatim (preview path)", async () => {

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { slugifyCompany } from "@/core/folderName";
 import { generateCv, type GenerateCvInput } from "@/core/generateCv";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
+import { archiveCvZip } from "@/lib/archive";
 import { downloadBytes } from "@/lib/download";
 import { loadMaster } from "@/lib/masters";
 import { GenerateCard } from "@/ui/GenerateCard";
@@ -95,7 +96,16 @@ export default function Home() {
           : `${slugifyCompany(input.company)}_${result.code}.zip`;
       downloadBytes(result.zip, zipName);
 
-      toast.success(`CV generado · código ${result.code}`);
+      // Keep a server-side copy (data/cvs/): masters evolve, so the archive is
+      // the only faithful record of what was sent. Never blocks the delivery.
+      try {
+        await archiveCvZip(zipName, result.zip);
+        toast.success(`CV generado · código ${result.code}`);
+      } catch {
+        toast.warning(
+          `CV ${result.code} generado y descargado, pero no se pudo archivar la copia en data/cvs.`,
+        );
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al generar el CV.");
       throw error;

@@ -4,11 +4,14 @@ import { LINK_ID, type FocusProfileId } from "./links";
 /** Relationships part of the .docx where the header hyperlink URLs live. */
 const RELS_PATH = "word/_rels/document.xml.rels";
 
-/** Placeholder present in both master links (portfolio + LinkedIn). */
+/** Placeholder present in all three master links (portfolio + LinkedIn + GitHub). */
 const PLACEHOLDER = "ref=li-cv";
 
 /** The LinkedIn link is the one carrying &dest=linkedin (XML-escaped in the rels). */
 const LINKEDIN_PLACEHOLDER = "ref=li-cv&amp;dest=linkedin";
+
+/** The GitHub link is the one carrying &dest=github (XML-escaped in the rels). */
+const GITHUB_PLACEHOLDER = "ref=li-cv&amp;dest=github";
 
 function countOccurrences(haystack: string, needle: string): number {
   return haystack.split(needle).length - 1;
@@ -19,13 +22,14 @@ function countOccurrences(haystack: string, needle: string): number {
  * identifier so clicks can be told apart:
  *   - portfolio link  -> ref=<code>P
  *   - LinkedIn link    -> ref=<code>L
+ *   - GitHub link      -> ref=<code>G
  *
- * An optional focus profile is appended to both links (`&focus=<id>`) so the
+ * An optional focus profile is appended to all links (`&focus=<id>`) so the
  * portfolio personalizes its case order for that application's visitors.
  *
  * Throws if the master is missing the relationships part, or does not contain
- * exactly two `ref=li-cv` placeholders with exactly one being the LinkedIn link
- * (signals a malformed master).
+ * exactly three `ref=li-cv` placeholders with exactly one LinkedIn and one
+ * GitHub link (signals a malformed master).
  *
  * Returns the bytes of the filled .docx.
  */
@@ -43,17 +47,20 @@ export async function fillMaster(
   const xml = await relsFile.async("string");
   const total = countOccurrences(xml, PLACEHOLDER);
   const linkedin = countOccurrences(xml, LINKEDIN_PLACEHOLDER);
-  if (total !== 2 || linkedin !== 1) {
+  const github = countOccurrences(xml, GITHUB_PLACEHOLDER);
+  if (total !== 3 || linkedin !== 1 || github !== 1) {
     throw new Error(
-      `Master must contain exactly 2 "${PLACEHOLDER}" placeholders (1 LinkedIn, 1 portfolio) in ${RELS_PATH}; found ${total} total, ${linkedin} LinkedIn. The master looks malformed.`,
+      `Master must contain exactly 3 "${PLACEHOLDER}" placeholders (1 portfolio, 1 LinkedIn, 1 GitHub) in ${RELS_PATH}; found ${total} total, ${linkedin} LinkedIn, ${github} GitHub. The master looks malformed.`,
     );
   }
 
-  // Replace the LinkedIn link first (more specific), then the remaining portfolio one.
+  // Replace the dest-specific links first (more specific), then the remaining portfolio one.
   const focusParam = focus ? `&amp;focus=${focus}` : "";
   const filled = xml
     .split(LINKEDIN_PLACEHOLDER)
     .join(`ref=${code}${LINK_ID.linkedin}&amp;dest=linkedin${focusParam}`)
+    .split(GITHUB_PLACEHOLDER)
+    .join(`ref=${code}${LINK_ID.github}&amp;dest=github${focusParam}`)
     .split(PLACEHOLDER)
     .join(`ref=${code}${LINK_ID.portfolio}${focusParam}`);
 
