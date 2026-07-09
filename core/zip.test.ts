@@ -12,15 +12,15 @@ async function listFiles(zipBytes: Uint8Array): Promise<string[]> {
 describe("packageCvs", () => {
   it("packages a single language into one folder", async () => {
     const bytes = await packageCvs([
-      { folder: "EN_globallogic_0628r4", docx: enc.encode("EN") },
+      { folder: "EN_globallogic_0628r4", language: "EN", docx: enc.encode("EN") },
     ]);
     expect(await listFiles(bytes)).toContain(`EN_globallogic_0628r4/${CV_FILENAME}`);
   });
 
   it("packages 'Ambos' as one zip with two folders", async () => {
     const bytes = await packageCvs([
-      { folder: "EN_globallogic_0628r4", docx: enc.encode("EN") },
-      { folder: "ES_globallogic_0628r4", docx: enc.encode("ES") },
+      { folder: "EN_globallogic_0628r4", language: "EN", docx: enc.encode("EN") },
+      { folder: "ES_globallogic_0628r4", language: "ES", docx: enc.encode("ES") },
     ]);
     const files = await listFiles(bytes);
     expect(files).toContain(`EN_globallogic_0628r4/${CV_FILENAME}`);

@@ -38,7 +38,11 @@ describe("generateCv", () => {
     // Entries expose the per-language docx for extra sinks (Google Docs).
     expect(result.entries).toHaveLength(1);
     expect(result.entries[0].folder).toBe("EN_globallogic_0628a2");
+    expect(result.entries[0].language).toBe("EN");
     expect(result.entries[0].docx.length).toBeGreaterThan(0);
+    // Delivery zip name, also persisted on the row (data/cvs archive record).
+    expect(result.zipName).toBe("EN_globallogic_0628a2.zip");
+    expect(result.row.zipName).toBe("EN_globallogic_0628a2.zip");
     expect(result.row.role).toBe("UX/UI Designer");
     expect(result.row.status).toBe("Activo");
     expect(result.row.date).toBe("2026-06-28");
@@ -67,6 +71,8 @@ describe("generateCv", () => {
     expect(result.row.role).toBe("Product Designer");
     expect(result.row.channel).toBe("LinkedIn");
     expect(result.row.language).toBe("Ambos");
+    // "Ambos" zip name carries the slug + code (two folders inside).
+    expect(result.zipName).toBe("globallogic_0628a2.zip");
 
     const zip = await JSZip.loadAsync(result.zip);
     expect(zip.file("EN_globallogic_0628a2/Lenin_Cuadra_CV.docx")).not.toBeNull();

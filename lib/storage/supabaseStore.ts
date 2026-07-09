@@ -8,7 +8,7 @@ import type {
   StatusUpdate,
 } from "../../core/registry/types";
 import type { FocusProfileId } from "../../core/links";
-import type { LanguageChoice } from "../../core/types";
+import type { Language, LanguageChoice } from "../../core/types";
 
 const TABLE = "registry";
 
@@ -26,6 +26,8 @@ interface RegistryRowDb {
   job_url: string | null;
   language: string | null;
   focus: string | null;
+  zip_name: string | null;
+  drive_docs: Partial<Record<Language, string>> | null;
   created_at: string | null;
   updates: StatusUpdate[] | null;
   archived: boolean | null;
@@ -45,6 +47,8 @@ export function dbToRow(db: RegistryRowDb): RegistryRow {
     jobUrl: db.job_url ?? undefined,
     language: (db.language ?? undefined) as LanguageChoice | undefined,
     focus: (db.focus ?? undefined) as FocusProfileId | undefined,
+    zipName: db.zip_name ?? undefined,
+    driveDocs: db.drive_docs ?? undefined,
     createdAt: db.created_at ?? undefined,
     updates: db.updates ?? undefined,
     archived: db.archived ?? undefined,
@@ -65,6 +69,8 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
     job_url: row.jobUrl ?? null,
     language: row.language ?? null,
     focus: row.focus ?? null,
+    zip_name: row.zipName ?? null,
+    drive_docs: row.driveDocs ?? null,
     created_at: row.createdAt ?? null,
     updates: row.updates ?? null,
     archived: row.archived ?? null,
@@ -82,6 +88,8 @@ export function editableToDb(fields: EditableFields): Partial<RegistryRowDb> {
   if ("jobUrl" in fields) out.job_url = fields.jobUrl ?? null;
   if ("language" in fields) out.language = fields.language ?? null;
   if ("focus" in fields) out.focus = fields.focus ?? null;
+  if ("zipName" in fields) out.zip_name = fields.zipName ?? null;
+  if ("driveDocs" in fields) out.drive_docs = fields.driveDocs ?? null;
   if ("notes" in fields) out.notes = fields.notes ?? null;
   if ("status" in fields) out.status = fields.status as string;
   if ("updates" in fields) out.updates = fields.updates ?? null;

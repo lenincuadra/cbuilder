@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import type { Language } from "./types";
 
 /** The delivered file name is always generic — no tracking data in it. */
 export const CV_FILENAME = "Lenin_Cuadra_CV.docx";
@@ -6,6 +7,8 @@ export const CV_FILENAME = "Lenin_Cuadra_CV.docx";
 export interface CvEntry {
   /** Folder name, e.g. "EN_globallogic_0628r4". */
   folder: string;
+  /** Concrete language of this entry (used by extra sinks, e.g. Google Docs). */
+  language: Language;
   /** Filled .docx bytes for this folder. */
   docx: Uint8Array;
 }

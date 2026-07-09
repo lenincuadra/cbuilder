@@ -10,6 +10,20 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Entrega visible: toast con CTAs (Finder/Detalles) + card "Entrega" en el drawer
+La generación ahora persiste en la fila **dónde quedó la entrega**: `zipName` (nombre del
+zip archivado en `data/cvs/`, calculado en `generateCv` — antes lo armaba `page.tsx`) y
+`driveDocs` (URL del Google Doc por idioma, se guarda vía `update()` después del sink).
+Con eso: (1) el **toast de éxito** lleva dos CTAs — "Finder" (revela el zip archivado:
+`POST /api/cvs/reveal` → `open -R`, **solo macOS**, 501 en deploy) y "Detalles" (abre el
+panel de la fila recién generada; resetea los filtros a Vigentes/Todos para que la fila
+sea visible y usa un `openRequest {code, nonce}` que `RegistryTable` honra ajustando
+estado durante render con guarda de nonce — sin useEffect, patrón React de "adjust state
+on prop change"); (2) el **drawer** muestra el card "Entrega" (`ui/detail/DeliveryInfo`):
+zip archivado + botón de Finder, y links clickeables a los Docs de Drive (a diferencia de
+los links de tracking, abrirlos no contamina nada). Filas viejas sin estos campos no
+muestran el card. Columnas `zip_name`/`drive_docs` agregadas al schema de Supabase.
+
 ## PDF vía Google Docs sink (Apps Script), no conversión local
 Para el pedido de "exportar a PDF" se eligió **no convertir localmente** (no hay
 docx→PDF fiel sin instalar LibreOffice, y el flujo real del usuario ya pasa por Google

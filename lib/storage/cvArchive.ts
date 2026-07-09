@@ -3,7 +3,7 @@ import path from "node:path";
 
 // Local archive of generated delivery zips: data/cvs/<zipName>. Gitignored
 // (/data/), same privacy rule as the registry — company names never reach git.
-const DEFAULT_ARCHIVE_DIR = path.join(process.cwd(), "data", "cvs");
+export const CV_ARCHIVE_DIR = path.join(process.cwd(), "data", "cvs");
 
 // Zip names come from slugifyCompany + code, but never trust the client:
 // a strict allowlist keeps path traversal out (no separators, no leading dot).
@@ -24,7 +24,7 @@ export function isValidZipName(name: string): boolean {
 export async function saveCvArchive(
   name: string,
   bytes: Uint8Array,
-  archiveDir: string = DEFAULT_ARCHIVE_DIR,
+  archiveDir: string = CV_ARCHIVE_DIR,
 ): Promise<string> {
   if (!isValidZipName(name)) {
     throw new Error(`Invalid zip name: ${JSON.stringify(name)}`);

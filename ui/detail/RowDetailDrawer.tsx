@@ -38,6 +38,7 @@ import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { languageLabel } from "@/core/types";
 import { StatusToggle } from "@/ui/StatusToggle";
 import { useIsMobile } from "@/ui/useIsMobile";
+import { DeliveryInfo } from "./DeliveryInfo";
 import { NotesTab } from "./NotesTab";
 import { RowEditForm } from "./RowEditForm";
 import { TrackedLinks } from "./TrackedLinks";
@@ -289,6 +290,7 @@ export function RowDetailDrawer({
                   )}
                 </div>
                 <TrackedLinks code={row.code} focus={row.focus} />
+                <DeliveryInfo row={row} />
               </div>
             )}
 

@@ -51,6 +51,11 @@ export interface RegistryTableProps {
   onUpdate: (code: string, fields: EditableFields) => void | Promise<void>;
   onDelete: (code: string) => void | Promise<void>;
   emptyMessage?: string;
+  /**
+   * External request to open a row's detail panel (e.g. from the generation
+   * toast). The nonce distinguishes repeated requests for the same code.
+   */
+  openRequest?: { code: string; nonce: number } | null;
 }
 
 /**
@@ -69,6 +74,7 @@ export function RegistryTable({
   onUpdate,
   onDelete,
   emptyMessage,
+  openRequest,
 }: RegistryTableProps) {
   const [detailCode, setDetailCode] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -80,6 +86,15 @@ export function RegistryTable({
     setDetailCode(code);
     setDetailTab(tab);
     setDetailOpen(true);
+  }
+
+  // Honor external open requests (generation toast → detail panel): adjust
+  // state during render, guarded by the nonce so each request opens once.
+  const [handledNonce, setHandledNonce] = useState<number | null>(null);
+  if (openRequest && openRequest.nonce !== handledNonce) {
+    setHandledNonce(openRequest.nonce);
+    const row = rows.find((candidate) => candidate.code === openRequest.code);
+    openDetail(openRequest.code, row ? defaultTabFor(row) : "notas");
   }
 
   // Navigate to another row (by table order) without closing the panel.

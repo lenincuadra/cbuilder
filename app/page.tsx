@@ -4,10 +4,9 @@ import { useState, type CSSProperties } from "react";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { slugifyCompany } from "@/core/folderName";
 import { generateCv, type GenerateCvInput } from "@/core/generateCv";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
-import { archiveCvZip } from "@/lib/archive";
+import { archiveCvZip, revealCvZip } from "@/lib/archive";
 import { downloadBytes } from "@/lib/download";
 import { createGoogleDoc } from "@/lib/gdocs";
 import { loadMaster } from "@/lib/masters";
@@ -26,6 +25,8 @@ export default function Home() {
   // Two orthogonal filters: archived-or-not (view) and status.
   const [view, setView] = useState<ArchiveView>("vigentes");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos");
+  // External "open this row's detail panel" request (generation toast CTA).
+  const [openRequest, setOpenRequest] = useState<{ code: string; nonce: number } | null>(null);
 
   const existingCodes = rows.map((row) => row.code);
 
@@ -85,23 +86,38 @@ export default function Home() {
     }
   }
 
+  /** Open a freshly generated row's panel: reset filters so the row is visible. */
+  function openGeneratedRow(code: string) {
+    setView("vigentes");
+    setStatusFilter("todos");
+    setOpenRequest({ code, nonce: Date.now() });
+  }
+
   async function handleGenerate(input: GenerateCvInput) {
     setGenerating(true);
     try {
       const result = await generateCv(input, { existingCodes, loadMaster });
       await add(result.row);
-
-      const zipName =
-        result.folderNames.length === 1
-          ? `${result.folderNames[0]}.zip`
-          : `${slugifyCompany(input.company)}_${result.code}.zip`;
-      downloadBytes(result.zip, zipName);
+      downloadBytes(result.zip, result.zipName);
 
       // Keep a server-side copy (data/cvs/): masters evolve, so the archive is
       // the only faithful record of what was sent. Never blocks the delivery.
       try {
-        await archiveCvZip(zipName, result.zip);
-        toast.success(`CV generado · código ${result.code}`);
+        await archiveCvZip(result.zipName, result.zip);
+        toast.success(`CV generado · código ${result.code}`, {
+          duration: 10000,
+          action: { label: "Detalles", onClick: () => openGeneratedRow(result.code) },
+          cancel: {
+            label: "Finder",
+            onClick: () => {
+              revealCvZip(result.zipName).catch((error: unknown) =>
+                toast.error(
+                  error instanceof Error ? error.message : "No se pudo abrir el Finder.",
+                ),
+              );
+            },
+          },
+        });
       } catch {
         toast.warning(
           `CV ${result.code} generado y descargado, pero no se pudo archivar la copia en data/cvs.`,
@@ -110,11 +126,14 @@ export default function Home() {
 
       // Extra sink: create each CV in the user's Google Drive as a native
       // Google Doc (via Apps Script). Feature-off (501) is silent; a real
-      // failure only warns — the zip was already delivered.
+      // failure only warns — the zip was already delivered. Collected URLs are
+      // persisted on the row so the panel can always show them.
+      const driveDocs: NonNullable<RegistryRow["driveDocs"]> = {};
       for (const entry of result.entries) {
         try {
           const url = await createGoogleDoc(entry.folder, entry.docx);
           if (url) {
+            driveDocs[entry.language] = url;
             toast.success(`${entry.folder} creado en Google Docs`, {
               action: { label: "Abrir", onClick: () => window.open(url, "_blank") },
               duration: 10000,
@@ -123,6 +142,11 @@ export default function Home() {
         } catch {
           toast.warning(`No se pudo crear ${entry.folder} en Google Docs.`);
         }
+      }
+      if (Object.keys(driveDocs).length > 0) {
+        await update(result.code, { driveDocs }).catch(() => {
+          // The docs exist in Drive; only the registry link failed — not fatal.
+        });
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al generar el CV.");
@@ -159,6 +183,7 @@ export default function Home() {
             loading={loading}
             onUpdate={handleUpdate}
             onDelete={handleDelete}
+            openRequest={openRequest}
             emptyMessage={
               statusFilter !== "todos"
                 ? `No hay ${statusFilter === "Activo" ? "activas" : "rechazadas"} en ${view === "archivado" ? "Archivado" : "Vigentes"}.`

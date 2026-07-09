@@ -1,6 +1,6 @@
 import { toISODate } from "./dates";
 import { fillMaster } from "./docx";
-import { folderName } from "./folderName";
+import { folderName, slugifyCompany } from "./folderName";
 import type { FocusProfileId } from "./links";
 import { generateCode } from "./tracking";
 import type { Language, LanguageChoice } from "./types";
@@ -51,6 +51,8 @@ export interface GenerateCvResult {
   folderNames: string[];
   /** Per-language filled CVs (also inside the zip) — for extra sinks like Google Docs. */
   entries: CvEntry[];
+  /** Delivery zip file name (single language: `<folder>.zip`; Ambos: `<slug>_<code>.zip`). */
+  zipName: string;
   /** Final delivery .zip bytes. */
   zip: Uint8Array;
   /** Registry row to persist (caller decides when to store it). */
@@ -87,10 +89,14 @@ export async function generateCv(
   for (const language of languagesFor(input.languageChoice)) {
     const master = await deps.loadMaster(language);
     const docx = await fillMaster(master, code, input.focus);
-    entries.push({ folder: folderName({ language, company: input.company, code }), docx });
+    entries.push({ folder: folderName({ language, company: input.company, code }), language, docx });
   }
 
   const zip = await packageCvs(entries);
+  const zipName =
+    entries.length === 1
+      ? `${entries[0].folder}.zip`
+      : `${slugifyCompany(input.company)}_${code}.zip`;
   const now = deps.now ?? (() => new Date());
 
   const row: RegistryRow = {
@@ -106,8 +112,9 @@ export async function generateCv(
     jobUrl: cleaned(input.jobUrl),
     language: input.languageChoice,
     focus: input.focus,
+    zipName,
     createdAt: now().toISOString(),
   };
 
-  return { code, folderNames: entries.map((entry) => entry.folder), entries, zip, row };
+  return { code, folderNames: entries.map((entry) => entry.folder), entries, zipName, zip, row };
 }
