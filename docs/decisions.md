@@ -10,6 +10,22 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Dropdowns con iconos: todos con `DropdownMenu`, no `Select` (`IconSelect`)
+Todos los dropdowns seleccionables que muestran iconos pasaron del `Select` (base-ui) a un
+componente único **`ui/IconSelect.tsx`** sobre **`DropdownMenu`** (patrón checkboxes+icons,
+el mismo del `StatusFilterDropdown`). Aplica a **Foco del portfolio** (`FocusIcon`) y
+**Canal** en el wizard y en el edit form (`ChannelIcon`, el mismo icono de la columna Canal).
+Razón: consistencia (un solo componente para todos los dropdowns con iconos) + pedido
+explícito con referencia al ejemplo *dropdown-menu / checkboxes-icons* de shadcn. Cada opción
+usa **el mismo icono que la tabla** para ese valor. Regla y lista completa en `DESIGN.md`.
+
+**Bonus:** esto resolvió de raíz la saga del `Select` adentro del drawer (ver la entrada
+"Select del drawer"). El `Menu` de base-ui, portaleado al nodo del drawer vía el nuevo prop
+`container` de `DropdownMenuContent` (+ `modal={false}`, `z-[60]`, `pointer-events-auto`),
+abre y **permite seleccionar** sin pelear con el focus-trap de vaul — verificado en el
+browser (antes el `Select` se cerraba al instante). El componente `Select` queda en el DS
+pero **ya no se usa** en la app.
+
 ## Entrega visible: una sola alerta (Finder/Drive + Detalles) + card "Entrega"
 La generación persiste en la fila **dónde quedó la entrega**: `zipName` (zip archivado en
 `data/cvs/`, calculado en `generateCv`), `driveDocs` (URL del Doc por idioma) y

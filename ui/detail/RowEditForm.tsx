@@ -8,23 +8,17 @@ import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toISODate } from "@/core/dates";
 import {
-  CHANNELS,
   DEFAULT_ROLE,
   type Channel,
   type EditableFields,
   type RegistryRow,
 } from "@/core/registry/types";
 import { languageLabel } from "@/core/types";
+import { IconSelect } from "@/ui/IconSelect";
 import { DatePicker } from "@/ui/wizard/DatePicker";
+import { CHANNEL_OPTIONS } from "@/ui/wizard/StepOptional";
 import { CHANNEL_OMIT } from "@/ui/wizard/types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -100,30 +94,16 @@ export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditF
 
       <div className="space-y-1.5">
         <Label htmlFor="edit-channel">Canal</Label>
-        <Select
-          // Non-modal so base-ui's focus management doesn't fight the vaul drawer's focus
-          // trap (which was closing the popup the instant it opened). See the pointer-events
-          // / z-index fix in components/ui/select.tsx for the rest of the drawer interplay.
-          modal={false}
+        {/* Same IconSelect as the wizard; `container` = the drawer node keeps the
+            menu in the drawer's focus / pointer-events scope (non-modal internally). */}
+        <IconSelect
+          id="edit-channel"
+          aria-label="Canal"
           value={channel === "" ? CHANNEL_OMIT : channel}
-          onValueChange={(value) =>
-            setChannel(value == null || value === CHANNEL_OMIT ? "" : (value as Channel))
-          }
-        >
-          <SelectTrigger id="edit-channel" className="w-full">
-            <SelectValue>
-              {(value: unknown) => (value && value !== CHANNEL_OMIT ? (value as string) : "Omitir")}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent container={portalContainer} alignItemWithTrigger={false}>
-            <SelectItem value={CHANNEL_OMIT}>Omitir</SelectItem>
-            {CHANNELS.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          onChange={(value) => setChannel(value === CHANNEL_OMIT ? "" : (value as Channel))}
+          options={CHANNEL_OPTIONS}
+          container={portalContainer}
+        />
       </div>
 
       {channel === "Email" && (

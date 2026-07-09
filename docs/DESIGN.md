@@ -31,6 +31,24 @@ Antes de crear cualquier componente o comportamiento de UI:
 - Usar el componente `Empty` de shadcn (`components/ui/empty.tsx`) en todos los vacíos
   (registro vacío, actualizaciones vacías, etc.), no texto suelto.
 
+## Dropdowns seleccionables con iconos → un solo componente
+- **Regla:** todo dropdown seleccionable que muestre iconos usa **`DropdownMenu`** del DS
+  (patrón *checkboxes + icons*), **no** el `Select`. Así todos los dropdowns con iconos son
+  visualmente consistentes y comparten el mismo componente.
+- **`ui/IconSelect.tsx`** — wrapper reusable (single-select) sobre `DropdownMenu` +
+  `DropdownMenuCheckboxItem`: trigger con look de select (icono + label + chevron) y ✓ a la
+  derecha del item elegido. Cada opción lleva **el mismo icono que se muestra en la tabla**
+  para ese valor.
+- Dónde se usa (cada dropdown con iconos):
+  - **Foco del portfolio** (wizard, `StepLanguage`) → `IconSelect` + `FocusIcon`.
+  - **Canal** (wizard `StepOptional` **y** edit form `RowEditForm`) → `IconSelect` +
+    `ChannelIcon` (mismo icono que la columna Canal de la tabla).
+  - **Filtro de estado** (`StatusFilterDropdown`) → `DropdownMenu` directo (trigger embudo +
+    chip), mismo componente base.
+- **Dentro del drawer**: `IconSelect` acepta `container` (el nodo del drawer) y se porta
+  ahí (`DropdownMenuContent` con `container`, `modal={false}`, `z-[60]`, `pointer-events-auto`)
+  — misma solución que se usaba para el `Select`, ahora resuelta de una vez en el DS.
+
 ## Inputs
 - Usar `InputGroup` (`components/ui/input-group.tsx`) para inputs con addon (íconos,
   botones). Campos **read-only/disabled** en un form: `InputGroup` con el valor + un

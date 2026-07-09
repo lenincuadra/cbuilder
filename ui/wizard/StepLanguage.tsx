@@ -1,18 +1,22 @@
 "use client";
 
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { FOCUS_PROFILES, focusLabel, type FocusProfileId } from "@/core/links";
+import { FOCUS_PROFILES, type FocusProfileId } from "@/core/links";
 import { FocusIcon } from "@/ui/FocusIcon";
+import { IconSelect, type IconSelectOption } from "@/ui/IconSelect";
 import { LanguageToggle } from "./LanguageToggle";
 import type { StepProps } from "./StepCompany";
 import { FOCUS_NONE } from "./types";
+
+/** "Sin foco" + one option per profile, each with its table icon. */
+const FOCUS_OPTIONS: IconSelectOption<string>[] = [
+  { value: FOCUS_NONE, label: "Sin foco" },
+  ...FOCUS_PROFILES.map((profile) => ({
+    value: profile.id,
+    label: profile.label,
+    icon: <FocusIcon focus={profile.id} className="size-4 text-muted-foreground" />,
+  })),
+];
 
 /** Step 3 — Idioma (EN / ES / Ambos) + foco del portfolio. Last selections before the review. */
 export function StepLanguage({ data, set }: StepProps) {
@@ -30,39 +34,15 @@ export function StepLanguage({ data, set }: StepProps) {
 
       <div className="space-y-2">
         <Label htmlFor="focus">Foco del portfolio</Label>
-        <Select
+        <IconSelect
+          id="focus"
+          aria-label="Foco del portfolio"
           value={data.focus === "" ? FOCUS_NONE : data.focus}
-          onValueChange={(value) =>
-            set({
-              focus:
-                value == null || value === FOCUS_NONE ? "" : (value as FocusProfileId),
-            })
+          onChange={(value) =>
+            set({ focus: value === FOCUS_NONE ? "" : (value as FocusProfileId) })
           }
-        >
-          <SelectTrigger id="focus" className="w-full">
-            <SelectValue>
-              {(value: unknown) =>
-                value && value !== FOCUS_NONE ? (
-                  <span className="inline-flex items-center gap-2">
-                    <FocusIcon focus={value as FocusProfileId} className="size-4 shrink-0" />
-                    {focusLabel(value as string)}
-                  </span>
-                ) : (
-                  "Sin foco"
-                )
-              }
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={FOCUS_NONE}>Sin foco</SelectItem>
-            {FOCUS_PROFILES.map((profile) => (
-              <SelectItem key={profile.id} value={profile.id}>
-                <FocusIcon focus={profile.id} className="size-4 shrink-0 text-muted-foreground" />
-                {profile.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          options={FOCUS_OPTIONS}
+        />
         <p className="text-xs text-muted-foreground">
           Reordena los casos del portfolio para quien abre el link del CV: destaca lo más
           afín a la empresa, sin ocultar nada.

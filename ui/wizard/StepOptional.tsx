@@ -2,16 +2,21 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { CHANNELS, type Channel } from "@/core/registry/types";
+import { ChannelIcon } from "@/ui/ChannelIcon";
+import { IconSelect, type IconSelectOption } from "@/ui/IconSelect";
 import type { StepProps } from "./StepCompany";
 import { CHANNEL_OMIT } from "./types";
+
+/** "Omitir" + one option per channel, each with its table icon. */
+export const CHANNEL_OPTIONS: IconSelectOption<string>[] = [
+  { value: CHANNEL_OMIT, label: "Omitir" },
+  ...CHANNELS.map((channel) => ({
+    value: channel,
+    label: channel,
+    icon: <ChannelIcon channel={channel} className="size-4 text-muted-foreground" />,
+  })),
+];
 
 /** Step 3 — Optional fields: rol, canal, quién, link del puesto. None are required. */
 export function StepOptional({ data, set }: StepProps) {
@@ -28,28 +33,15 @@ export function StepOptional({ data, set }: StepProps) {
 
       <div className="space-y-2">
         <Label htmlFor="channel">Canal</Label>
-        <Select
+        <IconSelect
+          id="channel"
+          aria-label="Canal"
           value={data.channel === "" ? CHANNEL_OMIT : data.channel}
-          onValueChange={(value) =>
-            set({ channel: value == null || value === CHANNEL_OMIT ? "" : (value as Channel) })
+          onChange={(value) =>
+            set({ channel: value === CHANNEL_OMIT ? "" : (value as Channel) })
           }
-        >
-          <SelectTrigger id="channel" className="w-full">
-            <SelectValue>
-              {(value: unknown) =>
-                value && value !== CHANNEL_OMIT ? (value as string) : "Omitir"
-              }
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={CHANNEL_OMIT}>Omitir</SelectItem>
-            {CHANNELS.map((channel) => (
-              <SelectItem key={channel} value={channel}>
-                {channel}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          options={CHANNEL_OPTIONS}
+        />
       </div>
 
       {data.channel === "Email" && (
