@@ -17,7 +17,7 @@ Dos sistemas separados, en repos distintos:
 | Repo | Rol | Público |
 |---|---|---|
 | **cv-builder** (este) | Escribe los links de tracking en el `.docx`; back-office privado del registro. Corre local. | Código sí, data no |
-| **portfolio** (`lenincuadra.com`, `~/Desktop/new/prft`) | Recibe los clicks, trackea, redirige, personaliza. GitHub Pages. | Sí |
+| **portfolio** (`lenincuadra.com`, repo aparte) | Recibe los clicks, trackea, redirige, personaliza. GitHub Pages. | Sí |
 
 La regla de oro: **cv-builder ESCRIBE los links, el portfolio los RECIBE.** El
 único acoplamiento es el contrato del `ref` (ver "Modelo de tracking").
