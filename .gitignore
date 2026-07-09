@@ -3,6 +3,8 @@
 # PRIVATE registry data — never commit (repo is public).
 /data/
 docs/*tracking-registry*.md
+# Personal backlog — has company names; repo is public.
+/TODO.md
 
 # dependencies
 /node_modules
