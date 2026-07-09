@@ -4,6 +4,7 @@ App web que genera el CV de Lenin Cuadra con tracking, fase 2 (app real).
 
 ## Fuente de verdad
 - La spec original del producto está en `docs/cv-builder-product-definition.md`. Es la spec histórica; algunas reglas se actualizaron después (ver `docs/decisions.md`). Si algo entra en conflicto, priorizá `docs/decisions.md` y preguntá ante la duda.
+- **`docs/architecture.md`**: mapa del "qué/cómo" (pipeline de generación, capas de storage, rutas API, modelo de tracking). Leelo para orientarte antes de tocar el flujo de generación, storage o sinks; actualizalo si agregás/cambiás una pieza de la arquitectura.
 - **`docs/decisions.md`**: log de decisiones (el "por qué", trade-offs y reglas que cambiaron). Leelo antes de tomar/revertir decisiones de producto o arquitectura, y agregá una entrada cuando tomes una decisión no obvia.
 - El pedido concreto de esta fase está en `docs/claude-code-prompt-fase2.md`.
 - Los CV master están en `assets/` (EN y ES). No los modifiques salvo que se pida explícitamente.

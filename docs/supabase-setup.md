@@ -2,19 +2,29 @@
 
 The registry lives behind the `RegistryStore` interface. When the Supabase env
 vars are present the app uses `SupabaseRegistryStore`; otherwise it falls back to
-per-browser `localStorage`.
+the **local file store** (`data/registry.json` on disk, via API routes) — durable
+and shared across browsers on the same machine. Supabase is for deploy / sharing.
+See [`architecture.md`](architecture.md) for the full storage picture.
 
 ## One-time setup
 
 1. **Create a project** at https://supabase.com (free tier is enough).
 2. **Create the table**: open the project's **SQL editor**, paste the contents of
-   [`supabase/schema.sql`](../supabase/schema.sql), and run it.
+   [`supabase/schema.sql`](../supabase/schema.sql), and run it. The schema tracks
+   `RegistryRow` — it already includes the newer columns (`focus`, `zip_name`,
+   `drive_docs`). If you ran an older schema, add the missing ones:
+   `alter table public.registry add column if not exists focus text, add column
+   if not exists zip_name text, add column if not exists drive_docs jsonb;`
 3. **Get the credentials**: Project settings → API → copy the **Project URL** and
    the **anon public** key.
 4. **Wire them locally**: copy `.env.local.example` to `.env.local` and fill both
    values. `.env.local` is gitignored.
-5. `npm run dev` — the app now reads/writes the `registry` table. (Check the
-   browser console: no localStorage warning means Supabase is active.)
+5. `npm run dev` — the app now reads/writes the `registry` table instead of the
+   local file store.
+
+> Note: this covers the **registry** only. The general-notes store is still
+> file-based (no Supabase table yet), and the Google Docs sink is independent
+> (see [`gdocs-setup.md`](gdocs-setup.md)).
 
 ## On Vercel
 

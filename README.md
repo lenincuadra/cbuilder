@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# cv-builder
 
-## Getting Started
+App web que genera el CV de Lenin Cuadra para una aplicación concreta, con un
+**código de tracking** insertado en los links del header, y mantiene un registro
+privado de a dónde y cómo se aplicó a cada puesto. El output es un `.docx`
+editable; opcionalmente se archiva el `.zip` y se crea una copia en Google Docs.
 
-First, run the development server:
+> **Privacidad:** el repo es público, pero la data del registro (a quién aplicó
+> Lenin) es privada y está fuera de git (`data/` gitignoreado). No commitear data
+> real.
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Sin ninguna configuración, la app corre 100% local: guarda el registro en
+`data/registry.json` (en disco, fuera de git). Los sinks opcionales (Supabase,
+Google Docs) se activan con variables de entorno — ver más abajo.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Otros comandos:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run test         # vitest (lógica de core/ + storage)
+npm run lint         # eslint
+npm run build        # build de producción
+```
 
-## Learn More
+## Cómo funciona (en un párrafo)
 
-To learn more about Next.js, take a look at the following resources:
+Un wizard captura empresa, idioma, foco y opcionales. `generateCv()` elige un
+código único, rellena el/los master(s) `.docx` reemplazando los placeholders por
+los links de tracking reales, empaqueta un `.zip` y arma la fila del registro. El
+zip se descarga, se archiva en `data/cvs/` y (si está configurado) se crea en tu
+Drive como Google Doc. Todo lo identificatorio va en el nombre de la carpeta
+(`[IDIOMA]_[empresa]_[código]`); el archivo entregable siempre se llama
+`Lenin_Cuadra_CV.docx`, sin tracking.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Para el detalle completo (pipeline, storage, rutas API, modelo de tracking):
+**[`docs/architecture.md`](docs/architecture.md)**.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Documentación
 
-## Deploy on Vercel
+| Doc | Qué contiene |
+|---|---|
+| [`docs/architecture.md`](docs/architecture.md) | **Empezá acá.** Mapa qué/cómo: pipeline, storage, rutas API, tracking |
+| [`docs/decisions.md`](docs/decisions.md) | Log de decisiones (el *por qué*, trade-offs, reglas que cambiaron) |
+| [`docs/DESIGN.md`](docs/DESIGN.md) | Convenciones de UI (drawers, tabla, filtros, wizard) |
+| [`docs/gdocs-setup.md`](docs/gdocs-setup.md) | Setup del sink a Google Docs (Apps Script) |
+| [`docs/supabase-setup.md`](docs/supabase-setup.md) | Setup de Supabase (registro durable para deploy) |
+| [`docs/cv-builder-product-definition.md`](docs/cv-builder-product-definition.md) | Spec original del producto (histórica) |
+| [`CLAUDE.md`](CLAUDE.md) | Reglas inviolables + convenciones para trabajar en el repo |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Features
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Tracking por link** — código `MMDD`+letra+dígito, con identificador de link
+  (portfolio `P` / LinkedIn `L` / GitHub `G`) apendeado.
+- **Foco del portfolio** — opción en el wizard para que el link del CV reordene
+  los casos del portfolio según la industria (fintech, IA, e-commerce).
+- **Registro** — tabla filtrable (vigentes/archivado × estado), panel de detalle
+  editable, seguimiento (notas + timeline), alerta de inactividad, borrado.
+- **Entrega** — descarga del zip + archivo local en `data/cvs/` + copia en Google
+  Docs; el drawer muestra dónde quedó cada cosa (Finder / URL de Drive).
+- **Notas generales** — markdown del proceso, no atado a ninguna fila.
+
+## Stack
+
+Next.js · Tailwind CSS · shadcn/ui (base-ui) · Vitest. Deploy a Vercel (requiere
+Supabase para el registro durable — ver [`docs/supabase-setup.md`](docs/supabase-setup.md)).
