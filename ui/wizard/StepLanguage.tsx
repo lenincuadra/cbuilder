@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FOCUS_PROFILES, focusLabel, type FocusProfileId } from "@/core/links";
+import { FocusIcon } from "@/ui/FocusIcon";
 import { LanguageToggle } from "./LanguageToggle";
 import type { StepProps } from "./StepCompany";
 import { FOCUS_NONE } from "./types";
@@ -41,7 +42,14 @@ export function StepLanguage({ data, set }: StepProps) {
           <SelectTrigger id="focus" className="w-full">
             <SelectValue>
               {(value: unknown) =>
-                value && value !== FOCUS_NONE ? focusLabel(value as string) : "Sin foco"
+                value && value !== FOCUS_NONE ? (
+                  <span className="inline-flex items-center gap-2">
+                    <FocusIcon focus={value as FocusProfileId} className="size-4 shrink-0" />
+                    {focusLabel(value as string)}
+                  </span>
+                ) : (
+                  "Sin foco"
+                )
               }
             </SelectValue>
           </SelectTrigger>
@@ -49,6 +57,7 @@ export function StepLanguage({ data, set }: StepProps) {
             <SelectItem value={FOCUS_NONE}>Sin foco</SelectItem>
             {FOCUS_PROFILES.map((profile) => (
               <SelectItem key={profile.id} value={profile.id}>
+                <FocusIcon focus={profile.id} className="size-4 shrink-0 text-muted-foreground" />
                 {profile.label}
               </SelectItem>
             ))}

@@ -9,12 +9,13 @@ import { revealCvZip } from "@/lib/archive";
 
 /**
  * Where this application's deliverables live: the archived .zip (data/cvs/,
- * revealable in Finder) and the Google Doc(s) created in Drive. Older rows
- * predate these fields — the card hides what it doesn't know.
+ * revealable in Finder) and the Google Docs folder in Drive. Older rows predate
+ * these fields — the card hides what it doesn't know. Falls back to per-language
+ * Doc links for rows that have driveDocs but no driveFolder.
  */
 export function DeliveryInfo({ row }: { row: RegistryRow }) {
-  const drive = Object.entries(row.driveDocs ?? {}) as Array<[string, string]>;
-  if (!row.zipName && drive.length === 0) return null;
+  const docs = Object.entries(row.driveDocs ?? {}) as Array<[string, string]>;
+  if (!row.zipName && !row.driveFolder && docs.length === 0) return null;
 
   async function reveal(name: string) {
     try {
@@ -49,24 +50,42 @@ export function DeliveryInfo({ row }: { row: RegistryRow }) {
         </div>
       )}
 
-      {drive.map(([language, url]) => (
-        <div key={language} className="space-y-0.5">
-          <span className="text-xs text-muted-foreground">Google Docs · {language}</span>
+      {row.driveFolder ? (
+        <div className="space-y-0.5">
+          <span className="text-xs text-muted-foreground">Carpeta en Google Drive</span>
           <div className="flex items-start gap-2">
             {/* Drive URLs are safe to click (no tracker), unlike the tracked links above. */}
             <a
-              href={url}
+              href={row.driveFolder}
               target="_blank"
               rel="noreferrer"
               className="min-w-0 flex-1 truncate font-mono text-xs underline underline-offset-2 hover:text-foreground"
-              title={url}
+              title={row.driveFolder}
             >
-              {url}
+              {row.driveFolder}
             </a>
             <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
           </div>
         </div>
-      ))}
+      ) : (
+        docs.map(([language, url]) => (
+          <div key={language} className="space-y-0.5">
+            <span className="text-xs text-muted-foreground">Google Docs · {language}</span>
+            <div className="flex items-start gap-2">
+              <a
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="min-w-0 flex-1 truncate font-mono text-xs underline underline-offset-2 hover:text-foreground"
+                title={url}
+              >
+                {url}
+              </a>
+              <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
+            </div>
+          </div>
+        ))
+      )}
     </div>
   );
 }

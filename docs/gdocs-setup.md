@@ -1,9 +1,20 @@
 # Google Docs sink — setup
 
-Cada CV generado se crea también en tu Drive como **Google Doc nativo**
-(`CV Builder/<carpeta>/Lenin_Cuadra_CV`), listo para *File → Download → PDF*.
+Cada CV generado se crea también en tu Drive como **Google Doc nativo**, listo
+para *File → Download → PDF*. Cada aplicación tiene **una carpeta propia** con
+subcarpetas por idioma adentro:
+
+```
+CV Builder/
+  <empresa>_<código>/          ← una por aplicación (la URL que abre la app)
+    EN/  Lenin_Cuadra_CV
+    ES/  Lenin_Cuadra_CV        ← sólo si generaste "Ambos"
+```
+
 El doc se llama `Lenin_Cuadra_CV` (sin tracking) a propósito: así el PDF
-descargado respeta la regla del naming; el código va en el nombre de la carpeta.
+descargado respeta la regla del naming; el idioma va en la subcarpeta y el código
+en la carpeta de la aplicación. La app abre la **carpeta** de la aplicación
+(no el archivo), así funciona igual para EN, ES o ambos.
 
 La integración es un **webhook de Google Apps Script** (sin Cloud Console ni
 OAuth): la app le manda el .docx a tu script, y el script lo guarda en tu Drive.
@@ -23,7 +34,8 @@ Si las env vars no están, el feature queda apagado en silencio.
 
 ```javascript
 // CV Builder -> Drive sink. Receives a filled CV (.docx, base64) and stores it
-// as a native Google Doc under: CV Builder/<folder>/Lenin_Cuadra_CV
+// as a native Google Doc under: CV Builder/<appFolder>/<language>/Lenin_Cuadra_CV
+// Returns the Doc URL and the application folder URL (shared across languages).
 const TOKEN = "PUT_A_LONG_RANDOM_TOKEN_HERE";
 const ROOT_FOLDER = "CV Builder";
 const DOC_NAME = "Lenin_Cuadra_CV"; // no tracking data: downloads inherit this name
@@ -32,10 +44,12 @@ function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
     if (body.token !== TOKEN) return json_({ error: "unauthorized" });
-    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(body.folder)) return json_({ error: "bad folder" });
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(body.appFolder)) return json_({ error: "bad folder" });
+    if (body.language !== "EN" && body.language !== "ES") return json_({ error: "bad language" });
 
     const root = findOrCreate_(DriveApp.getRootFolder(), ROOT_FOLDER);
-    const folder = findOrCreate_(root, body.folder);
+    const appFolder = findOrCreate_(root, body.appFolder);   // one per application
+    const langFolder = findOrCreate_(appFolder, body.language); // EN / ES inside
 
     const blob = Utilities.newBlob(
       Utilities.base64Decode(body.docxBase64),
@@ -44,10 +58,13 @@ function doPost(e) {
     );
     // Advanced Drive service (v3): upload with conversion to a native Google Doc.
     const file = Drive.Files.create(
-      { name: DOC_NAME, parents: [folder.getId()], mimeType: "application/vnd.google-apps.document" },
+      { name: DOC_NAME, parents: [langFolder.getId()], mimeType: "application/vnd.google-apps.document" },
       blob,
     );
-    return json_({ url: "https://docs.google.com/document/d/" + file.id + "/edit" });
+    return json_({
+      url: "https://docs.google.com/document/d/" + file.id + "/edit",
+      folderUrl: "https://drive.google.com/drive/folders/" + appFolder.getId(),
+    });
   } catch (err) {
     return json_({ error: String(err) });
   }
@@ -74,13 +91,20 @@ GDOCS_SCRIPT_URL=https://script.google.com/macros/s/XXXX/exec
 GDOCS_TOKEN=el-mismo-token-del-script
 ```
 
-Reiniciar el dev server. Listo: al generar un CV aparece el toast
-"…creado en Google Docs → Abrir".
+Reiniciar el dev server. Listo: al generar un CV, la alerta de éxito trae un
+botón **Drive** que abre la carpeta de la aplicación.
+
+## Actualizar un script ya deployado
+
+Si ya tenías una versión vieja del script (que guardaba en
+`CV Builder/<carpeta>/…` y devolvía sólo `{ url }`), **reemplazá el código por
+el de arriba y redeployá**: **Administrar implementaciones → editar (lápiz) →
+Versión: Nueva versión → Implementar**. Eso mantiene la misma URL (no hace falta
+tocar `.env.local`). Hasta actualizarlo, el sink falla y el CV igual se descarga
+(toast warning).
 
 ## Notas
 
-- Si redeployás el script (cambios de código), la URL puede cambiar según cómo
-  publiques: usá **Administrar implementaciones → editar (lápiz) → Nueva versión**
-  para mantener la misma URL.
+- El token viaja server-to-server (la URL/token nunca llegan al browser).
 - El token viaja server-to-server (la URL/token nunca llegan al browser).
 - Fallos del script solo muestran un toast de warning: el .zip ya se descargó.

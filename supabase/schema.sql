@@ -16,6 +16,7 @@ create table if not exists public.registry (
   focus       text,                          -- portfolio focus profile baked into the CV links
   zip_name    text,                          -- archived delivery zip file name (data/cvs/)
   drive_docs  jsonb,                         -- Google Doc URL per language {"EN": url, "ES": url}
+  drive_folder text,                         -- Drive folder holding this application's Doc(s)
   created_at  timestamptz not null default now(),
   updates     jsonb not null default '[]'::jsonb,  -- follow-up timeline [{at, message}]
   archived    boolean not null default false

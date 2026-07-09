@@ -343,28 +343,40 @@ export function RowDetailDrawer({
               </AlertDialogDescription>
             </AlertDialogHeader>
 
-            {row.driveDocs && Object.keys(row.driveDocs).length > 0 && (
+            {(row.driveFolder || (row.driveDocs && Object.keys(row.driveDocs).length > 0)) && (
               <div className="space-y-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs">
                 <div className="flex items-center gap-1.5 font-medium text-amber-500">
                   <TriangleAlert className="size-3.5 shrink-0" />
-                  El Google Doc no se borra: queda en tu Drive
+                  El CV en Drive no se borra: queda en tu Drive
                 </div>
                 <p className="text-muted-foreground">
                   Borrar la fila no toca Google Drive. Si querés eliminarlo, hacelo a mano:
                 </p>
-                {(Object.entries(row.driveDocs) as Array<[string, string]>).map(
-                  ([language, url]) => (
-                    <a
-                      key={language}
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block truncate font-mono underline underline-offset-2 hover:text-foreground"
-                      title={url}
-                    >
-                      {language} · {url}
-                    </a>
-                  ),
+                {row.driveFolder ? (
+                  <a
+                    href={row.driveFolder}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block break-all font-mono underline underline-offset-2 hover:text-foreground"
+                    title={row.driveFolder}
+                  >
+                    Carpeta · {row.driveFolder}
+                  </a>
+                ) : (
+                  (Object.entries(row.driveDocs ?? {}) as Array<[string, string]>).map(
+                    ([language, url]) => (
+                      <a
+                        key={language}
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block break-all font-mono underline underline-offset-2 hover:text-foreground"
+                        title={url}
+                      >
+                        {language} · {url}
+                      </a>
+                    ),
+                  )
                 )}
               </div>
             )}

@@ -10,19 +10,31 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
-## Entrega visible: toast con CTAs (Finder/Detalles) + card "Entrega" en el drawer
-La generación ahora persiste en la fila **dónde quedó la entrega**: `zipName` (nombre del
-zip archivado en `data/cvs/`, calculado en `generateCv` — antes lo armaba `page.tsx`) y
-`driveDocs` (URL del Google Doc por idioma, se guarda vía `update()` después del sink).
-Con eso: (1) el **toast de éxito** lleva dos CTAs — "Finder" (revela el zip archivado:
-`POST /api/cvs/reveal` → `open -R`, **solo macOS**, 501 en deploy) y "Detalles" (abre el
-panel de la fila recién generada; resetea los filtros a Vigentes/Todos para que la fila
-sea visible y usa un `openRequest {code, nonce}` que `RegistryTable` honra ajustando
-estado durante render con guarda de nonce — sin useEffect, patrón React de "adjust state
-on prop change"); (2) el **drawer** muestra el card "Entrega" (`ui/detail/DeliveryInfo`):
-zip archivado + botón de Finder, y links clickeables a los Docs de Drive (a diferencia de
-los links de tracking, abrirlos no contamina nada). Filas viejas sin estos campos no
-muestran el card. Columnas `zip_name`/`drive_docs` agregadas al schema de Supabase.
+## Entrega visible: una sola alerta (Finder/Drive + Detalles) + card "Entrega"
+La generación persiste en la fila **dónde quedó la entrega**: `zipName` (zip archivado en
+`data/cvs/`, calculado en `generateCv`), `driveDocs` (URL del Doc por idioma) y
+`driveFolder` (la carpeta de la aplicación en Drive). Se guardan vía `update()` tras el
+sink. Con eso:
+- **Una sola alerta de éxito** (antes eran hasta 3: "CV generado" + un toast por idioma).
+  El botón secundario abre la **carpeta de Drive** si el sink corrió, si no revela el zip
+  en **Finder** (`POST /api/cvs/reveal` → `open -R`, **solo macOS**, 501 en deploy); el
+  principal ("Detalles") abre el panel de la fila recién generada (resetea filtros a
+  Vigentes/Todos y usa `openRequest {code, nonce}` que `RegistryTable` honra ajustando
+  estado durante render con guarda de nonce — sin useEffect). Fallos (archivo/gdocs) van en
+  toasts warning aparte, no ensucian el happy path.
+- El **drawer** muestra el card "Entrega" (`ui/detail/DeliveryInfo`): zip archivado + botón
+  de Finder, y la **carpeta de Drive** como link clickeable (fallback a Docs por idioma en
+  filas viejas). Abrir links de Drive no contamina el tracking.
+- El **diálogo de borrado** avisa que el CV en Drive **no se borra** y muestra la carpeta
+  (lo que hay que borrar a mano es la carpeta completa). Las URLs usan `break-all`, no
+  `truncate`, para no desbordar el modal.
+
+**Estructura en Drive: una carpeta por aplicación** — `CV Builder/<empresa>_<código>/<IDIOMA>/
+Lenin_Cuadra_CV` (idioma en subcarpeta). Así una sola URL de carpeta sirve para EN, ES o
+Ambos, y el Doc mantiene el nombre limpio `Lenin_Cuadra_CV` (PDF sin tracking). El Apps
+Script devuelve `{ url, folderUrl }`; el contrato del sink pasó de `{folder}` a
+`{appFolder, language}` (requiere redeploy del script — ver `gdocs-setup.md`). Columnas
+`zip_name`/`drive_docs`/`drive_folder` en el schema de Supabase.
 
 ## PDF vía Google Docs sink (Apps Script), no conversión local
 Para el pedido de "exportar a PDF" se eligió **no convertir localmente** (no hay

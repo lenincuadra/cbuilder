@@ -102,51 +102,64 @@ export default function Home() {
 
       // Keep a server-side copy (data/cvs/): masters evolve, so the archive is
       // the only faithful record of what was sent. Never blocks the delivery.
+      let archiveOk = true;
       try {
         await archiveCvZip(result.zipName, result.zip);
-        toast.success(`CV generado · código ${result.code}`, {
-          duration: 10000,
-          action: { label: "Detalles", onClick: () => openGeneratedRow(result.code) },
-          cancel: {
-            label: "Finder",
-            onClick: () => {
-              revealCvZip(result.zipName).catch((error: unknown) =>
-                toast.error(
-                  error instanceof Error ? error.message : "No se pudo abrir el Finder.",
-                ),
-              );
-            },
-          },
-        });
       } catch {
-        toast.warning(
-          `CV ${result.code} generado y descargado, pero no se pudo archivar la copia en data/cvs.`,
-        );
+        archiveOk = false;
       }
 
-      // Extra sink: create each CV in the user's Google Drive as a native
-      // Google Doc (via Apps Script). Feature-off (501) is silent; a real
-      // failure only warns — the zip was already delivered. Collected URLs are
-      // persisted on the row so the panel can always show them.
+      // Extra sink: create each CV in the user's Google Drive as a native Google
+      // Doc (via Apps Script), all under one per-application folder. Feature-off
+      // (501) is silent; a real failure only warns. Collected URLs are persisted
+      // so the panel can always show them. No per-language toasts — one alert.
       const driveDocs: NonNullable<RegistryRow["driveDocs"]> = {};
+      let driveFolder: string | undefined;
+      let gdocsFailed = false;
       for (const entry of result.entries) {
+        // App folder = the delivery folder without its language prefix, shared
+        // across languages ("EN_acme_0628a2" -> "acme_0628a2").
+        const appFolder = entry.folder.slice(entry.language.length + 1);
         try {
-          const url = await createGoogleDoc(entry.folder, entry.docx);
-          if (url) {
-            driveDocs[entry.language] = url;
-            toast.success(`${entry.folder} creado en Google Docs`, {
-              action: { label: "Abrir", onClick: () => window.open(url, "_blank") },
-              duration: 10000,
-            });
+          const doc = await createGoogleDoc(appFolder, entry.language, entry.docx);
+          if (doc) {
+            driveDocs[entry.language] = doc.docUrl;
+            driveFolder = doc.folderUrl ?? driveFolder;
           }
         } catch {
-          toast.warning(`No se pudo crear ${entry.folder} en Google Docs.`);
+          gdocsFailed = true;
         }
       }
       if (Object.keys(driveDocs).length > 0) {
-        await update(result.code, { driveDocs }).catch(() => {
+        await update(result.code, { driveDocs, driveFolder }).catch(() => {
           // The docs exist in Drive; only the registry link failed — not fatal.
         });
+      }
+
+      // Single success alert. Secondary button opens the Drive folder when the
+      // sink ran, otherwise reveals the archived zip in Finder; Finder always
+      // stays reachable from "Detalles" (the drawer's Entrega card).
+      toast.success(`CV generado · código ${result.code}`, {
+        duration: 10000,
+        action: { label: "Detalles", onClick: () => openGeneratedRow(result.code) },
+        cancel: driveFolder
+          ? { label: "Drive", onClick: () => window.open(driveFolder, "_blank") }
+          : {
+              label: "Finder",
+              onClick: () => {
+                revealCvZip(result.zipName).catch((error: unknown) =>
+                  toast.error(
+                    error instanceof Error ? error.message : "No se pudo abrir el Finder.",
+                  ),
+                );
+              },
+            },
+      });
+      if (!archiveOk) {
+        toast.warning(`No se pudo archivar la copia de ${result.code} en data/cvs.`);
+      }
+      if (gdocsFailed) {
+        toast.warning(`No se pudo crear ${result.code} en Google Docs.`);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al generar el CV.");
