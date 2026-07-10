@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
-import { Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { generateCv, type GenerateCvInput } from "@/core/generateCv";
@@ -10,6 +9,7 @@ import { archiveCvZip, revealCvZip } from "@/lib/archive";
 import { downloadBytes } from "@/lib/download";
 import { createGoogleDoc } from "@/lib/gdocs";
 import { loadMaster } from "@/lib/masters";
+import { toastDeleted } from "@/ui/ConfirmDelete";
 import { GenerateCard } from "@/ui/GenerateCard";
 import { GeneralNotesCard } from "@/ui/GeneralNotesCard";
 import { StableLinksCard } from "@/ui/StableLinksCard";
@@ -74,14 +74,7 @@ export default function Home() {
   async function handleDelete(code: string) {
     try {
       await remove(code);
-      // Destructive action → destructive-styled toast (red icon/text/border), not a success check.
-      toast(`Registro ${code} borrado.`, {
-        icon: <Trash2 className="size-4 text-destructive" />,
-        style: {
-          "--normal-text": "var(--destructive)",
-          "--normal-border": "var(--destructive)",
-        } as CSSProperties,
-      });
+      toastDeleted(`Registro ${code} borrado.`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo borrar la fila.");
     }

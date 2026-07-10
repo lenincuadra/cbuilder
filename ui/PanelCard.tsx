@@ -21,6 +21,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
+import { keepDrawerOnDialogInteraction } from "@/ui/ConfirmDelete";
 import { useIsMobile } from "@/ui/useIsMobile";
 
 /**
@@ -53,7 +54,16 @@ export function PanelCard({ title, description, card, children }: PanelCardProps
     <>
       {card(() => setOpen(true))}
       <Drawer direction={isMobile ? "bottom" : "right"} open={open} onOpenChange={setOpen}>
-        <DrawerContent ref={setNode}>
+        <DrawerContent
+          ref={setNode}
+          // A nested confirm dialog (ConfirmDelete) portals to <body>; keep the
+          // drawer open when the interaction is inside it.
+          onPointerDownOutside={keepDrawerOnDialogInteraction}
+          onInteractOutside={keepDrawerOnDialogInteraction}
+          onEscapeKeyDown={(event) => {
+            if (document.querySelector('[data-slot="alert-dialog-content"]')) event.preventDefault();
+          }}
+        >
           <DrawerHeader className="relative pr-12">
             <DrawerTitle>{title}</DrawerTitle>
             {description && <DrawerDescription>{description}</DrawerDescription>}

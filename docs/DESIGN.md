@@ -31,6 +31,22 @@ Antes de crear cualquier componente o comportamiento de UI:
 - Usar el componente `Empty` de shadcn (`components/ui/empty.tsx`) en todos los vacíos
   (registro vacío, actualizaciones vacías, etc.), no texto suelto.
 
+## Borrado → confirmar + avisar (patrón global)
+**Todo borrado en la app** sigue el mismo patrón: un **modal de confirmación** primero, y
+después un **toast destructivo** de lo que pasó. Nunca borrar directo (sin confirmar) ni en
+silencio (sin avisar). Componente único: **`ui/ConfirmDelete.tsx`**:
+- **`ConfirmDelete`** — `AlertDialog` controlado (media destructiva + título + descripción +
+  `children` opcional para contenido extra, ej. un warning). Botón de confirmar en
+  **destructive solid** (`bg-destructive text-white`), porque es irreversible.
+- **`toastDeleted(mensaje)`** — el toast destructivo estándar (icono `Trash2`, texto/borde
+  destructivos). Llamalo **después** de que el borrado tenga éxito.
+- Lo usan: **registro** (fila, en el panel de detalle) y **links estables**. Para un borrado
+  nuevo: `ConfirmDelete` + `toastDeleted`, no reinventar.
+- **Dentro de un drawer**: el diálogo portalea a `<body>` (fuera del drawer); pasá
+  `keepDrawerOnDialogInteraction` (mismo archivo) a los `onPointerDownOutside`/
+  `onInteractOutside` del `DrawerContent` para que el drawer no se cierre al clickear el
+  diálogo. `PanelCard` y `RowDetailDrawer` ya lo hacen.
+
 ## Cards de la columna derecha → patrón "card compacta → drawer"
 Cada card de acción de la columna derecha es una **cara compacta y clickeable** cuyo
 contenido completo vive en un **drawer** (right en desktop / bottom en mobile). Patrón

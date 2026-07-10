@@ -10,6 +10,19 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Borrado en toda la app: confirmar + avisar (`ConfirmDelete` + `toastDeleted`)
+Todo borrado sigue **un** patrón: modal de confirmación (`AlertDialog`) y después un toast
+destructivo. Se unificó en `ui/ConfirmDelete.tsx` (componente `ConfirmDelete` + helper
+`toastDeleted` + `keepDrawerOnDialogInteraction`). Antes el borrado del **registro** tenía
+su `AlertDialog` inline (con toda la maña del diálogo dentro del `vaul` drawer) y el toast
+armado a mano en `page.tsx`; el de **links estables** era borrado directo sin confirmar ni
+avisar. Ahora ambos usan lo mismo, y el helper del drawer (que evita que clickear el diálogo
+cierre el drawer) se comparte entre `RowDetailDrawer` y `PanelCard`. Pedido explícito:
+"cuando se le de borrar a algo, en toda la aplicación, modal de confirmación y luego un
+alert de que sucedió". Detalle del patrón en `DESIGN.md` ("Borrado: confirmar + avisar").
+El `AlertDialog` sigue portaleado a `<body>` (centrado en viewport) con `pointer-events-auto`
++ `z-[60]` (ver la entrada vieja del `AlertDialog` sobre el drawer).
+
 ## Columna derecha: cards compactas → drawer (patrón `PanelCard`) + links estables
 Las 3 cards de acción (Generar CV, Notas generales, Links estables) pasaron a un patrón
 único: **cara compacta clickeable → contenido en drawer** (`ui/PanelCard.tsx` +

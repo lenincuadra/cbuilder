@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isValidStableRef, stableLinkUrl, type StableLink } from "@/core/stableLinks/types";
+import { ConfirmDelete, toastDeleted } from "@/ui/ConfirmDelete";
 import { PanelCard, PanelCardFace } from "@/ui/PanelCard";
 import { useStableLinks } from "@/ui/useStableLinks";
 
@@ -49,7 +50,7 @@ function CopyButton({ url }: { url: string }) {
   );
 }
 
-function LinkRow({ link, onRemove }: { link: StableLink; onRemove: (ref: string) => void }) {
+function LinkRow({ link, onRemove }: { link: StableLink; onRemove: (link: StableLink) => void }) {
   const url = stableLinkUrl(link.ref);
   return (
     <div className="space-y-0.5 rounded-lg border px-3 py-2">
@@ -63,7 +64,7 @@ function LinkRow({ link, onRemove }: { link: StableLink; onRemove: (ref: string)
             className="size-6 text-muted-foreground hover:text-destructive"
             title="Quitar del registro"
             aria-label={`Quitar ${link.name}`}
-            onClick={() => onRemove(link.ref)}
+            onClick={() => onRemove(link)}
           >
             <Trash2 className="size-3.5" />
           </Button>
@@ -82,6 +83,8 @@ function StableLinksManager() {
   const [name, setName] = useState("");
   const [ref, setRef] = useState("");
   const [saving, setSaving] = useState(false);
+  // Delete goes through the app-wide confirm-then-toast pattern.
+  const [toDelete, setToDelete] = useState<StableLink | null>(null);
 
   const refOk = isValidStableRef(ref.trim());
   const canAdd = name.trim() !== "" && refOk && !links.some((l) => l.ref === ref.trim());
@@ -117,10 +120,32 @@ function StableLinksManager() {
       ) : (
         <div className="space-y-2">
           {links.map((link) => (
-            <LinkRow key={link.ref} link={link} onRemove={remove} />
+            <LinkRow key={link.ref} link={link} onRemove={setToDelete} />
           ))}
         </div>
       )}
+
+      <ConfirmDelete
+        open={toDelete !== null}
+        onOpenChange={(open) => !open && setToDelete(null)}
+        title="Quitar link estable"
+        description={
+          toDelete ? (
+            <>
+              Se va a quitar <strong>{toDelete.name}</strong> (
+              <span className="font-mono">{toDelete.ref}</span>) del registro. El link seguirá
+              trackeando si ya lo pegaste en algún lado; esto solo lo borra de acá.
+            </>
+          ) : null
+        }
+        confirmLabel="Quitar"
+        onConfirm={async () => {
+          if (!toDelete) return;
+          await remove(toDelete.ref);
+          toastDeleted(`Link estable ${toDelete.name} quitado.`);
+          setToDelete(null);
+        }}
+      />
 
       <div className="space-y-3 rounded-lg border p-3">
         <span className="text-xs font-medium text-muted-foreground">Agregar link estable</span>

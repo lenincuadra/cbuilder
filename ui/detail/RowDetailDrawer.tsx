@@ -14,17 +14,6 @@ import {
   X,
 } from "lucide-react";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogMedia,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -37,6 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { languageLabel } from "@/core/types";
+import { ConfirmDelete, keepDrawerOnDialogInteraction } from "@/ui/ConfirmDelete";
 import { StatusToggle } from "@/ui/StatusToggle";
 import { useIsMobile } from "@/ui/useIsMobile";
 import { DeliveryInfo } from "./DeliveryInfo";
@@ -103,21 +93,6 @@ export function RowDetailDrawer({
   // the drawer's pointer-events / stacking / focus scope — a base-ui popup portaled to <body>
   // gets vaul's `pointer-events: none` and its focus gets trapped back, breaking selection.
   const [drawerNode, setDrawerNode] = useState<HTMLDivElement | null>(null);
-
-  // The confirm dialog renders at its default (viewport-centered) position, so it portals
-  // to <body> — outside the drawer. vaul would read a click on it as an outside click and
-  // dismiss the drawer. Keep the drawer open by inspecting the event's DOM target (no React
-  // state, so no stale-closure races): if the interaction is inside the alert dialog, cancel
-  // the dismissal. Explicit closes (X, Archivar, confirm) still call onOpenChange directly.
-  const keepDrawerOnDialogInteraction = (event: { detail?: { originalEvent?: Event }; target?: EventTarget | null; preventDefault: () => void }) => {
-    const target = event.detail?.originalEvent?.target ?? event.target;
-    if (
-      target instanceof Element &&
-      target.closest('[data-slot="alert-dialog-content"], [data-slot="alert-dialog-overlay"]')
-    ) {
-      event.preventDefault();
-    }
-  };
 
   // Sync transient panel state during render instead of in an effect: React
   // re-renders synchronously after a set-in-render, so each key matches on the
@@ -328,74 +303,61 @@ export function RowDetailDrawer({
     </Drawer>
 
       {row && (
-        <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogMedia className="bg-destructive/10">
-                <Trash2 className="text-destructive" />
-              </AlertDialogMedia>
-              <AlertDialogTitle>Borrar registro</AlertDialogTitle>
-              <AlertDialogDescription>
-                Se va a borrar la aplicación a <strong>{row.company}</strong>
-                {row.role ? <> · {row.role}</> : null} (código{" "}
-                <span className="font-mono">{row.code}</span>, {row.date}). Esta acción no se
-                puede deshacer.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-
-            {(row.driveFolder || (row.driveDocs && Object.keys(row.driveDocs).length > 0)) && (
-              <div className="space-y-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs">
-                <div className="flex items-center gap-1.5 font-medium text-amber-500">
-                  <TriangleAlert className="size-3.5 shrink-0" />
-                  El CV en Drive no se borra: queda en tu Drive
-                </div>
-                <p className="text-muted-foreground">
-                  Borrar la fila no toca Google Drive. Si querés eliminarlo, hacelo a mano:
-                </p>
-                {row.driveFolder ? (
-                  <a
-                    href={row.driveFolder}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block break-all font-mono underline underline-offset-2 hover:text-foreground"
-                    title={row.driveFolder}
-                  >
-                    Carpeta · {row.driveFolder}
-                  </a>
-                ) : (
-                  (Object.entries(row.driveDocs ?? {}) as Array<[string, string]>).map(
-                    ([language, url]) => (
-                      <a
-                        key={language}
-                        href={url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block break-all font-mono underline underline-offset-2 hover:text-foreground"
-                        title={url}
-                      >
-                        {language} · {url}
-                      </a>
-                    ),
-                  )
-                )}
+        <ConfirmDelete
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title="Borrar registro"
+          description={
+            <>
+              Se va a borrar la aplicación a <strong>{row.company}</strong>
+              {row.role ? <> · {row.role}</> : null} (código{" "}
+              <span className="font-mono">{row.code}</span>, {row.date}). Esta acción no se
+              puede deshacer.
+            </>
+          }
+          onConfirm={async () => {
+            await onDelete(row.code);
+            onOpenChange(false); // close the detail drawer too
+          }}
+        >
+          {(row.driveFolder || (row.driveDocs && Object.keys(row.driveDocs).length > 0)) && (
+            <div className="space-y-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs">
+              <div className="flex items-center gap-1.5 font-medium text-amber-500">
+                <TriangleAlert className="size-3.5 shrink-0" />
+                El CV en Drive no se borra: queda en tu Drive
               </div>
-            )}
-
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive text-white hover:bg-destructive/90 focus-visible:border-destructive/40 focus-visible:ring-destructive/20"
-                onClick={async () => {
-                  await onDelete(row.code);
-                  setConfirmDelete(false);
-                  onOpenChange(false);
-                }}
-              >
-                Borrar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              <p className="text-muted-foreground">
+                Borrar la fila no toca Google Drive. Si querés eliminarlo, hacelo a mano:
+              </p>
+              {row.driveFolder ? (
+                <a
+                  href={row.driveFolder}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block break-all font-mono underline underline-offset-2 hover:text-foreground"
+                  title={row.driveFolder}
+                >
+                  Carpeta · {row.driveFolder}
+                </a>
+              ) : (
+                (Object.entries(row.driveDocs ?? {}) as Array<[string, string]>).map(
+                  ([language, url]) => (
+                    <a
+                      key={language}
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block break-all font-mono underline underline-offset-2 hover:text-foreground"
+                      title={url}
+                    >
+                      {language} · {url}
+                    </a>
+                  ),
+                )
+              )}
+            </div>
+          )}
+        </ConfirmDelete>
       )}
     </>
   );
