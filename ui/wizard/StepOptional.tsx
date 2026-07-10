@@ -19,7 +19,7 @@ export const CHANNEL_OPTIONS: IconSelectOption<string>[] = [
 ];
 
 /** Step 3 — Optional fields: rol, canal, quién, link del puesto. None are required. */
-export function StepOptional({ data, set }: StepProps) {
+export function StepOptional({ data, set, container }: StepProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -41,6 +41,7 @@ export function StepOptional({ data, set }: StepProps) {
             set({ channel: value === CHANNEL_OMIT ? "" : (value as Channel) })
           }
           options={CHANNEL_OPTIONS}
+          container={container}
         />
       </div>
 

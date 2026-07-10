@@ -1,19 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { FilePlus2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import type { GenerateCvInput } from "@/core/generateCv";
+import { PanelCard, PanelCardFace } from "@/ui/PanelCard";
 import { Wizard } from "@/ui/wizard/Wizard";
 
 export interface GenerateCardProps {
@@ -26,48 +17,42 @@ export interface GenerateCardProps {
 }
 
 /**
- * Right-column CV generator. Shows an empty state first (the entry point); the
- * wizard opens in place on demand and collapses back to the empty state on
- * cancel or after a successful generation.
+ * Right-column CV generator. Compact empty-state card; the "Generar CV" button
+ * opens the full wizard in a drawer (shared PanelCard pattern). The drawer node
+ * is threaded to the wizard so its dropdowns portal inside it.
  */
 export function GenerateCard({ existingCodes, generating, onGenerate }: GenerateCardProps) {
-  const [open, setOpen] = useState(false);
-
-  async function handleGenerate(input: GenerateCvInput) {
-    // Throws on error → the wizard stays on the confirm step showing the message.
-    await onGenerate(input);
-    // Success → back to the empty state, ready for the next one.
-    setOpen(false);
-  }
-
   return (
-    <Card>
-      <CardContent className="pt-6">
-        {open ? (
-          <Wizard
-            existingCodes={existingCodes}
-            generating={generating}
-            onGenerate={handleGenerate}
-            onCancel={() => setOpen(false)}
-          />
-        ) : (
-          <Empty className="border-0 p-0">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <FilePlus2 />
-              </EmptyMedia>
-              <EmptyTitle>Generar un CV</EmptyTitle>
-              <EmptyDescription>Creá un CV trackeado y sumalo al registro.</EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button size="sm" onClick={() => setOpen(true)}>
-                <FilePlus2 className="size-4" />
-                Generar CV
-              </Button>
-            </EmptyContent>
-          </Empty>
-        )}
-      </CardContent>
-    </Card>
+    <PanelCard
+      title="Generar un CV"
+      description="Creá un CV trackeado y sumalo al registro."
+      card={(open) => (
+        <PanelCardFace
+          icon={FilePlus2}
+          title="Generar un CV"
+          description="Creá un CV trackeado y sumalo al registro."
+          cta={
+            <Button size="sm" onClick={open}>
+              <FilePlus2 className="size-4" />
+              Generar CV
+            </Button>
+          }
+        />
+      )}
+    >
+      {(close, container) => (
+        <Wizard
+          existingCodes={existingCodes}
+          generating={generating}
+          onGenerate={async (input) => {
+            // Throws on error → the wizard stays on the confirm step with the message.
+            await onGenerate(input);
+            close(); // success → close the drawer, ready for the next one.
+          }}
+          onCancel={close}
+          container={container}
+        />
+      )}
+    </PanelCard>
   );
 }

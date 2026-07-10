@@ -19,7 +19,7 @@ const FOCUS_OPTIONS: IconSelectOption<string>[] = [
 ];
 
 /** Step 3 — Idioma (EN / ES / Ambos) + foco del portfolio. Last selections before the review. */
-export function StepLanguage({ data, set }: StepProps) {
+export function StepLanguage({ data, set, container }: StepProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -42,6 +42,7 @@ export function StepLanguage({ data, set }: StepProps) {
             set({ focus: value === FOCUS_NONE ? "" : (value as FocusProfileId) })
           }
           options={FOCUS_OPTIONS}
+          container={container}
         />
         <p className="text-xs text-muted-foreground">
           Reordena los casos del portfolio para quien abre el link del CV: destaca lo más

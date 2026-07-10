@@ -38,18 +38,22 @@ export interface PanelCardProps {
   /** Drawer subtitle. */
   description?: string;
   card: (open: () => void) => ReactNode;
-  children: (close: () => void) => ReactNode;
+  /** Drawer body. `container` is the drawer node — pass it to popouts inside. */
+  children: (close: () => void, container: HTMLElement | null) => ReactNode;
 }
 
 export function PanelCard({ title, description, card, children }: PanelCardProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
+  // The drawer node — popouts (dropdowns) inside the body portal here so they
+  // stay in the drawer's focus / pointer-events scope.
+  const [node, setNode] = useState<HTMLDivElement | null>(null);
 
   return (
     <>
       {card(() => setOpen(true))}
       <Drawer direction={isMobile ? "bottom" : "right"} open={open} onOpenChange={setOpen}>
-        <DrawerContent>
+        <DrawerContent ref={setNode}>
           <DrawerHeader className="relative pr-12">
             <DrawerTitle>{title}</DrawerTitle>
             {description && <DrawerDescription>{description}</DrawerDescription>}
@@ -64,7 +68,7 @@ export function PanelCard({ title, description, card, children }: PanelCardProps
             </Button>
           </DrawerHeader>
           <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-4">
-            {children(() => setOpen(false))}
+            {children(() => setOpen(false), node)}
           </div>
         </DrawerContent>
       </Drawer>

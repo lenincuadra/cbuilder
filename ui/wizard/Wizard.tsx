@@ -41,9 +41,17 @@ export interface WizardProps {
   onGenerate: (input: GenerateCvInput) => Promise<void>;
   /** Optional: dismiss the wizard from step 1 (turns "Atrás" into "Cancelar"). */
   onCancel?: () => void;
+  /** Portal target for the step dropdowns when the wizard runs inside a drawer. */
+  container?: HTMLElement | null;
 }
 
-export function Wizard({ existingCodes, generating, onGenerate, onCancel }: WizardProps) {
+export function Wizard({
+  existingCodes,
+  generating,
+  onGenerate,
+  onCancel,
+  container,
+}: WizardProps) {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>(initialData);
   const [previewCode, setPreviewCode] = useState<string | null>(null);
@@ -110,9 +118,9 @@ export function Wizard({ existingCodes, generating, onGenerate, onCancel }: Wiza
       </div>
 
       <div className="min-h-[260px]">
-        {step === 1 && <StepCompany data={data} set={set} />}
-        {step === 2 && <StepOptional data={data} set={set} />}
-        {step === 3 && <StepLanguage data={data} set={set} />}
+        {step === 1 && <StepCompany data={data} set={set} container={container} />}
+        {step === 2 && <StepOptional data={data} set={set} container={container} />}
+        {step === 3 && <StepLanguage data={data} set={set} container={container} />}
         {step === 4 && previewCode && <StepConfirm data={data} previewCode={previewCode} />}
       </div>
 

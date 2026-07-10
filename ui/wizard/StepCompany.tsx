@@ -8,6 +8,8 @@ import type { WizardData } from "./types";
 export interface StepProps {
   data: WizardData;
   set: (patch: Partial<WizardData>) => void;
+  /** Portal target for popouts (dropdowns) when the wizard runs inside a drawer. */
+  container?: HTMLElement | null;
 }
 
 /** Step 1 — Empresa (required) + Fecha de aplicación (default hoy). */
