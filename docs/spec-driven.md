@@ -51,6 +51,15 @@ Dominio, formatos o perfiles nuevos fluyen solos, sin tocar código de cbuilder.
   - `FocusIcon` mapea los ids conocidos con un icono default (`Target`) para
     perfiles nuevos. El spec se carga **una vez** vía `SpecProvider` (contexto),
     así la tabla no lo re-fetchea por fila.
-- **E — persistencia + export CSV/markdown** — pendiente
-- **F — prueba E2E** — pendiente
-- **G — firma como link estable** — pendiente
+- **E — persistencia + export CSV/markdown** ✅
+  - La fila ya persiste código→empresa/fecha/foco/**links** (Fase B). Export del
+    mapeo a **CSV o Markdown** (`core/registry/export.ts`, botón "Exportar" junto
+    a los filtros). Verificado contra los datos reales.
+- **F — prueba E2E** — verificada por fase en el browser (código+links del spec,
+  preview, export). **Falta el check conjunto**: abrir un short link real y
+  confirmar que llega el mail de tracking con el código (necesita tu Gmail).
+- **G — firma como link estable** ✅
+  - La firma es un touchpoint con ref **`sig`** (directo al portfolio,
+    `?ref=sig`), agregado a las sugerencias de "Links estables". Solo el
+    Portfolio se trackea (LinkedIn/GitHub directos). HTML de la firma + setup en
+    `docs/email-signature.md`.

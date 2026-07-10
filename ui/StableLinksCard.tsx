@@ -22,6 +22,7 @@ import { useStableLinks } from "@/ui/useStableLinks";
 
 /** Quick-add suggestions for the common permanent touchpoints. */
 const SUGGESTIONS = [
+  { name: "Firma de mail", ref: "sig" },
   { name: "LinkedIn (perfil)", ref: "li-profile" },
   { name: "CV en la web", ref: "web-cv" },
   { name: "Behance", ref: "behance" },

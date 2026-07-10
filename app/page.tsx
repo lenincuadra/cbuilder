@@ -10,6 +10,7 @@ import { downloadBytes } from "@/lib/download";
 import { createGoogleDoc } from "@/lib/gdocs";
 import { loadMaster } from "@/lib/masters";
 import { toastDeleted } from "@/ui/ConfirmDelete";
+import { ExportButton } from "@/ui/ExportButton";
 import { GenerateCard } from "@/ui/GenerateCard";
 import { GeneralNotesCard } from "@/ui/GeneralNotesCard";
 import { StableLinksCard } from "@/ui/StableLinksCard";
@@ -182,8 +183,11 @@ export default function Home() {
         {/* Registro: protagonista, ancho, con scroll horizontal propio. */}
         <section className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            {/* Estado a la izquierda (dropdown con badge); Vigentes/Archivado a la derecha. */}
-            <StatusFilterDropdown value={statusFilter} onChange={setStatusFilter} />
+            {/* Estado + export a la izquierda; Vigentes/Archivado a la derecha. */}
+            <div className="flex items-center gap-2">
+              <StatusFilterDropdown value={statusFilter} onChange={setStatusFilter} />
+              <ExportButton rows={rows} />
+            </div>
             <SegmentedControl
               aria-label="Archivadas o no"
               value={view}
