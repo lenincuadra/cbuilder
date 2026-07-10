@@ -265,7 +265,7 @@ export function RowDetailDrawer({
                     </Field>
                   )}
                 </div>
-                <TrackedLinks code={row.code} focus={row.focus} />
+                <TrackedLinks code={row.code} focus={row.focus} links={row.links} />
                 <DeliveryInfo row={row} />
               </div>
             )}

@@ -4,8 +4,10 @@ import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { focusLabel, trackedLinks, type FocusProfileId } from "@/core/links";
+import { focusLabel, type FocusProfileId } from "@/core/links";
+import { buildTrackedLinks, type TrackedLinks as TrackedLinksT } from "@/core/spec/links";
 import { FocusIcon } from "@/ui/FocusIcon";
+import { useSpec } from "@/ui/useSpec";
 
 /** One tracked link shown as plain text (never an <a>, so clicking never fires the
  *  tracker) with a copy button to grab it without visiting. */
@@ -46,9 +48,23 @@ function LinkRow({ label, url }: { label: string; url: string }) {
   );
 }
 
-/** The row's tracked links (portfolio + LinkedIn), read-only. */
-export function TrackedLinks({ code, focus }: { code: string; focus?: FocusProfileId }) {
-  const links = trackedLinks(code, focus);
+/**
+ * The row's tracked links (portfolio + LinkedIn + GitHub), read-only. Prefers the
+ * links stored on the row (faithful record of what was sent); for older rows
+ * without them, rebuilds from the current spec.
+ */
+export function TrackedLinks({
+  code,
+  focus,
+  links: stored,
+}: {
+  code: string;
+  focus?: FocusProfileId;
+  links?: TrackedLinksT;
+}) {
+  const { spec } = useSpec();
+  const links = stored ?? (spec ? buildTrackedLinks(spec, code, focus) : null);
+
   return (
     <div className="space-y-2 rounded-lg border px-3 py-2">
       <span className="text-xs font-medium text-muted-foreground">Links de tracking</span>
@@ -60,9 +76,15 @@ export function TrackedLinks({ code, focus }: { code: string; focus?: FocusProfi
           </span>
         </div>
       )}
-      <LinkRow label="Portfolio" url={links.portfolio} />
-      <LinkRow label="LinkedIn" url={links.linkedin} />
-      <LinkRow label="GitHub" url={links.github} />
+      {links ? (
+        <>
+          <LinkRow label="Portfolio" url={links.portfolio} />
+          <LinkRow label="LinkedIn" url={links.linkedin} />
+          <LinkRow label="GitHub" url={links.github} />
+        </>
+      ) : (
+        <span className="text-xs text-muted-foreground">Cargando el spec…</span>
+      )}
     </div>
   );
 }

@@ -2,7 +2,9 @@ import { toISODate } from "./dates";
 import { fillMaster } from "./docx";
 import { folderName, slugifyCompany } from "./folderName";
 import type { FocusProfileId } from "./links";
-import { generateCode } from "./tracking";
+import { generateCode } from "./spec/code";
+import { buildTrackedLinks } from "./spec/links";
+import type { LinkSpec } from "./spec/types";
 import type { Language, LanguageChoice } from "./types";
 import { packageCvs, type CvEntry } from "./zip";
 import {
@@ -36,6 +38,8 @@ export interface GenerateCvInput {
 }
 
 export interface GenerateCvDeps {
+  /** The link contract — supplies the code format, reserved refs and link templates. */
+  spec: LinkSpec;
   /** Codes already in the registry (collision set). */
   existingCodes: string[];
   /** Load the master .docx bytes for a concrete language. */
@@ -80,15 +84,20 @@ export async function generateCv(
   const code =
     input.code ??
     generateCode({
+      spec: deps.spec,
       date: input.date,
       existingCodes: deps.existingCodes,
       rng: deps.rng,
     });
 
+  // Build the three tracked links (short form) once from the spec; bake them
+  // into every master and persist them on the row (faithful record of what was sent).
+  const links = buildTrackedLinks(deps.spec, code, input.focus);
+
   const entries: CvEntry[] = [];
   for (const language of languagesFor(input.languageChoice)) {
     const master = await deps.loadMaster(language);
-    const docx = await fillMaster(master, code, input.focus);
+    const docx = await fillMaster(master, links);
     entries.push({ folder: folderName({ language, company: input.company, code }), language, docx });
   }
 
@@ -112,6 +121,7 @@ export async function generateCv(
     jobUrl: cleaned(input.jobUrl),
     language: input.languageChoice,
     focus: input.focus,
+    links,
     zipName,
     createdAt: now().toISOString(),
   };

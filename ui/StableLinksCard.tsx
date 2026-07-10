@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { isValidStableRef, stableLinkUrl, type StableLink } from "@/core/stableLinks/types";
 import { ConfirmDelete, toastDeleted } from "@/ui/ConfirmDelete";
 import { PanelCard, PanelCardFace } from "@/ui/PanelCard";
+import { useSpec } from "@/ui/useSpec";
 import { useStableLinks } from "@/ui/useStableLinks";
 
 /** Quick-add suggestions for the common permanent touchpoints. */
@@ -50,8 +51,16 @@ function CopyButton({ url }: { url: string }) {
   );
 }
 
-function LinkRow({ link, onRemove }: { link: StableLink; onRemove: (link: StableLink) => void }) {
-  const url = stableLinkUrl(link.ref);
+function LinkRow({
+  link,
+  base,
+  onRemove,
+}: {
+  link: StableLink;
+  base: string;
+  onRemove: (link: StableLink) => void;
+}) {
+  const url = stableLinkUrl(base, link.ref);
   return (
     <div className="space-y-0.5 rounded-lg border px-3 py-2">
       <div className="flex items-center justify-between gap-2">
@@ -80,6 +89,8 @@ function LinkRow({ link, onRemove }: { link: StableLink; onRemove: (link: Stable
 /** Drawer body: the list of stable links + an add form. */
 function StableLinksManager() {
   const { links, add, remove } = useStableLinks();
+  const { spec } = useSpec();
+  const base = spec?.base ?? "";
   const [name, setName] = useState("");
   const [ref, setRef] = useState("");
   const [saving, setSaving] = useState(false);
@@ -120,7 +131,7 @@ function StableLinksManager() {
       ) : (
         <div className="space-y-2">
           {links.map((link) => (
-            <LinkRow key={link.ref} link={link} onRemove={setToDelete} />
+            <LinkRow key={link.ref} link={link} base={base} onRemove={setToDelete} />
           ))}
         </div>
       )}
@@ -189,7 +200,7 @@ function StableLinksManager() {
             aria-invalid={ref.trim() !== "" && !refOk}
           />
           <p className="font-mono text-xs break-all text-muted-foreground">
-            {stableLinkUrl(ref.trim() === "" ? "…" : ref.trim())}
+            {stableLinkUrl(base, ref.trim() === "" ? "…" : ref.trim())}
           </p>
         </div>
 

@@ -1,4 +1,5 @@
 import type { FocusProfileId } from "../links";
+import type { TrackedLinks } from "../spec/links";
 import type { Language, LanguageChoice } from "../types";
 
 /** Application channels (no "Referido" — a referral can apply via any channel). */
@@ -59,6 +60,8 @@ export interface RegistryRow {
    * Like `language`, not editable post-creation: the sent CV already carries it.
    */
   focus?: FocusProfileId;
+  /** The three tracked links (short form) baked into this CV — faithful record. */
+  links?: TrackedLinks;
   /** File name of the archived delivery zip in data/cvs/ (set at generation). */
   zipName?: string;
   /** Google Doc URL per generated language (Docs sink), filled after the upload. */

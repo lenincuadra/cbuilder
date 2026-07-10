@@ -3,10 +3,13 @@
 import { FilePlus2 } from "lucide-react";
 
 import type { GenerateCvInput } from "@/core/generateCv";
+import type { LinkSpec } from "@/core/spec/types";
 import { PanelCard, PanelCardFace } from "@/ui/PanelCard";
 import { Wizard } from "@/ui/wizard/Wizard";
 
 export interface GenerateCardProps {
+  /** The link contract (from useSpec) — passed to the wizard. Null while loading. */
+  spec: LinkSpec | null;
   /** Codes already in the registry, for collision-checked preview. */
   existingCodes: string[];
   /** True while a generation is in flight. */
@@ -21,7 +24,7 @@ export interface GenerateCardProps {
  * pattern). The drawer node is threaded to the wizard so its dropdowns portal
  * inside it.
  */
-export function GenerateCard({ existingCodes, generating, onGenerate }: GenerateCardProps) {
+export function GenerateCard({ spec, existingCodes, generating, onGenerate }: GenerateCardProps) {
   return (
     <PanelCard
       title="Generar un CV"
@@ -37,6 +40,7 @@ export function GenerateCard({ existingCodes, generating, onGenerate }: Generate
     >
       {(close, container) => (
         <Wizard
+          spec={spec}
           existingCodes={existingCodes}
           generating={generating}
           onGenerate={async (input) => {

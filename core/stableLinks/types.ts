@@ -1,4 +1,3 @@
-import { PORTFOLIO_BASE } from "../links";
 
 /**
  * A "stable link": a tracking link for a permanent touchpoint (LinkedIn profile,
@@ -16,9 +15,13 @@ export interface StableLink {
   createdAt?: string;
 }
 
-/** The link goes straight to the portfolio, tagged with its source ref (no go.html). */
-export function stableLinkUrl(ref: string): string {
-  return `${PORTFOLIO_BASE}/?ref=${ref}`;
+/**
+ * The link goes straight to the portfolio index, tagged with its source ref
+ * (no go.html — the index tracks any ref directly). `base` comes from the spec
+ * (`spec.base`, ends with "/"), so the domain has a single source of truth.
+ */
+export function stableLinkUrl(base: string, ref: string): string {
+  return `${base}?ref=${ref}`;
 }
 
 /** Allowed ref shape: a lowercase slug, like the portfolio's reserved refs. */

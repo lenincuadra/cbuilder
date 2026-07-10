@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { GenerateCvInput } from "@/core/generateCv";
 import { DEFAULT_ROLE } from "@/core/registry/types";
-import { generateCode } from "@/core/tracking";
+import { generateCode } from "@/core/spec/code";
+import type { LinkSpec } from "@/core/spec/types";
 import { StepCompany } from "./StepCompany";
 import { StepConfirm } from "./StepConfirm";
 import { StepLanguage } from "./StepLanguage";
@@ -33,6 +34,8 @@ function initialData(): WizardData {
 }
 
 export interface WizardProps {
+  /** The link contract — drives the preview code. Null while it loads. */
+  spec: LinkSpec | null;
   /** Codes already in the registry, for collision-checked preview. */
   existingCodes: string[];
   /** True while a generation is in flight. */
@@ -46,6 +49,7 @@ export interface WizardProps {
 }
 
 export function Wizard({
+  spec,
   existingCodes,
   generating,
   onGenerate,
@@ -67,9 +71,13 @@ export function Wizard({
       setStep(step + 1);
       return;
     }
+    if (!spec) {
+      toast.error("Esperando el link-spec del portfolio. Probá de nuevo en un momento.");
+      return;
+    }
     // Entering the confirm step: lock in a collision-checked code for the preview.
     try {
-      const code = generateCode({ date: data.date, existingCodes });
+      const code = generateCode({ spec, date: data.date, existingCodes });
       setPreviewCode(code);
       setStep(4);
     } catch (error) {

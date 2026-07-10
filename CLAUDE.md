@@ -10,12 +10,11 @@ App web que genera el CV de Lenin Cuadra con tracking, fase 2 (app real).
 - Los CV master están en `assets/` (EN y ES). No los modifiques salvo que se pida explícitamente.
 
 ## Reglas inviolables (no alucinar sobre esto)
-- El código de tracking es `MMDD` + una letra de `abcdefghjkmnpqrstuvwxyz` (sin i, l, o) + un dígito de `23456789` (sin 0, 1). Ej: `0628r4`.
-- Reservados, nunca generarlos: `me`, `li-profile`, `organic`, `li-cv`, `web-cv`. (`web-cv` viene del registro vivo, que es la fuente de verdad; no estaba en la spec original.)
-- Chequear colisiones contra los códigos del registro antes de asignar uno.
-- El output del CV es `.docx` editable (no PDF), rellenando el master por reemplazo del placeholder `ref=li-cv`.
-- Cada link del CV lleva un **identificador de link** apendeado al código (para saber qué link se clickeó): portfolio → `ref=<código>P`, LinkedIn → `ref=<código>L`, GitHub → `ref=<código>G`. Definidos en `core/links.ts` (`LINK_ID`).
-- Link de portfolio va directo; LinkedIn y GitHub pasan por `go.html` (`dest=linkedin` / `dest=github`, porque esos hosts no aceptan el `?ref=`). No rutear el portfolio por `go.html`.
+- **Spec-driven**: cbuilder no conoce nada del portfolio salvo la URL del spec (`link-spec.json`). Dominio, formato del código, reservados, templates de links y perfiles salen del spec (fetch + cache + fallback, ver `docs/spec-driven.md`). El único valor hardcodeado es `SPEC_URL`.
+- El código de tracking es `MMDD` + una letra de `abcdefghjkmnpqrstuvwxyz` (sin i, l, o) + un dígito de `23456789` (sin 0, 1). Ej: `0628r4`. Debe cumplir `spec.tracking.codeFormat` y no colisionar con el registro ni con `spec.tracking.reservedRefs`. Generación en `core/spec/code.ts`.
+- El output del CV es `.docx` editable (no PDF). `fillMaster` (`core/docx.ts`) reemplaza los **3 targets** marcados con `ref=li-cv` en el master por los links ya armados (no toca el archivo master).
+- Cada link del CV lleva un identificador (portfolio `P` / LinkedIn `L` / GitHub `G`) horneado en el template del spec. Los links son **cortos** (`{base}r/{code}P{focusLetter}`, ej. `lenincuadra.com/r/0628r4Pp`) y se arman con `buildTrackedLinks` (`core/spec/links.ts`) desde el spec.
+- Los links cortos redirigen por el 404-router → `go.html` (que registra la visita y setea la personalización). Por eso **el portfolio ya no va "directo"** (la regla vieja quedó obsoleta): con links cortos + personalización, el paso por `go.html` es inherente.
 - El nombre del archivo entregable es siempre `Lenin_Cuadra_CV.docx`, sin datos de tracking. Todo lo identificatorio va en el nombre de la carpeta `[IDIOMA]_[empresa]_[código]`.
 - Separación estricta `core/` (lógica pura) y `ui/` (React). El storage va detrás de la interfaz `RegistryStore` (`core/registry/types.ts`). Implementaciones en `lib/storage/`: `supabaseStore.ts` (durable, futuro), `fileStore.ts` (server, escribe `data/registry.json` local, default actual vía API routes + `apiStore.ts` en el cliente) y `localStorageStore.ts` (alternativa por-browser, no usada por default). La factory `lib/storage/index.ts` elige Supabase si están las env vars `NEXT_PUBLIC_SUPABASE_URL`/`ANON_KEY`, si no usa el file store local.
 - **Privacidad: el repo es PÚBLICO.** La data del registro es privada (a quién aplicó Lenin). Nunca commitear data real: `data/` y `docs/*tracking-registry*.md` están gitignoreados. El file store local persiste en `data/registry.json` (en disco, fuera de git). Para deploy/durabilidad compartida, Supabase (`docs/supabase-setup.md`, `supabase/schema.sql`).

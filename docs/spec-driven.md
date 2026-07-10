@@ -26,8 +26,20 @@ Dominio, formatos o perfiles nuevos fluyen solos, sin tocar código de cbuilder.
     `SUPPORTED_SPEC_VERSION` (`core/spec/types.ts`), warning y uso best-effort.
   - Tipos/validación en `core/spec/`. El **único** valor hardcodeado es
     `SPEC_URL` (overridable por env), que es lo que el contrato permite.
-- **B — código + links desde el spec (cortos)** — pendiente
-- **C — masters a links cortos (v16)** — pendiente
+- **B — código + links desde el spec (cortos)** ✅
+  - `core/spec/code.ts` (`generateCode` desde `spec.codeFormat`/`reservedRefs`) y
+    `core/spec/links.ts` (`buildTrackedLinks` con los templates **cortos** +
+    `focusLetters`). Jubilados `PORTFOLIO_BASE`/`LINK_ID`/`trackedLinks` y
+    `core/tracking.ts`. `stableLinkUrl` toma el `base` del spec.
+  - `generateCv` recibe el `spec` en sus deps; arma los links una vez y los
+    hornea en el `.docx` (**sin re-editar los masters**: `fillMaster` reemplaza
+    los 3 targets marcados con `ref=li-cv`) y los persiste en `row.links`.
+  - UI cableada: `page`/`GenerateCard`/`Wizard` (preview code), `TrackedLinks`
+    (muestra `row.links`, o reconstruye del spec para filas viejas),
+    `StableLinksCard` (base del spec). Columna `links` en Supabase.
+  - Verificado E2E: CV generado con `Target="…/r/<code>P|L|G"`, 0 `ref=li-cv`.
+- **C — masters** — **absorbido en B**: `fillMaster` reemplaza el target completo,
+  así los masters v15 quedan como están (no hizo falta v16).
 - **D — perfiles + preview desde el spec** — pendiente
 - **E — persistencia + export CSV/markdown** — pendiente
 - **F — prueba E2E** — pendiente

@@ -17,11 +17,13 @@ import { RegistryTable } from "@/ui/RegistryTable";
 import { SegmentedControl, type SegmentedOption } from "@/ui/SegmentedControl";
 import { StatusFilterDropdown, type StatusFilter } from "@/ui/StatusFilterDropdown";
 import { useRegistry } from "@/ui/useRegistry";
+import { useSpec } from "@/ui/useSpec";
 
 type ArchiveView = "vigentes" | "archivado";
 
 export default function Home() {
   const { rows, loading, add, update, remove } = useRegistry();
+  const { spec } = useSpec();
   const [generating, setGenerating] = useState(false);
   // Two orthogonal filters: archived-or-not (view) and status.
   const [view, setView] = useState<ArchiveView>("vigentes");
@@ -88,9 +90,13 @@ export default function Home() {
   }
 
   async function handleGenerate(input: GenerateCvInput) {
+    if (!spec) {
+      toast.error("No se pudo leer el link-spec del portfolio. Revisá la conexión.");
+      return;
+    }
     setGenerating(true);
     try {
-      const result = await generateCv(input, { existingCodes, loadMaster });
+      const result = await generateCv(input, { spec, existingCodes, loadMaster });
       await add(result.row);
       downloadBytes(result.zip, result.zipName);
 
@@ -207,6 +213,7 @@ export default function Home() {
             (default) + `h-full` en la cara de la card las mantiene del mismo alto. */}
         <aside className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-5 lg:sticky lg:top-6 lg:self-start">
           <GenerateCard
+            spec={spec}
             existingCodes={existingCodes}
             generating={generating}
             onGenerate={handleGenerate}

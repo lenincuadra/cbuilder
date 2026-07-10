@@ -3,6 +3,8 @@ import { join } from "node:path";
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 import { fillMaster } from "./docx";
+import { buildTrackedLinks } from "./spec/links";
+import { TEST_SPEC } from "./spec/testSpec";
 
 const RELS_PATH = "word/_rels/document.xml.rels";
 
@@ -23,51 +25,33 @@ function countOccurrences(haystack: string, needle: string): number {
 
 describe("fillMaster", () => {
   it.each(["EN", "ES"] as const)(
-    "inserts per-link ids (P portfolio, L linkedin, G github) in the %s master",
+    "replaces the three ref=li-cv targets with the built short links (%s)",
     async (lang) => {
-      const filled = await fillMaster(loadMaster(lang), "0628r4");
+      const links = buildTrackedLinks(TEST_SPEC, "0628r4", "payments");
+      const filled = await fillMaster(loadMaster(lang), links);
       const rels = await readRels(filled);
 
       expect(rels).not.toContain("ref=li-cv");
-      // Portfolio → <code>P (direct); LinkedIn → <code>L and GitHub → <code>G (via go.html).
-      expect(rels).toContain("https://lenincuadra.com/?ref=0628r4P");
-      expect(rels).toContain(
-        "https://lenincuadra.com/go.html?ref=0628r4L&amp;dest=linkedin",
-      );
-      expect(rels).toContain(
-        "https://lenincuadra.com/go.html?ref=0628r4G&amp;dest=github",
-      );
-      expect(countOccurrences(rels, "ref=0628r4P")).toBe(1);
-      expect(countOccurrences(rels, "ref=0628r4L")).toBe(1);
-      expect(countOccurrences(rels, "ref=0628r4G")).toBe(1);
+      expect(rels).toContain(`Target="${links.portfolio}"`); // /r/0628r4Pp
+      expect(rels).toContain(`Target="${links.linkedin}"`);
+      expect(rels).toContain(`Target="${links.github}"`);
+      expect(countOccurrences(rels, "/r/0628r4")).toBe(3);
     },
   );
-
-  it("appends the focus profile to all links when given", async () => {
-    const filled = await fillMaster(loadMaster("EN"), "0628r4", "payments");
-    const rels = await readRels(filled);
-
-    expect(rels).toContain("https://lenincuadra.com/?ref=0628r4P&amp;focus=payments");
-    expect(rels).toContain(
-      "https://lenincuadra.com/go.html?ref=0628r4L&amp;dest=linkedin&amp;focus=payments",
-    );
-    expect(rels).toContain(
-      "https://lenincuadra.com/go.html?ref=0628r4G&amp;dest=github&amp;focus=payments",
-    );
-    expect(countOccurrences(rels, "focus=payments")).toBe(3);
-  });
 
   it("throws when the relationships part is missing", async () => {
     const zip = new JSZip();
     zip.file("word/document.xml", "<xml/>");
     const bytes = await zip.generateAsync({ type: "uint8array" });
-    await expect(fillMaster(bytes, "0628r4")).rejects.toThrow(/missing/);
+    const links = buildTrackedLinks(TEST_SPEC, "0628r4");
+    await expect(fillMaster(bytes, links)).rejects.toThrow(/missing/);
   });
 
-  it("throws when the placeholder count is not exactly three", async () => {
+  it("throws when the marker count is not exactly three", async () => {
     const zip = new JSZip();
-    zip.file(RELS_PATH, '<Relationships><Relationship Target="ref=li-cv"/></Relationships>');
+    zip.file(RELS_PATH, '<Relationships><Relationship Target="x?ref=li-cv"/></Relationships>');
     const bytes = await zip.generateAsync({ type: "uint8array" });
-    await expect(fillMaster(bytes, "0628r4")).rejects.toThrow(/exactly 3/);
+    const links = buildTrackedLinks(TEST_SPEC, "0628r4");
+    await expect(fillMaster(bytes, links)).rejects.toThrow(/exactly 3/);
   });
 });

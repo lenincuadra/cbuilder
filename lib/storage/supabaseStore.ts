@@ -8,6 +8,7 @@ import type {
   StatusUpdate,
 } from "../../core/registry/types";
 import type { FocusProfileId } from "../../core/links";
+import type { TrackedLinks } from "../../core/spec/links";
 import type { Language, LanguageChoice } from "../../core/types";
 
 const TABLE = "registry";
@@ -28,6 +29,7 @@ interface RegistryRowDb {
   focus: string | null;
   zip_name: string | null;
   drive_docs: Partial<Record<Language, string>> | null;
+  links: TrackedLinks | null;
   drive_folder: string | null;
   created_at: string | null;
   updates: StatusUpdate[] | null;
@@ -50,6 +52,7 @@ export function dbToRow(db: RegistryRowDb): RegistryRow {
     focus: (db.focus ?? undefined) as FocusProfileId | undefined,
     zipName: db.zip_name ?? undefined,
     driveDocs: db.drive_docs ?? undefined,
+    links: db.links ?? undefined,
     driveFolder: db.drive_folder ?? undefined,
     createdAt: db.created_at ?? undefined,
     updates: db.updates ?? undefined,
@@ -73,6 +76,7 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
     focus: row.focus ?? null,
     zip_name: row.zipName ?? null,
     drive_docs: row.driveDocs ?? null,
+    links: row.links ?? null,
     drive_folder: row.driveFolder ?? null,
     created_at: row.createdAt ?? null,
     updates: row.updates ?? null,
@@ -93,6 +97,7 @@ export function editableToDb(fields: EditableFields): Partial<RegistryRowDb> {
   if ("focus" in fields) out.focus = fields.focus ?? null;
   if ("zipName" in fields) out.zip_name = fields.zipName ?? null;
   if ("driveDocs" in fields) out.drive_docs = fields.driveDocs ?? null;
+  if ("links" in fields) out.links = fields.links ?? null;
   if ("driveFolder" in fields) out.drive_folder = fields.driveFolder ?? null;
   if ("notes" in fields) out.notes = fields.notes ?? null;
   if ("status" in fields) out.status = fields.status as string;

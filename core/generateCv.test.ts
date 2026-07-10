@@ -3,7 +3,8 @@ import { join } from "node:path";
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 import { generateCv } from "./generateCv";
-import { CODE_DIGITS, CODE_LETTERS } from "./tracking";
+import { CODE_DIGITS, CODE_LETTERS } from "./spec/code";
+import { TEST_SPEC } from "./spec/testSpec";
 import type { Language } from "./types";
 
 function masterLoader(): (language: Language) => Promise<Uint8Array> {
@@ -11,6 +12,11 @@ function masterLoader(): (language: Language) => Promise<Uint8Array> {
     new Uint8Array(
       readFileSync(join(process.cwd(), "public", "masters", `${language}.docx`)),
     );
+}
+
+/** Deps with the test spec; callers add existingCodes / rng / now. */
+function deps(extra: Partial<Parameters<typeof generateCv>[1]> = {}) {
+  return { spec: TEST_SPEC, existingCodes: [], loadMaster: masterLoader(), ...extra };
 }
 
 // Always index 0 -> code suffix "a2".
@@ -30,7 +36,7 @@ describe("generateCv", () => {
   it("generates a single-language CV: one folder, one row, defaults applied", async () => {
     const result = await generateCv(
       { company: "GlobalLogic", languageChoice: "EN", date: new Date(2026, 5, 28) },
-      { existingCodes: [], loadMaster: masterLoader(), rng: fixedRng, now: fixedNow },
+      deps({ rng: fixedRng, now: fixedNow }),
     );
 
     expect(result.code).toBe("0628a2");
@@ -60,7 +66,7 @@ describe("generateCv", () => {
         role: "Product Designer",
         channel: "LinkedIn",
       },
-      { existingCodes: [], loadMaster: masterLoader(), rng: fixedRng, now: fixedNow },
+      deps({ rng: fixedRng, now: fixedNow }),
     );
 
     expect(result.code).toBe("0628a2");
@@ -82,15 +88,14 @@ describe("generateCv", () => {
   it("avoids a code already present in the registry", async () => {
     const result = await generateCv(
       { company: "Acme", languageChoice: "EN", date: new Date(2026, 5, 28) },
-      {
+      deps({
         existingCodes: ["0628a2"],
-        loadMaster: masterLoader(),
         rng: codeRng([
           [0, 0],
           [1, 1],
         ]),
         now: fixedNow,
-      },
+      }),
     );
     expect(result.code).toBe("0628b3");
   });
@@ -98,7 +103,7 @@ describe("generateCv", () => {
   it("persists the focus profile and bakes it into the CV links", async () => {
     const result = await generateCv(
       { company: "Acme", languageChoice: "EN", date: new Date(2026, 5, 28), focus: "payments" },
-      { existingCodes: [], loadMaster: masterLoader(), rng: fixedRng, now: fixedNow },
+      deps({ rng: fixedRng, now: fixedNow }),
     );
 
     expect(result.row.focus).toBe("payments");
@@ -108,15 +113,21 @@ describe("generateCv", () => {
     const rels = await (await JSZip.loadAsync(docx))
       .file("word/_rels/document.xml.rels")!
       .async("string");
-    expect(rels).toContain("ref=0628a2P&amp;focus=payments");
-    expect(rels).toContain("ref=0628a2L&amp;dest=linkedin&amp;focus=payments");
-    expect(rels).toContain("ref=0628a2G&amp;dest=github&amp;focus=payments");
+    // Short links from the spec: portfolio carries the profile letter ("p" for payments).
+    expect(rels).toContain('Target="https://lenincuadra.com/r/0628a2Pp"');
+    expect(rels).toContain('Target="https://lenincuadra.com/r/0628a2L"');
+    expect(rels).toContain('Target="https://lenincuadra.com/r/0628a2G"');
+    expect(result.row.links).toEqual({
+      portfolio: "https://lenincuadra.com/r/0628a2Pp",
+      linkedin: "https://lenincuadra.com/r/0628a2L",
+      github: "https://lenincuadra.com/r/0628a2G",
+    });
   });
 
   it("uses a precomputed code verbatim (preview path)", async () => {
     const result = await generateCv(
       { company: "GlobalLogic", languageChoice: "EN", date: new Date(2026, 5, 28), code: "0628z9" },
-      { existingCodes: [], loadMaster: masterLoader(), now: fixedNow },
+      deps({ now: fixedNow }),
     );
     expect(result.code).toBe("0628z9");
     expect(result.folderNames).toEqual(["EN_globallogic_0628z9"]);
