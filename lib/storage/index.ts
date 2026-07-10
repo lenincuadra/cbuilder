@@ -1,12 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 import type { GeneralNotesStore } from "@/core/notes/types";
 import type { RegistryStore } from "@/core/registry/types";
+import type { StableLinksStore } from "@/core/stableLinks/types";
 import { ApiGeneralNotesStore } from "./apiNotesStore";
+import { ApiStableLinksStore } from "./apiStableLinksStore";
 import { ApiRegistryStore } from "./apiStore";
 import { SupabaseRegistryStore } from "./supabaseStore";
 
 let store: RegistryStore | null = null;
 let notesStore: GeneralNotesStore | null = null;
+let stableLinksStore: StableLinksStore | null = null;
 
 /**
  * Single entry point to the registry store. Swap the implementation here
@@ -45,4 +48,11 @@ export function getGeneralNotesStore(): GeneralNotesStore {
   if (notesStore) return notesStore;
   notesStore = new ApiGeneralNotesStore();
   return notesStore;
+}
+
+/** Single entry point to the stable-links store (local file/API path for now). */
+export function getStableLinksStore(): StableLinksStore {
+  if (stableLinksStore) return stableLinksStore;
+  stableLinksStore = new ApiStableLinksStore();
+  return stableLinksStore;
 }

@@ -12,6 +12,7 @@ import { createGoogleDoc } from "@/lib/gdocs";
 import { loadMaster } from "@/lib/masters";
 import { GenerateCard } from "@/ui/GenerateCard";
 import { GeneralNotesCard } from "@/ui/GeneralNotesCard";
+import { StableLinksCard } from "@/ui/StableLinksCard";
 import { RegistryTable } from "@/ui/RegistryTable";
 import { SegmentedControl, type SegmentedOption } from "@/ui/SegmentedControl";
 import { StatusFilterDropdown, type StatusFilter } from "@/ui/StatusFilterDropdown";
@@ -215,6 +216,7 @@ export default function Home() {
             onGenerate={handleGenerate}
           />
           <GeneralNotesCard />
+          <StableLinksCard />
         </aside>
       </div>
     </main>
