@@ -34,12 +34,16 @@ USA) · una línea de prueba (el micro-pitch del hero) · Portfolio + LinkedIn.
 
 ## Tracking
 
-- **Portfolio** → `https://lenincuadra.com/?ref=sig` (directo al index, que
-  trackea el ref). Es un link estable — agregalo desde el card "Links estables"
-  (sugerencia "Firma de mail").
-- **LinkedIn** → `https://lenincuadra.com/go.html?ref=sig&dest=linkedin`
-  (go.html loguea la visita y redirige a LinkedIn). Mismo ref `sig` = touchpoint
-  "firma de mail"; el `dest` distingue a dónde fue.
+**Un ref por idioma**, para distinguir de qué público viene la visita: `sig-en`
+(firma EN → público remoto/US) y `sig-es` (firma ES → LATAM/MELI). Dentro de cada
+firma, el `dest` distingue Portfolio de LinkedIn. Los dos refs de Portfolio son
+links estables — agregalos desde el card "Links estables" (sugerencias "Firma EN"
+/ "Firma ES").
+
+| Firma | Portfolio | LinkedIn |
+|---|---|---|
+| EN | `…/?ref=sig-en` | `…/go.html?ref=sig-en&dest=linkedin` |
+| ES | `…/?ref=sig-es` | `…/go.html?ref=sig-es&dest=linkedin` |
 
 ## EN — para `hi@lenincuadra.com` (remoto / US)
 
@@ -49,9 +53,9 @@ USA) · una línea de prueba (el micro-pitch del hero) · Portfolio + LinkedIn.
   Senior Product Designer · AI Adoption Lead<br>
   <span style="color: #6b7280;">Córdoba, Argentina · GMT-3 (US hours)</span><br>
   <span style="color: #6b7280;">+221% revenue redesign · design-to-code in days</span><br>
-  <a href="https://lenincuadra.com/?ref=sig" style="color: #7c4abf; text-decoration: none; font-weight: 600;">Portfolio</a>
+  <a href="https://lenincuadra.com/?ref=sig-en" style="color: #7c4abf; text-decoration: none; font-weight: 600;">Portfolio</a>
   &nbsp;·&nbsp;
-  <a href="https://lenincuadra.com/go.html?ref=sig&amp;dest=linkedin" style="color: #7c4abf; text-decoration: none; font-weight: 600;">LinkedIn</a>
+  <a href="https://lenincuadra.com/go.html?ref=sig-en&amp;dest=linkedin" style="color: #7c4abf; text-decoration: none; font-weight: 600;">LinkedIn</a>
 </div>
 ```
 
@@ -63,9 +67,9 @@ USA) · una línea de prueba (el micro-pitch del hero) · Portfolio + LinkedIn.
   Senior Product Designer · Líder de Adopción de IA<br>
   <span style="color: #6b7280;">Córdoba, Argentina · Remoto &amp; Híbrido</span><br>
   <span style="color: #6b7280;">+221% de ingresos con un rediseño UX · de diseño a código en días</span><br>
-  <a href="https://lenincuadra.com/?ref=sig" style="color: #7c4abf; text-decoration: none; font-weight: 600;">Portfolio</a>
+  <a href="https://lenincuadra.com/?ref=sig-es" style="color: #7c4abf; text-decoration: none; font-weight: 600;">Portfolio</a>
   &nbsp;·&nbsp;
-  <a href="https://lenincuadra.com/go.html?ref=sig&amp;dest=linkedin" style="color: #7c4abf; text-decoration: none; font-weight: 600;">LinkedIn</a>
+  <a href="https://lenincuadra.com/go.html?ref=sig-es&amp;dest=linkedin" style="color: #7c4abf; text-decoration: none; font-weight: 600;">LinkedIn</a>
 </div>
 ```
 
