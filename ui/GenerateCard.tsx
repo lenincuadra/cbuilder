@@ -2,7 +2,6 @@
 
 import { FilePlus2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import type { GenerateCvInput } from "@/core/generateCv";
 import { PanelCard, PanelCardFace } from "@/ui/PanelCard";
 import { Wizard } from "@/ui/wizard/Wizard";
@@ -17,9 +16,10 @@ export interface GenerateCardProps {
 }
 
 /**
- * Right-column CV generator. Compact empty-state card; the "Generar CV" button
- * opens the full wizard in a drawer (shared PanelCard pattern). The drawer node
- * is threaded to the wizard so its dropdowns portal inside it.
+ * Right-column CV generator. Compact card, clickable anywhere (same as the other
+ * right-column cards); opens the full wizard in a drawer (shared PanelCard
+ * pattern). The drawer node is threaded to the wizard so its dropdowns portal
+ * inside it.
  */
 export function GenerateCard({ existingCodes, generating, onGenerate }: GenerateCardProps) {
   return (
@@ -31,12 +31,7 @@ export function GenerateCard({ existingCodes, generating, onGenerate }: Generate
           icon={FilePlus2}
           title="Generar un CV"
           description="Creá un CV trackeado y sumalo al registro."
-          cta={
-            <Button size="sm" onClick={open}>
-              <FilePlus2 className="size-4" />
-              Generar CV
-            </Button>
-          }
+          onOpen={open}
         />
       )}
     >
