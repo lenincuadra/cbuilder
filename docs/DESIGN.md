@@ -31,6 +31,27 @@ Antes de crear cualquier componente o comportamiento de UI:
 - Usar el componente `Empty` de shadcn (`components/ui/empty.tsx`) en todos los vacíos
   (registro vacío, actualizaciones vacías, etc.), no texto suelto.
 
+## Cards de la columna derecha → patrón "card compacta → drawer"
+Cada card de acción de la columna derecha es una **cara compacta y clickeable** cuyo
+contenido completo vive en un **drawer** (right en desktop / bottom en mobile). Patrón
+reusable en **`ui/PanelCard.tsx`**:
+- **`PanelCard`** — maneja el drawer; recibe `title`/`description`, un render `card(open)`
+  (la cara) y `children(close, container)` (el cuerpo del drawer). `container` es el nodo
+  del drawer: pasalo a cualquier **popout** adentro (dropdowns, etc.) para que portalee en
+  el scope del drawer (ver la regla de dropdowns).
+- **`PanelCardFace`** — la cara compacta compartida (icono + título + descripción), para que
+  las 3 cards se vean idénticas. `h-full` para que estiren al mismo alto en fila. Usá `cta`
+  (un botón) para una card con acción explícita (Generar CV) o `onOpen` para hacer toda la
+  card clickeable (Notas, Links estables).
+- Lo usan: **Generar un CV** (wizard en el drawer), **Notas generales** (editor), **Links
+  estables** (manager). **Para una card nueva**: reusá `PanelCard` + `PanelCardFace`; el
+  contenido pesado va en el cuerpo del drawer.
+
+**Layout responsive de las cards** (`aside` en `app/page.tsx`): grid **`auto-fit` con
+`minmax`** que responde al **ancho del contenedor**, no de la pantalla → 1 columna en la
+columna angosta (lg), 3 en fila (mismo tamaño, o wrap a 2+1 igual) cuando la tabla las
+empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
+
 ## Dropdowns seleccionables con iconos → un solo componente
 - **Regla:** todo dropdown seleccionable que muestre iconos usa **`DropdownMenu`** del DS
   (patrón *checkboxes + icons*), **no** el `Select`. Así todos los dropdowns con iconos son

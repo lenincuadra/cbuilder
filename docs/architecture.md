@@ -126,6 +126,8 @@ Supabase ([`supabase-setup.md`](supabase-setup.md)).
 | `/api/cvs` | POST | Archiva un zip en `data/cvs/` (nombre validado, escritura atómica) |
 | `/api/cvs/reveal` | POST | Revela un zip archivado en Finder (`open -R`, **solo macOS**; 501 en otros lados) |
 | `/api/gdocs` | POST | Reenvía el `.docx` al webhook de Apps Script del usuario (501 si no configurado) |
+| `/api/stable-links` | GET/POST | Lista / agrega links estables (touchpoints permanentes) |
+| `/api/stable-links/[ref]` | DELETE | Quita un link estable del registro |
 
 ## Variables de entorno
 

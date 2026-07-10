@@ -63,7 +63,8 @@ Para el detalle completo (pipeline, storage, rutas API, modelo de tracking):
   editable, seguimiento (notas + timeline), alerta de inactividad, borrado.
 - **Entrega** — descarga del zip + archivo local en `data/cvs/` + copia en Google
   Docs; el drawer muestra dónde quedó cada cosa (Finder / URL de Drive).
-- **Notas generales** — markdown del proceso, no atado a ninguna fila.
+- **Links estables** — tracking de touchpoints permanentes (LinkedIn, Behance…),
+  no atados a una aplicación: 1 link por perfil, para ver/copiar/agregar.
 
 ## Stack
 

@@ -10,6 +10,29 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Columna derecha: cards compactas → drawer (patrón `PanelCard`) + links estables
+Las 3 cards de acción (Generar CV, Notas generales, Links estables) pasaron a un patrón
+único: **cara compacta clickeable → contenido en drawer** (`ui/PanelCard.tsx` +
+`PanelCardFace`). Antes cada una resolvía su UI aparte (el wizard se expandía in-place; las
+notas mostraban el editor inline + una flecha). Ahora: **Generar CV** abre el wizard en un
+drawer, **Notas** abre el editor, **Links estables** (feature nuevo) abre su manager. Pedido
+explícito de unificar el comportamiento y documentarlo para replicarlo. Detalle del patrón
+y del layout responsive en `DESIGN.md`.
+
+Notas técnicas: (1) el wizard adentro del drawer necesitaba threadear el **`container`** (el
+nodo del drawer) hasta los `IconSelect` de canal/foco para que portaleen bien — `PanelCard`
+lo expone como 2º arg de `children`, `Wizard`/steps lo aceptan. El DatePicker sigue sin
+container (mismo precedente que el edit form). (2) El layout de las cards es un **grid
+`auto-fit`** (responde al ancho del contenedor): 1 col en la columna angosta, 3 en fila
+(igual tamaño / wrap a 2+1), apiladas en mobile — así una card futura entra sola.
+
+**Links estables** (feature): tracking de touchpoints permanentes (LinkedIn, Behance…), 1
+link por touchpoint, `lenincuadra.com/?ref=<ref>` directo al portfolio. Registro propio
+(`StableLink {name, ref}`) con su store (file + API + client, espejo del registro; Supabase
+a futuro). No toca el portfolio (el tracker ya loguea cualquier `ref`); el feature es el
+**registro** de qué ref le asignaste a cada uno, más ver/copiar/agregar (con sugerencias
+`li-profile`/`web-cv`/`behance`).
+
 ## Dropdowns con iconos: todos con `DropdownMenu`, no `Select` (`IconSelect`)
 Todos los dropdowns seleccionables que muestran iconos pasaron del `Select` (base-ui) a un
 componente único **`ui/IconSelect.tsx`** sobre **`DropdownMenu`** (patrón checkboxes+icons,
