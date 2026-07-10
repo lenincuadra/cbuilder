@@ -1,4 +1,3 @@
-import type { FocusProfileId } from "@/core/links";
 import type { Channel } from "@/core/registry/types";
 import type { LanguageChoice } from "@/core/types";
 
@@ -20,8 +19,8 @@ export interface WizardData {
   email: string;
   who: string;
   jobUrl: string;
-  /** Portfolio focus profile for the tracked links. "" = sin foco. */
-  focus: FocusProfileId | "";
+  /** Portfolio focus profile id (from the spec) for the tracked links. "" = sin foco. */
+  focus: string;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

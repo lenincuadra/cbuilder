@@ -7,7 +7,6 @@ import type {
   RegistryStore,
   StatusUpdate,
 } from "../../core/registry/types";
-import type { FocusProfileId } from "../../core/links";
 import type { TrackedLinks } from "../../core/spec/links";
 import type { Language, LanguageChoice } from "../../core/types";
 
@@ -49,7 +48,7 @@ export function dbToRow(db: RegistryRowDb): RegistryRow {
     who: db.who ?? undefined,
     jobUrl: db.job_url ?? undefined,
     language: (db.language ?? undefined) as LanguageChoice | undefined,
-    focus: (db.focus ?? undefined) as FocusProfileId | undefined,
+    focus: db.focus ?? undefined,
     zipName: db.zip_name ?? undefined,
     driveDocs: db.drive_docs ?? undefined,
     links: db.links ?? undefined,

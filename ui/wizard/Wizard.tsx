@@ -128,8 +128,10 @@ export function Wizard({
       <div className="min-h-[260px]">
         {step === 1 && <StepCompany data={data} set={set} container={container} />}
         {step === 2 && <StepOptional data={data} set={set} container={container} />}
-        {step === 3 && <StepLanguage data={data} set={set} container={container} />}
-        {step === 4 && previewCode && <StepConfirm data={data} previewCode={previewCode} />}
+        {step === 3 && <StepLanguage data={data} set={set} container={container} spec={spec} />}
+        {step === 4 && previewCode && (
+          <StepConfirm data={data} previewCode={previewCode} spec={spec} />
+        )}
       </div>
 
       <div className="flex items-center justify-between gap-2">

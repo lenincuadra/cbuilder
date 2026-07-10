@@ -40,7 +40,17 @@ Dominio, formatos o perfiles nuevos fluyen solos, sin tocar código de cbuilder.
   - Verificado E2E: CV generado con `Target="…/r/<code>P|L|G"`, 0 `ref=li-cv`.
 - **C — masters** — **absorbido en B**: `fillMaster` reemplaza el target completo,
   así los masters v15 quedan como están (no hizo falta v16).
-- **D — perfiles + preview desde el spec** — pendiente
+- **D — perfiles + preview desde el spec** ✅
+  - El selector de foco lee `spec.profiles` (id + label ES) en vez del espejo
+    manual; se **borró `core/links.ts`** (`FOCUS_PROFILES`/`focusLabel`/
+    `FocusProfileId`). `focus` es ahora un `string` (id del perfil). Helpers en
+    `core/spec/profiles.ts` (`profileLabel`/`profileIds`/`profilePreview`).
+  - **Preview (Uso A)**: al elegir un perfil, el paso muestra lo que verá quien
+    abra el link — el case destacado (`cases[featured]`) + las `proofs`, en ES,
+    todo del spec (verificado: cambia por perfil).
+  - `FocusIcon` mapea los ids conocidos con un icono default (`Target`) para
+    perfiles nuevos. El spec se carga **una vez** vía `SpecProvider` (contexto),
+    así la tabla no lo re-fetchea por fila.
 - **E — persistencia + export CSV/markdown** — pendiente
 - **F — prueba E2E** — pendiente
 - **G — firma como link estable** — pendiente

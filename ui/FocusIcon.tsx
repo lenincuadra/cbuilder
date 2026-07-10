@@ -1,14 +1,11 @@
-import { CreditCard, Sparkles, TrendingUp } from "lucide-react";
-import type { FocusProfileId } from "@/core/links";
+import { CreditCard, Sparkles, Target, TrendingUp } from "lucide-react";
 
-/** Representative icon for a portfolio focus profile. Monochrome (currentColor). */
-export function FocusIcon({
-  focus,
-  className = "size-4",
-}: {
-  focus: FocusProfileId;
-  className?: string;
-}) {
+/**
+ * Representative icon for a portfolio focus profile (monochrome, currentColor).
+ * The profile list is spec-driven, so this is a cosmetic mapping for the known
+ * ids with a generic fallback (`Target`) for any new profile.
+ */
+export function FocusIcon({ focus, className = "size-4" }: { focus: string; className?: string }) {
   switch (focus) {
     case "payments":
       return <CreditCard className={className} />;
@@ -17,6 +14,6 @@ export function FocusIcon({
     case "conversion":
       return <TrendingUp className={className} />;
     default:
-      return null;
+      return <Target className={className} />;
   }
 }

@@ -1,7 +1,6 @@
 import { toISODate } from "./dates";
 import { fillMaster } from "./docx";
 import { folderName, slugifyCompany } from "./folderName";
-import type { FocusProfileId } from "./links";
 import { generateCode } from "./spec/code";
 import { buildTrackedLinks } from "./spec/links";
 import type { LinkSpec } from "./spec/types";
@@ -27,8 +26,8 @@ export interface GenerateCvInput {
   jobUrl?: string;
   notes?: string;
   status?: ApplicationStatus;
-  /** Portfolio focus profile appended to the CV's tracked links (`&focus=`). */
-  focus?: FocusProfileId;
+  /** Portfolio focus profile id (from the spec) baked into the CV's tracked links. */
+  focus?: string;
   /**
    * Precomputed tracking code (e.g. from the wizard's folder-name preview).
    * When provided it is used as-is; otherwise a fresh, collision-checked code

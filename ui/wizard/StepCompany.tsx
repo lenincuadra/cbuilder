@@ -10,6 +10,8 @@ export interface StepProps {
   set: (patch: Partial<WizardData>) => void;
   /** Portal target for popouts (dropdowns) when the wizard runs inside a drawer. */
   container?: HTMLElement | null;
+  /** The link contract — supplies the focus profiles (StepLanguage). Null while loading. */
+  spec?: import("@/core/spec/types").LinkSpec | null;
 }
 
 /** Step 1 — Empresa (required) + Fecha de aplicación (default hoy). */

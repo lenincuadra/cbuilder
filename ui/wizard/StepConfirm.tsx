@@ -3,7 +3,8 @@
 import { FolderIcon } from "lucide-react";
 
 import { folderName } from "@/core/folderName";
-import { focusLabel } from "@/core/links";
+import { profileLabel } from "@/core/spec/profiles";
+import type { LinkSpec } from "@/core/spec/types";
 import { languageLabel } from "@/core/types";
 import { CV_FILENAME } from "@/core/zip";
 import { languagesFor, type WizardData } from "./types";
@@ -11,6 +12,7 @@ import { languagesFor, type WizardData } from "./types";
 export interface StepConfirmProps {
   data: WizardData;
   previewCode: string;
+  spec: LinkSpec | null;
 }
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
@@ -23,7 +25,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 }
 
 /** Step 4 — Confirm. Shows a summary and a preview of the folder name(s) to be created. */
-export function StepConfirm({ data, previewCode }: StepConfirmProps) {
+export function StepConfirm({ data, previewCode, spec }: StepConfirmProps) {
   const folders = languagesFor(data.language).map((language) =>
     folderName({ language, company: data.company, code: previewCode }),
   );
@@ -33,7 +35,9 @@ export function StepConfirm({ data, previewCode }: StepConfirmProps) {
       <div className="space-y-1.5 rounded-lg border p-3">
         <SummaryRow label="Empresa" value={data.company} />
         <SummaryRow label="Idioma" value={languageLabel(data.language)} />
-        {data.focus !== "" && <SummaryRow label="Foco" value={focusLabel(data.focus)} />}
+        {data.focus !== "" && (
+          <SummaryRow label="Foco" value={spec ? profileLabel(spec, data.focus) : data.focus} />
+        )}
         <SummaryRow label="Fecha" value={data.date.toLocaleDateString("es-AR")} />
         <SummaryRow label="Rol" value={data.role} />
         {data.channel && <SummaryRow label="Canal" value={data.channel} />}

@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { focusLabel, type FocusProfileId } from "@/core/links";
 import { buildTrackedLinks, type TrackedLinks as TrackedLinksT } from "@/core/spec/links";
+import { profileLabel } from "@/core/spec/profiles";
 import { FocusIcon } from "@/ui/FocusIcon";
 import { useSpec } from "@/ui/useSpec";
 
@@ -59,11 +59,12 @@ export function TrackedLinks({
   links: stored,
 }: {
   code: string;
-  focus?: FocusProfileId;
+  focus?: string;
   links?: TrackedLinksT;
 }) {
   const { spec } = useSpec();
   const links = stored ?? (spec ? buildTrackedLinks(spec, code, focus) : null);
+  const focusName = focus && spec ? profileLabel(spec, focus) : focus;
 
   return (
     <div className="space-y-2 rounded-lg border px-3 py-2">
@@ -72,7 +73,7 @@ export function TrackedLinks({
         <div className="flex items-center gap-1.5 text-xs">
           <FocusIcon focus={focus} className="size-3.5 shrink-0 text-muted-foreground" />
           <span>
-            <span className="text-muted-foreground">Foco:</span> {focusLabel(focus)}
+            <span className="text-muted-foreground">Foco:</span> {focusName}
           </span>
         </div>
       )}

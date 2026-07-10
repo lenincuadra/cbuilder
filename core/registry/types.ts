@@ -1,4 +1,3 @@
-import type { FocusProfileId } from "../links";
 import type { TrackedLinks } from "../spec/links";
 import type { Language, LanguageChoice } from "../types";
 
@@ -59,7 +58,7 @@ export interface RegistryRow {
    * Portfolio focus profile baked into the CV's tracked links (`&focus=`).
    * Like `language`, not editable post-creation: the sent CV already carries it.
    */
-  focus?: FocusProfileId;
+  focus?: string;
   /** The three tracked links (short form) baked into this CV — faithful record. */
   links?: TrackedLinks;
   /** File name of the archived delivery zip in data/cvs/ (set at generation). */

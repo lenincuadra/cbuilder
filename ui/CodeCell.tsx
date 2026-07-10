@@ -2,14 +2,17 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
-import { focusLabel, type FocusProfileId } from "@/core/links";
+import { profileLabel } from "@/core/spec/profiles";
 import { cn } from "@/lib/utils";
 import { FocusIcon } from "@/ui/FocusIcon";
+import { useSpec } from "@/ui/useSpec";
 
 /** Tracking code cell: hover reveals a copy affordance; click copies it.
  *  When the row has a portfolio focus, a per-profile icon (with tooltip) follows the code. */
-export function CodeCell({ code, focus }: { code: string; focus?: FocusProfileId }) {
+export function CodeCell({ code, focus }: { code: string; focus?: string }) {
+  const { spec } = useSpec();
   const [copied, setCopied] = useState(false);
+  const focusName = focus && spec ? profileLabel(spec, focus) : focus;
 
   async function copy(event: React.MouseEvent) {
     event.stopPropagation(); // don't open the row's detail panel
@@ -48,8 +51,8 @@ export function CodeCell({ code, focus }: { code: string; focus?: FocusProfileId
           // shrink-0: inside the fixed 9% truncating cell the flex layout would
           // otherwise squash the icon horizontally into an unreadable glyph.
           className="inline-flex shrink-0 text-muted-foreground"
-          title={`Foco: ${focusLabel(focus)}`}
-          aria-label={`Foco: ${focusLabel(focus)}`}
+          title={`Foco: ${focusName}`}
+          aria-label={`Foco: ${focusName}`}
         >
           <FocusIcon focus={focus} className="size-3.5" />
         </span>
