@@ -25,7 +25,10 @@ export const TEST_SPEC: LinkSpec = {
       label: { en: "For payment platforms", es: "Para plataformas de pagos" },
       featured: "fintech-ecosystem",
       order: ["fintech-ecosystem", "no-handoff"],
-      proofs: [{ id: "fintech-ecosystem", en: "launched…", es: "lanzó…" }],
+      proofs: [
+        { id: "fintech-ecosystem", en: "launched…", es: "lanzó…" }, // = featured
+        { id: "ecommerce-conversion", en: "+221%…", es: "+221%…" },
+      ],
     },
   },
   defaultOrder: ["no-handoff", "fintech-ecosystem"],

@@ -40,11 +40,14 @@ function FocusPreview({ spec, focus }: { spec: LinkSpec; focus: string }) {
         </p>
       )}
       {preview.proofs.length > 0 && (
-        <ul className="list-disc space-y-0.5 pl-4 text-muted-foreground">
-          {preview.proofs.map((proof) => (
-            <li key={proof}>{proof}</li>
-          ))}
-        </ul>
+        <div className="text-muted-foreground">
+          <span className="text-foreground">También muestra:</span>
+          <ul className="mt-0.5 list-disc space-y-0.5 pl-4">
+            {preview.proofs.map((proof) => (
+              <li key={proof}>{proof}</li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

@@ -17,7 +17,7 @@ export interface ProfilePreview {
   label: string;
   /** The case shown first (featured), from the spec's case index. */
   featured?: { title: string; description: string };
-  /** The two hero metrics fixed by the profile. */
+  /** Hero metrics **other than the featured case** (which is already shown above). */
   proofs: string[];
 }
 
@@ -30,6 +30,8 @@ export function profilePreview(spec: LinkSpec, id: string, lang: Lang = "es"): P
     featured: featured
       ? { title: featured.title[lang], description: featured.description[lang] }
       : undefined,
-    proofs: profile.proofs.map((proof) => proof[lang]),
+    // The featured case is usually also proofs[0]; drop it so the preview
+    // doesn't show the same metric twice.
+    proofs: profile.proofs.filter((proof) => proof.id !== profile.featured).map((proof) => proof[lang]),
   };
 }

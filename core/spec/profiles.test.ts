@@ -13,11 +13,12 @@ describe("profiles helpers", () => {
     expect(profileIds(TEST_SPEC)).toEqual(["payments"]);
   });
 
-  it("builds the preview from featured case + proofs", () => {
+  it("builds the preview, dropping the featured case from the proofs (no repeat)", () => {
     const preview = profilePreview(TEST_SPEC, "payments");
     expect(preview?.label).toBe("Para plataformas de pagos");
     expect(preview?.featured?.title).toBe("Ecosistema Fintech");
-    expect(preview?.proofs).toEqual(["lanzó…"]);
+    // featured (fintech-ecosystem) is excluded; only the other proof remains.
+    expect(preview?.proofs).toEqual(["+221%…"]);
     expect(profilePreview(TEST_SPEC, "unknown")).toBeNull();
   });
 });
