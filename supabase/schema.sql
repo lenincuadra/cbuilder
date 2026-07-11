@@ -26,18 +26,11 @@ create table if not exists public.registry (
 -- Newest applications first when listing.
 create index if not exists registry_created_at_idx on public.registry (created_at desc);
 
--- Row Level Security.
+-- Row Level Security ON, with NO policy → anon/authenticated are denied.
+-- The app never touches this table from the browser: it goes through its own
+-- server API routes, which use the SERVICE ROLE key (bypasses RLS, never shipped
+-- to the client). So the registry stays private even though the project is public.
+-- If a leftover "anon full access (dev)" policy exists from an earlier setup,
+-- drop it so the anon key can't read/write the table.
 alter table public.registry enable row level security;
-
--- DEV policy: any client holding the anon key can read/write the table.
--- This is fine for local/private use, but the anon key is shipped to the
--- browser, so a PUBLIC deployment would expose the registry to anyone.
--- Before deploying publicly, drop this policy and gate access behind
--- Supabase Auth (e.g. `to authenticated` + a user-id check).
 drop policy if exists "anon full access (dev)" on public.registry;
-create policy "anon full access (dev)"
-  on public.registry
-  for all
-  to anon
-  using (true)
-  with check (true);

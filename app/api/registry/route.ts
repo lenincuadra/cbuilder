@@ -1,19 +1,19 @@
 import { NextResponse } from "next/server";
 import type { RegistryRow } from "@/core/registry/types";
-import { fileStore } from "@/lib/storage/fileStore";
+import { getServerRegistryStore } from "@/lib/storage/serverRegistry";
 
-// Reads/writes a local file — never statically cached.
+// Reads/writes the durable store — never statically cached.
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const rows = await fileStore.list();
+  const rows = await getServerRegistryStore().list();
   return NextResponse.json(rows);
 }
 
 export async function POST(request: Request) {
   const row = (await request.json()) as RegistryRow;
   try {
-    await fileStore.add(row);
+    await getServerRegistryStore().add(row);
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
     return NextResponse.json(

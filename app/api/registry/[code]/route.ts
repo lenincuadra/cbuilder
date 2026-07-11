@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { EditableFields } from "@/core/registry/types";
-import { fileStore } from "@/lib/storage/fileStore";
+import { getServerRegistryStore } from "@/lib/storage/serverRegistry";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export async function PATCH(
   const { code } = await params;
   const fields = (await request.json()) as EditableFields;
   try {
-    await fileStore.update(code, fields);
+    await getServerRegistryStore().update(code, fields);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(
@@ -27,7 +27,7 @@ export async function DELETE(
 ) {
   const { code } = await params;
   try {
-    await fileStore.remove(code);
+    await getServerRegistryStore().remove(code);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(

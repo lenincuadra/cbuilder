@@ -1,46 +1,41 @@
-# Supabase setup (registry storage)
+# Supabase (registry storage)
 
-The registry lives behind the `RegistryStore` interface. When the Supabase env
-vars are present the app uses `SupabaseRegistryStore`; otherwise it falls back to
-the **local file store** (`data/registry.json` on disk, via API routes) — durable
-and shared across browsers on the same machine. Supabase is for deploy / sharing.
-See [`architecture.md`](architecture.md) for the full storage picture.
+The registry lives behind the `RegistryStore` interface. It's accessed **only from
+the server** (`getServerRegistryStore`): with the Supabase env vars set it uses
+`SupabaseRegistryStore` with the **service role key**; without them it falls back to
+the local file store (`data/registry.json`). The browser always goes through the
+app's API routes, so the private registry is never exposed by a public key.
 
-## One-time setup
+**For the full deploy walkthrough (Supabase + Vercel + auth), see
+[`deploy.md`](deploy.md).** This file is just the Supabase table setup.
+
+## Create the table
 
 1. **Create a project** at https://supabase.com (free tier is enough).
-2. **Create the table**: open the project's **SQL editor**, paste the contents of
-   [`supabase/schema.sql`](../supabase/schema.sql), and run it. The schema tracks
-   `RegistryRow` — it already includes the newer columns (`focus`, `zip_name`,
-   `drive_docs`). If you ran an older schema, add the missing ones:
-   `alter table public.registry add column if not exists focus text, add column
-   if not exists zip_name text, add column if not exists drive_docs jsonb;`
-3. **Get the credentials**: Project settings → API → copy the **Project URL** and
-   the **anon public** key.
-4. **Wire them locally**: copy `.env.local.example` to `.env.local` and fill both
-   values. `.env.local` is gitignored.
-5. `npm run dev` — the app now reads/writes the `registry` table instead of the
-   local file store.
+2. **SQL editor** → paste and run [`supabase/schema.sql`](../supabase/schema.sql).
+   It tracks `RegistryRow` (incl. `focus`, `zip_name`, `drive_docs`, `drive_folder`,
+   `links`) and turns on RLS **with no policy** — anon is denied; only the service
+   key (server-side) reaches the table. If you ran an older schema, add missing
+   columns and drop the old dev policy:
+   ```sql
+   alter table public.registry
+     add column if not exists focus text,
+     add column if not exists zip_name text,
+     add column if not exists drive_docs jsonb,
+     add column if not exists drive_folder text,
+     add column if not exists links jsonb;
+   drop policy if exists "anon full access (dev)" on public.registry;
+   ```
+3. **Credentials**: Project settings → API → copy the **Project URL** and the
+   **`service_role`** key (NOT the anon key). Put them in `SUPABASE_URL` /
+   `SUPABASE_SERVICE_ROLE_KEY` (see `.env.local.example`). ⚠️ The service key is a
+   full secret — never ship it to the client or commit it.
 
-> Note: this covers the **registry** only. The general-notes store is still
-> file-based (no Supabase table yet), and the Google Docs sink is independent
+> This covers the **registry** only. General notes and stable links are still
+> file-based (no Supabase table yet); the Google Docs sink is independent
 > (see [`gdocs-setup.md`](gdocs-setup.md)).
-
-## On Vercel
-
-Add the same two vars in **Project → Settings → Environment Variables**:
-`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Redeploy.
-
-## Security note (read before deploying publicly)
-
-`NEXT_PUBLIC_*` vars are shipped to the browser, so the anon key is public. The
-dev RLS policy in `schema.sql` lets anyone with that key read/write the registry.
-That is fine for local/private use, but **before a public deployment** replace the
-policy with an auth-gated one (Supabase Auth + `to authenticated`), so only you
-can see who you applied to.
 
 ## Importing an existing registry
 
-The legacy CLI registry (`tracking-registry.md`) currently holds only a test row.
-If you have real history to bulk-load, share the file and we'll add an importer
-that parses it into rows and inserts them.
+Bulk-load real history with the CSV from the app's **Exportar** button, or a
+one-off insert — the schema maps 1:1 to `RegistryRow`.
