@@ -77,9 +77,12 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
     drive_docs: row.driveDocs ?? null,
     links: row.links ?? null,
     drive_folder: row.driveFolder ?? null,
-    created_at: row.createdAt ?? null,
-    updates: row.updates ?? null,
-    archived: row.archived ?? null,
+    // These three columns are NOT NULL with a default in Postgres. An explicit
+    // null would override the default and violate the constraint, so fall back to
+    // the schema default value instead of null (a fresh row leaves them unset).
+    created_at: row.createdAt ?? new Date().toISOString(),
+    updates: row.updates ?? [],
+    archived: row.archived ?? false,
   };
 }
 
@@ -100,8 +103,8 @@ export function editableToDb(fields: EditableFields): Partial<RegistryRowDb> {
   if ("driveFolder" in fields) out.drive_folder = fields.driveFolder ?? null;
   if ("notes" in fields) out.notes = fields.notes ?? null;
   if ("status" in fields) out.status = fields.status as string;
-  if ("updates" in fields) out.updates = fields.updates ?? null;
-  if ("archived" in fields) out.archived = fields.archived ?? null;
+  if ("updates" in fields) out.updates = fields.updates ?? [];
+  if ("archived" in fields) out.archived = fields.archived ?? false;
   return out;
 }
 
