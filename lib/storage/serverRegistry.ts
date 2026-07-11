@@ -1,6 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import type { RegistryStore } from "@/core/registry/types";
 import { fileStore } from "./fileStore";
+import { getSupabaseAdmin } from "./supabaseAdmin";
 import { SupabaseRegistryStore } from "./supabaseStore";
 
 let store: RegistryStore | null = null;
@@ -15,16 +15,7 @@ let store: RegistryStore | null = null;
  */
 export function getServerRegistryStore(): RegistryStore {
   if (store) return store;
-
-  const url = process.env.SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (url && serviceKey) {
-    store = new SupabaseRegistryStore(
-      createClient(url, serviceKey, { auth: { persistSession: false } }),
-    );
-    return store;
-  }
-
-  store = fileStore;
+  const admin = getSupabaseAdmin();
+  store = admin ? new SupabaseRegistryStore(admin) : fileStore;
   return store;
 }

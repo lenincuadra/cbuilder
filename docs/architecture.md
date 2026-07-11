@@ -97,14 +97,20 @@ quedó la entrega para siempre (no solo recién generado) — card `DeliveryInfo
 
 ## Capas de storage
 
-Dos documentos independientes, cada uno detrás de su interfaz, elegidos por una
-factory (`lib/storage/index.ts`). Se puede cambiar la implementación sin tocar
-`core/` ni `ui/`.
+Tres documentos independientes, cada uno detrás de su interfaz. El cliente siempre
+habla con las API routes (`Api*Store`); en el server, una factory por documento
+(`getServer*Store`) elige Supabase con la service key (si están las env vars) o el
+file store local. Se puede cambiar la implementación sin tocar `core/` ni `ui/`.
 
-| Documento | Interfaz | Default local | Durable (deploy) |
+| Documento | Interfaz | Default local | Durable (deploy) — factory server |
 |---|---|---|---|
-| Registro | `RegistryStore` | File store (`data/registry.json`) vía API + `ApiRegistryStore` | `SupabaseRegistryStore` (si están las env vars) |
-| Notas generales | `GeneralNotesStore` | File store (`data/notes.json`) vía API | Supabase a futuro (aún no) |
+| Registro | `RegistryStore` | File store (`data/registry.json`) vía API + `ApiRegistryStore` | `SupabaseRegistryStore` — `getServerRegistryStore` |
+| Notas generales | `GeneralNotesStore` | File store (`data/notes.json`) vía API | `SupabaseGeneralNotesStore` — `getServerNotesStore` |
+| Links estables | `StableLinksStore` | File store (`data/stable-links.json`) vía API | `SupabaseStableLinksStore` — `getServerStableLinksStore` |
+
+Las tres factories usan un cliente admin compartido (`getSupabaseAdmin`, service
+key, server-only). Las tablas Supabase (`registry`, `general_notes`,
+`stable_links`) tienen RLS on sin policy → solo la service key entra.
 
 Notas de los file stores: **acceso serializado** (cola serial → read-modify-write
 atómico) + **escritura atómica** (tmp + rename), para no perder filas ni corromper

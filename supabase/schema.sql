@@ -34,3 +34,26 @@ create index if not exists registry_created_at_idx on public.registry (created_a
 -- drop it so the anon key can't read/write the table.
 alter table public.registry enable row level security;
 drop policy if exists "anon full access (dev)" on public.registry;
+
+
+-- General notes: a single free-text markdown document about the job search as a
+-- whole (not tied to any application). One row, pinned to id = 1.
+create table if not exists public.general_notes (
+  id         smallint primary key default 1 check (id = 1),
+  notes      text not null default '',
+  updated_at timestamptz not null default now()
+);
+alter table public.general_notes enable row level security;
+
+-- Stable links: tracking refs for permanent touchpoints (LinkedIn, Behance…),
+-- not tied to a single application. One row per touchpoint, keyed by ref.
+create table if not exists public.stable_links (
+  ref        text primary key,
+  name       text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists stable_links_created_at_idx on public.stable_links (created_at);
+alter table public.stable_links enable row level security;
+
+-- Both tables: same privacy model as registry — RLS on, NO policy, reached only
+-- via the service role key from the server.

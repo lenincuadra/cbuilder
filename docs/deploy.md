@@ -1,26 +1,36 @@
 # Deploy (Vercel + Supabase)
 
-Deploy privado del **registro** (fase 1). Notas y Links estables quedan solo-local
-por ahora (usan el file store, que es efímero en Vercel; se suman a Supabase
-después si hace falta). El archivo de zips (`data/cvs`) también es efímero en
-Vercel — no importa: el sink de Google Docs ya guarda la copia durable en Drive.
+Deploy privado. **Registro, Notas generales y Links estables** son durables en
+Supabase (cada uno detrás de su store: `getServerRegistryStore` /
+`getServerNotesStore` / `getServerStableLinksStore`, que eligen Supabase con la
+service key o el file store local según las env vars). El archivo de zips
+(`data/cvs`) sí es efímero en Vercel — no importa: el sink de Google Docs ya
+guarda la copia durable en Drive.
 
 ## Arquitectura (por qué es privado)
 
 - El browser **nunca** habla con Supabase directo. Va a las **API routes** de la
   app (`/api/registry`), que corren en el server y usan Supabase con la **service
   role key** — que **nunca** se manda al browser (no es `NEXT_PUBLIC`).
-- La tabla tiene **RLS on y sin policy** → anon/authenticated denegados. Solo la
-  service key (server) accede. Aunque el repo/URL sea público, el registro no.
-- Un **middleware** de basic-auth le pone contraseña a toda la app.
+- Las tablas (`registry`, `general_notes`, `stable_links`) tienen **RLS on y sin
+  policy** → anon/authenticated denegados. Solo la service key (server) accede.
+  Aunque el repo/URL sea público, la data no.
+- El **proxy** de basic-auth (`proxy.ts`, ex-`middleware`) le pone contraseña a
+  toda la app.
 
 ## 1. Supabase (una vez)
 
 1. Crear proyecto en [supabase.com](https://supabase.com) (free alcanza).
-2. **SQL editor** → pegar y correr `supabase/schema.sql` (crea la tabla + RLS).
-3. **Project settings → API** → copiar la **Project URL** y la **`service_role`**
-   key (NO la anon). ⚠️ La service key es un secreto total — nunca la pegues en el
-   cliente ni la commitees.
+2. **SQL editor** → pegar y correr `supabase/schema.sql` (crea las 3 tablas +
+   RLS: `registry`, `general_notes`, `stable_links`).
+3. **Credenciales** (Settings):
+   - **Project URL**: en **Data API** → copiar la **"Project URL"** base
+     (`https://XXXX.supabase.co`). ⚠️ NO el "RESTful endpoint" (`.../rest/v1/`): la
+     librería ya agrega `/rest/v1`, y una URL con path da
+     `Invalid path specified in request URL` al insertar.
+   - **Service key**: en **API Keys** → la **"Secret key"** (`sb_secret_…`, reemplazo
+     de la vieja `service_role`; NO la publishable/anon). Va en
+     `SUPABASE_SERVICE_ROLE_KEY`. ⚠️ Secreto total — nunca al cliente ni al repo.
 
 ## 2. Variables de entorno
 
@@ -49,7 +59,9 @@ candado (dev). En Vercel, seteá los cuatro.
 
 ## Notas
 
-- Migrar el registro local a Supabase: exportá el CSV (botón "Exportar") o corré
-  un insert one-off; el schema mapea 1:1 a `RegistryRow`.
+- Migrar data local a Supabase: correr en el SQL editor los scripts generados
+  desde los JSON de `data/` — `registry-import.sql` (registro) y
+  `notes-links-import.sql` (notas + links estables). Ambos gitignoreados,
+  `on conflict do nothing`/`do update` (seguros de re-correr).
 - Para login real (multi-usuario) en el futuro: Supabase Auth + RLS
   `to authenticated`, sin rehacer los datos.

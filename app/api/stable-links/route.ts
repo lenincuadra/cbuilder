@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { isValidStableRef, type StableLink } from "@/core/stableLinks/types";
-import { fileStableLinksStore } from "@/lib/storage/fileStableLinksStore";
+import { getServerStableLinksStore } from "@/lib/storage/serverStableLinks";
 
-// Reads/writes a local file — never statically cached.
+// Reads/writes the durable store (Supabase on deploy, local file in dev) —
+// never statically cached.
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const links = await fileStableLinksStore.list();
+  const links = await getServerStableLinksStore().list();
   return NextResponse.json(links);
 }
 
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Nombre o ref inválido." }, { status: 400 });
   }
   try {
-    await fileStableLinksStore.add({ name, ref, createdAt: new Date().toISOString() });
+    await getServerStableLinksStore().add({ name, ref, createdAt: new Date().toISOString() });
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
     return NextResponse.json(

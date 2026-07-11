@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { fileStableLinksStore } from "@/lib/storage/fileStableLinksStore";
+import { getServerStableLinksStore } from "@/lib/storage/serverStableLinks";
 
-// Writes a local file — never statically cached.
+// Writes the durable store (Supabase on deploy, local file in dev) — never
+// statically cached.
 export const dynamic = "force-dynamic";
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ ref: string }> }) {
   const { ref } = await params;
-  await fileStableLinksStore.remove(ref);
+  await getServerStableLinksStore().remove(ref);
   return NextResponse.json({ ok: true });
 }

@@ -10,6 +10,21 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Notas + Links estables durables en Supabase (mismo patrón que el registro)
+Los tres documentos (registro, notas generales, links estables) ahora son durables en
+Supabase detrás de una **factory server-side por documento** (`getServerRegistryStore` /
+`getServerNotesStore` / `getServerStableLinksStore`), cada una eligiendo Supabase (service
+key) o el file store local según las env vars. Las tres comparten un único cliente admin
+(`getSupabaseAdmin`, service key, server-only). Antes solo el registro estaba en Supabase; las
+notas y los links seguían en el file store, que **es efímero en Vercel** (el filesystem se
+resetea en cada deploy → se perdían al redeployar). Motivo: el objetivo del deploy es
+**usar la app mientras se sigue implementando**, y para eso todo lo que el usuario escribe en
+prod tiene que persistir a través de los redeploys. Trade-off: 2 tablas más
+(`general_notes` single-row pinned a `id=1`; `stable_links` keyed por `ref`), ambas con RLS
+on sin policy como el registro. Los `Api*Store` del cliente no cambian (siguen pegándole a
+las API routes); el swap es 100% server-side. Migración de la data local vía
+`data/notes-links-import.sql` (gitignored). Ver `docs/deploy.md` y `docs/architecture.md`.
+
 ## Borrado en toda la app: confirmar + avisar (`ConfirmDelete` + `toastDeleted`)
 Todo borrado sigue **un** patrón: modal de confirmación (`AlertDialog`) y después un toast
 destructivo. Se unificó en `ui/ConfirmDelete.tsx` (componente `ConfirmDelete` + helper

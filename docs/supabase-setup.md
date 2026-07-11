@@ -31,9 +31,10 @@ app's API routes, so the private registry is never exposed by a public key.
    `SUPABASE_SERVICE_ROLE_KEY` (see `.env.local.example`). ⚠️ The service key is a
    full secret — never ship it to the client or commit it.
 
-> This covers the **registry** only. General notes and stable links are still
-> file-based (no Supabase table yet); the Google Docs sink is independent
-> (see [`gdocs-setup.md`](gdocs-setup.md)).
+> `schema.sql` also creates **`general_notes`** (single-row markdown doc) and
+> **`stable_links`**, behind the same server-only + RLS model as the registry
+> (stores: `getServerNotesStore` / `getServerStableLinksStore`). The Google Docs
+> sink is independent (see [`gdocs-setup.md`](gdocs-setup.md)).
 
 ## Importing an existing registry
 
