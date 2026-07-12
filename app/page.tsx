@@ -107,11 +107,12 @@ export default function Home() {
 
       // Keep a server-side copy (data/cvs/): masters evolve, so the archive is
       // the only faithful record of what was sent. Never blocks the delivery.
-      let archiveOk = true;
+      // "off" (501, deploy) is expected — Drive holds the durable copy there.
+      let archiveState: "ok" | "off" | "failed";
       try {
-        await archiveCvZip(result.zipName, result.zip);
+        archiveState = (await archiveCvZip(result.zipName, result.zip)) ? "ok" : "off";
       } catch {
-        archiveOk = false;
+        archiveState = "failed";
       }
 
       // Extra sink: create each CV in the user's Google Drive as a native Google
@@ -142,25 +143,33 @@ export default function Home() {
       }
 
       // Single success alert. Secondary button opens the Drive folder when the
-      // sink ran, otherwise reveals the archived zip in Finder; Finder always
-      // stays reachable from "Detalles" (the drawer's Entrega card).
+      // sink ran, otherwise reveals the archived zip in Finder — only when the
+      // archive actually ran (locally); on a deploy there's no zip to reveal.
+      const finderButton =
+        archiveState === "ok"
+          ? {
+              label: "Finder",
+              onClick: () => {
+                revealCvZip(result.zipName)
+                  .then((unavailable) => {
+                    if (unavailable) toast.info(unavailable);
+                  })
+                  .catch((error: unknown) =>
+                    toast.error(
+                      error instanceof Error ? error.message : "No se pudo abrir el Finder.",
+                    ),
+                  );
+              },
+            }
+          : undefined;
       toast.success(`CV generado · código ${result.code}`, {
         duration: 10000,
         action: { label: "Detalles", onClick: () => openGeneratedRow(result.code) },
         cancel: driveFolder
           ? { label: "Drive", onClick: () => window.open(driveFolder, "_blank") }
-          : {
-              label: "Finder",
-              onClick: () => {
-                revealCvZip(result.zipName).catch((error: unknown) =>
-                  toast.error(
-                    error instanceof Error ? error.message : "No se pudo abrir el Finder.",
-                  ),
-                );
-              },
-            },
+          : finderButton,
       });
-      if (!archiveOk) {
+      if (archiveState === "failed") {
         toast.warning(`No se pudo archivar la copia de ${result.code} en data/cvs.`);
       }
       if (gdocsFailed) {

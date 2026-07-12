@@ -202,13 +202,22 @@ function CoverLettersManager({ store }: { store: UseCoverLetterTemplates }) {
           />
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          Variables: <span className="font-mono">{"{company}"}</span>,{" "}
-          <span className="font-mono">{"{role}"}</span> y{" "}
-          <span className="font-mono">{"{who}"}</span> se completan solas en el wizard. Soporta{" "}
-          <strong>**negrita**</strong>, <em>*cursiva*</em> y listas con “- ”. Con un solo cuerpo
-          alcanza (el idioma que uses al aplicar).
-        </p>
+        <div className="space-y-1 text-xs text-muted-foreground">
+          <p>
+            Escribí <span className="font-mono">{"{company}"}</span>,{" "}
+            <span className="font-mono">{"{role}"}</span> o{" "}
+            <span className="font-mono">{"{who}"}</span> y el wizard los reemplaza con la
+            empresa, el rol y el contacto de cada aplicación — ahí ves el texto final y podés
+            editarlo antes de generar.
+          </p>
+          <p>
+            El formato se aplica en el .docx generado:{" "}
+            <span className="font-mono">**texto**</span> sale en negrita,{" "}
+            <span className="font-mono">*texto*</span> en cursiva y las líneas que empiezan con{" "}
+            <span className="font-mono">-&nbsp;</span> como lista de viñetas.
+          </p>
+          <p>Con un solo cuerpo alcanza (el idioma que uses al aplicar).</p>
+        </div>
 
         <div className="flex justify-end gap-2">
           {editing && (

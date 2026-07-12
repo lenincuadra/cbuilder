@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, Link2, Plus, Trash2 } from "lucide-react";
+import { Link2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isValidStableRef, stableLinkUrl, type StableLink } from "@/core/stableLinks/types";
 import { ConfirmDelete, toastDeleted } from "@/ui/ConfirmDelete";
+import { CopyButton } from "@/ui/CopyButton";
 import { PanelCard, PanelCardFace } from "@/ui/PanelCard";
 import { useSpec } from "@/ui/useSpec";
 import { useStableLinks } from "@/ui/useStableLinks";
@@ -28,30 +29,6 @@ const SUGGESTIONS = [
   { name: "CV en la web", ref: "web-cv" },
   { name: "Behance", ref: "behance" },
 ];
-
-function CopyButton({ url }: { url: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="size-6 shrink-0"
-      title="Copiar link"
-      aria-label="Copiar link"
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(url);
-          setCopied(true);
-          window.setTimeout(() => setCopied(false), 1200);
-        } catch {
-          // clipboard unavailable — ignore
-        }
-      }}
-    >
-      {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
-    </Button>
-  );
-}
 
 function LinkRow({
   link,
@@ -68,7 +45,7 @@ function LinkRow({
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-sm font-medium">{link.name}</span>
         <div className="flex shrink-0 items-center">
-          <CopyButton url={url} />
+          <CopyButton text={url} title="Copiar link" />
           <Button
             variant="ghost"
             size="icon"

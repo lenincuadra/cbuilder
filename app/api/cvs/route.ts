@@ -6,6 +6,15 @@ export const dynamic = "force-dynamic";
 
 /** Archive a generated delivery zip (binary body, name in ?name=). */
 export async function POST(request: Request) {
+  // Local-first feature: on a deploy the filesystem is ephemeral, so archiving
+  // there would silently lie. 501 = "feature off here" (same contract as gdocs);
+  // the durable deploy copy is the Drive sink.
+  if (process.env.VERCEL) {
+    return NextResponse.json(
+      { error: "El archivo local (data/cvs) solo existe corriendo la app en tu Mac." },
+      { status: 501 },
+    );
+  }
   const name = new URL(request.url).searchParams.get("name") ?? "";
   if (!isValidZipName(name)) {
     return NextResponse.json({ error: "Invalid zip name." }, { status: 400 });
