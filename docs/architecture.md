@@ -139,8 +139,8 @@ Supabase ([`supabase-setup.md`](supabase-setup.md)).
 | `/api/registry` | GET/POST | Lista / agrega filas (file store) |
 | `/api/registry/[code]` | PATCH/DELETE | Edita / borra una fila |
 | `/api/notes` | GET/PUT | Lee / guarda las notas generales |
-| `/api/cvs` | POST | Archiva un zip en `data/cvs/` (nombre validado, escritura atómica) |
-| `/api/cvs/reveal` | POST | Revela un zip archivado en Finder (`open -R`, **solo macOS**; 501 en otros lados) |
+| `/api/cvs` | POST | Archiva un zip en `data/cvs/` (nombre validado, escritura atómica). **501 en deploy** (archivo local apagado; Drive es la copia durable) |
+| `/api/cvs/reveal` | POST | Revela un zip archivado en Finder (`open -R`). **501 en deploy o fuera de macOS** — la UI lo muestra como info, no error |
 | `/api/gdocs` | POST | Reenvía el `.docx` al webhook de Apps Script del usuario (501 si no configurado) |
 | `/api/stable-links` | GET/POST | Lista / agrega links estables (touchpoints permanentes) |
 | `/api/stable-links/[ref]` | DELETE | Quita un link estable del registro |

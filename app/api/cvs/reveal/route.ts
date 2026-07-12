@@ -12,8 +12,11 @@ export const dynamic = "force-dynamic";
  * only meaningful on the user's Mac — 501 elsewhere (deploys have no Finder).
  */
 export async function POST(request: Request) {
-  if (process.platform !== "darwin") {
-    return NextResponse.json({ error: "Finder reveal is only available on macOS." }, { status: 501 });
+  if (process.env.VERCEL || process.platform !== "darwin") {
+    return NextResponse.json(
+      { error: "Abrir en Finder solo funciona corriendo la app local en tu Mac (el zip vive en data/cvs de esa máquina)." },
+      { status: 501 },
+    );
   }
 
   const body = (await request.json()) as { name?: unknown };

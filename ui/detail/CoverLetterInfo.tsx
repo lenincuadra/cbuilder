@@ -1,6 +1,7 @@
 "use client";
 
 import type { RegistryRow } from "@/core/registry/types";
+import { CopyButton } from "@/ui/CopyButton";
 import { MarkdownView } from "./MarkdownView";
 
 /**
@@ -24,9 +25,10 @@ export function CoverLetterInfo({ row }: { row: RegistryRow }) {
       </div>
       {bodies.map(([language, body]) => (
         <div key={language} className="space-y-0.5">
-          {bodies.length > 1 && (
+          <div className="flex items-center justify-between">
             <span className="font-mono text-xs text-muted-foreground">{language}</span>
-          )}
+            <CopyButton text={body} title="Copiar texto de la carta" />
+          </div>
           <div className="max-h-48 overflow-y-auto rounded-md border bg-muted/40 px-2.5 py-1.5">
             <MarkdownView source={body} />
           </div>

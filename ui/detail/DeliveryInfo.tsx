@@ -19,7 +19,9 @@ export function DeliveryInfo({ row }: { row: RegistryRow }) {
 
   async function reveal(name: string) {
     try {
-      await revealCvZip(name);
+      // null = revealed; a message = feature not available here (deploy) — info, not error.
+      const unavailable = await revealCvZip(name);
+      if (unavailable) toast.info(unavailable);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo abrir el Finder.");
     }

@@ -10,6 +10,19 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Features locales (archivo data/cvs, Finder) → 501 en deploy, UI en silencio/info
+El archivo local de zips y el "Mostrar en Finder" son **features locales**: solo tienen
+sentido corriendo la app en la Mac del usuario (en Vercel el filesystem es efímero y no hay
+Finder). Se formalizó el mismo contrato que el sink de gdocs: **HTTP 501 = "feature apagado
+acá"**, y la UI lo trata como estado, no como error — el archivado en deploy no muestra
+nada (antes: toast warning "No se pudo archivar…" en cada generación — ruido esperado), el
+botón Finder del toast de éxito solo aparece si el archivado corrió, y el del drawer
+responde con un toast **info** explicando la realidad ("solo funciona corriendo la app
+local en tu Mac") en vez del error en inglés "Finder reveal is only available on macOS".
+`archiveCvZip` devuelve `boolean` (false = off) y `revealCvZip` devuelve `null | mensaje`.
+Regla general: si un feature depende del entorno, la ruta responde 501 y el cliente lo
+degrada a info/nada — los errores rojos quedan para fallos reales.
+
 ## Cover letters: templates como data + letterhead programático (no un master por tipo)
 El feature de cover letters por tipo de aplicación se diseñó con **templates como data**
 (markdown con variables `{company}`/`{role}`/`{who}`, tabla `cover_letter_templates` con el
