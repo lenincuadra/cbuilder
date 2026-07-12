@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Inbox, Send, type LucideIcon } from "lucide-react";
+import { Crosshair, Dot, Inbox, Send, type LucideIcon } from "lucide-react";
 
 import {
   Empty,
@@ -18,31 +18,52 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDateShort } from "@/core/dates";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
+import { profileLabel } from "@/core/spec/profiles";
+import type { LinkSpec } from "@/core/spec/types";
 import { cn } from "@/lib/utils";
 import { ChannelIcon } from "@/ui/ChannelIcon";
 import { CodeCell } from "@/ui/CodeCell";
 import { RowDetailDrawer, type DetailTab } from "@/ui/detail/RowDetailDrawer";
+import { FocusIcon } from "@/ui/FocusIcon";
 import { SeguimientoCell } from "@/ui/detail/SeguimientoCell";
 import { StatusToggle } from "@/ui/StatusToggle";
+import { useSpec } from "@/ui/useSpec";
 
 /**
  * Flat table, fixed layout: columns truncate to fit the container, so there is
- * no horizontal scroll at normal widths. Seguimiento is always last. Canal is
- * icon-only so it stays narrow; the freed width goes to Empresa/Rol/Seguimiento.
- * Below 640px a min-width re-enables scroll so columns stay legible.
+ * no horizontal scroll at normal widths. Seguimiento is always last. Foco and
+ * Canal are icon-only so they stay narrow; the freed width goes to
+ * Empresa/Rol/Seguimiento. Below 640px a min-width re-enables scroll so
+ * columns stay legible.
  */
-type Column = { label: string; width: string; icon?: LucideIcon };
+type Column = {
+  label: string;
+  width: string;
+  icon?: LucideIcon;
+  iconClass?: string;
+  /** Header alignment override; icon columns default to text-center. */
+  headClass?: string;
+};
 const COLUMNS: Column[] = [
-  // Código fits code + copy affordance + focus icon (~97px); below 11% the
-  // truncate overflow clips the focus icon into an unreadable half-glyph.
   { label: "Código", width: "w-[11%]" },
-  { label: "Empresa", width: "w-[18%]" },
-  { label: "Rol", width: "w-[22%]" },
+  // Foco's icons are white (foreground): they mark row state, not secondary
+  // text. Right-aligned with no right padding so the icon sits one cell
+  // padding (8px) from the company name, as when it lived inline next to it.
+  {
+    label: "Foco",
+    width: "w-[5%]",
+    icon: Crosshair,
+    iconClass: "text-foreground",
+    headClass: "pr-0 text-right",
+  },
+  { label: "Empresa", width: "w-[17%]" },
+  { label: "Rol", width: "w-[20%]" },
   { label: "Canal", width: "w-[8%]", icon: Send },
-  { label: "Fecha", width: "w-[12%]" },
+  { label: "Fecha", width: "w-[11%]" },
   { label: "Estado", width: "w-[11%]" },
-  { label: "Seguimiento", width: "w-[18%]" },
+  { label: "Seguimiento", width: "w-[17%]" },
 ];
 
 export interface RegistryTableProps {
@@ -68,6 +89,11 @@ function defaultTabFor(row: RegistryRow): DetailTab {
   return !hasNotes && hasUpdates ? "updates" : "notas";
 }
 
+/** Tooltip for the focus indicator: the profile's label once the spec is loaded, its raw id until then. */
+function focusTooltip(focus: string, spec: LinkSpec | null): string {
+  return `Foco: ${spec ? profileLabel(spec, focus) : focus}`;
+}
+
 export function RegistryTable({
   rows,
   loading = false,
@@ -76,6 +102,7 @@ export function RegistryTable({
   emptyMessage,
   openRequest,
 }: RegistryTableProps) {
+  const { spec } = useSpec();
   const [detailCode, setDetailCode] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailTab, setDetailTab] = useState<DetailTab>("notas");
@@ -112,10 +139,21 @@ export function RegistryTable({
               {COLUMNS.map((column) => {
                 const Icon = column.icon;
                 return (
-                  <TableHead key={column.label} className={cn("whitespace-nowrap", column.width)}>
+                  <TableHead
+                    key={column.label}
+                    className={cn(
+                      "whitespace-nowrap",
+                      column.width,
+                      column.headClass ?? (Icon && "text-center"),
+                    )}
+                  >
                     {Icon ? (
-                      <span className="inline-flex" title={column.label} aria-label={column.label}>
-                        <Icon className="size-4 text-muted-foreground" />
+                      <span
+                        className="inline-flex justify-center"
+                        title={column.label}
+                        aria-label={column.label}
+                      >
+                        <Icon className={cn("size-4", column.iconClass ?? "text-muted-foreground")} />
                       </span>
                     ) : (
                       column.label
@@ -156,16 +194,29 @@ export function RegistryTable({
                   className="cursor-pointer"
                 >
                   <TableCell className="truncate">
-                    <CodeCell code={row.code} focus={row.focus} />
+                    <CodeCell code={row.code} />
+                  </TableCell>
+                  <TableCell className="pr-0 text-right text-foreground">
+                    <span
+                      className="inline-flex"
+                      title={row.focus ? focusTooltip(row.focus, spec) : "Sin foco"}
+                      aria-label={row.focus ? focusTooltip(row.focus, spec) : "Sin foco"}
+                    >
+                      {row.focus ? (
+                        <FocusIcon focus={row.focus} className="size-4" />
+                      ) : (
+                        <Dot className="size-4" />
+                      )}
+                    </span>
                   </TableCell>
                   <TableCell className="truncate font-medium">{row.company}</TableCell>
                   <TableCell className="truncate" title={row.role}>
                     {row.role}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-center text-muted-foreground">
                     {row.channel ? (
                       <span
-                        className="inline-flex"
+                        className="inline-flex justify-center"
                         title={row.channel}
                         aria-label={row.channel}
                       >
@@ -175,7 +226,7 @@ export function RegistryTable({
                       "—"
                     )}
                   </TableCell>
-                  <TableCell className="truncate tabular-nums">{row.date}</TableCell>
+                  <TableCell className="truncate tabular-nums">{formatDateShort(row.date)}</TableCell>
                   <TableCell>
                     <StatusToggle
                       status={row.status}

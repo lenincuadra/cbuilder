@@ -10,6 +10,23 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Columna "Foco" propia (header `Crosshair`), icon-only, entre Código y Empresa
+El icono de foco por perfil dejó de vivir junto al código (decisión previa, "Filtro de
+estado como dropdown-embudo; foco visible junto al código") y pasó a una **columna propia**
+entre Código y Empresa, con el mismo patrón que Canal: **icon-only con icono en el header**
+(`Crosshair`) que le da nombre a la columna — sin él, los glifos por perfil flotaban sin
+etiqueta y no se entendía qué eran. Las filas conservan el icono por perfil (`FocusIcon`:
+payments→CreditCard, ai→Sparkles, conversion→TrendingUp; tooltip `Foco: <label>`), y las que
+**no** tienen foco muestran `Dot` (tooltip "Sin foco") en vez de quedar vacías, para que la
+columna lea consistente. Todos estos iconos (header y celdas) van en **`text-foreground`**
+(`oklch(0.985 0 0)`, el blanco más claro del DS — pedido explícito: sin tokens nuevos), a
+diferencia de los demás iconos de la tabla que usan `text-muted-foreground`: marcan estado de
+la fila, no texto secundario. A diferencia de Canal (centrado), la columna va **alineada a la
+derecha y sin padding derecho** (`pr-0 text-right`): el icono queda a un padding de celda
+(8px) del nombre de la empresa, conservando la distancia que tenía cuando vivía inline junto
+al nombre (pedido explícito). Anchos rebalanceados para pagar el 5% nuevo (Empresa 18→17,
+Rol 22→20, Fecha 12→11 — ahora muestra `DD-MM` sin año, ver commit — Seguimiento 18→17).
+
 ## Features locales (archivo data/cvs, Finder) → 501 en deploy, UI en silencio/info
 El archivo local de zips y el "Mostrar en Finder" son **features locales**: solo tienen
 sentido corriendo la app en la Mac del usuario (en Vercel el filesystem es efímero y no hay
