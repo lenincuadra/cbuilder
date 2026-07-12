@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatDateLong } from "@/core/dates";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { languageLabel } from "@/core/types";
 import { ConfirmDelete, keepDrawerOnDialogInteraction } from "@/ui/ConfirmDelete";
@@ -242,7 +243,7 @@ export function RowDetailDrawer({
                   {/* Only fields with a value are shown. */}
                   <Field label="Rol">{row.role}</Field>
                   <Field label="Fecha">
-                    <span className="tabular-nums">{row.date}</span>
+                    <span className="tabular-nums">{formatDateLong(row.date)}</span>
                   </Field>
                   {row.channel && <Field label="Canal">{row.channel}</Field>}
                   {row.email && (
@@ -313,8 +314,8 @@ export function RowDetailDrawer({
             <>
               Se va a borrar la aplicación a <strong>{row.company}</strong>
               {row.role ? <> · {row.role}</> : null} (código{" "}
-              <span className="font-mono">{row.code}</span>, {row.date}). Esta acción no se
-              puede deshacer.
+              <span className="font-mono">{row.code}</span>, {formatDateLong(row.date)}). Esta
+              acción no se puede deshacer.
             </>
           }
           onConfirm={async () => {
