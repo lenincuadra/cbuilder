@@ -132,4 +132,51 @@ describe("generateCv", () => {
     expect(result.code).toBe("0628z9");
     expect(result.folderNames).toEqual(["EN_globallogic_0628z9"]);
   });
+
+  it("ships the cover letter in each folder that has a body, and records it on the row", async () => {
+    const result = await generateCv(
+      {
+        company: "Acme",
+        languageChoice: "Ambos",
+        date: new Date(2026, 5, 28),
+        coverLetter: {
+          templateId: "t-1",
+          templateName: "Fintech",
+          // Only EN has a body: the ES folder ships without a letter.
+          bodies: { EN: "Dear team, I want to join Acme." },
+        },
+      },
+      deps({ rng: fixedRng, now: fixedNow }),
+    );
+
+    const zip = await JSZip.loadAsync(result.zip);
+    expect(zip.file("EN_acme_0628a2/Lenin_Cuadra_Cover_Letter.docx")).not.toBeNull();
+    expect(zip.file("ES_acme_0628a2/Lenin_Cuadra_Cover_Letter.docx")).toBeNull();
+    expect(zip.file("EN_acme_0628a2/Lenin_Cuadra_CV.docx")).not.toBeNull();
+
+    // Faithful record: only the body that actually shipped.
+    expect(result.row.coverLetter).toEqual({
+      templateId: "t-1",
+      templateName: "Fintech",
+      bodies: { EN: "Dear team, I want to join Acme." },
+    });
+    // Entries expose the letter bytes for future sinks.
+    expect(result.entries.find((entry) => entry.language === "EN")?.coverLetter).toBeDefined();
+    expect(result.entries.find((entry) => entry.language === "ES")?.coverLetter).toBeUndefined();
+  });
+
+  it("records no cover letter when the bodies are empty", async () => {
+    const result = await generateCv(
+      {
+        company: "Acme",
+        languageChoice: "EN",
+        date: new Date(2026, 5, 28),
+        coverLetter: { templateId: "t-1", bodies: { ES: "No aplica al idioma elegido." } },
+      },
+      deps({ rng: fixedRng, now: fixedNow }),
+    );
+    expect(result.row.coverLetter).toBeUndefined();
+    const zip = await JSZip.loadAsync(result.zip);
+    expect(zip.file("EN_acme_0628a2/Lenin_Cuadra_Cover_Letter.docx")).toBeNull();
+  });
 });

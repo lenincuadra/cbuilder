@@ -1,3 +1,4 @@
+import type { CoverLetterRecord } from "../coverLetter/types";
 import type { TrackedLinks } from "../spec/links";
 import type { Language, LanguageChoice } from "../types";
 
@@ -61,6 +62,12 @@ export interface RegistryRow {
   focus?: string;
   /** The three tracked links (short form) baked into this CV — faithful record. */
   links?: TrackedLinks;
+  /**
+   * Cover letter actually sent: template + final per-language markdown (after
+   * variable resolution and per-application edits). Like `links`, a faithful
+   * record — read-only post-creation.
+   */
+  coverLetter?: CoverLetterRecord;
   /** File name of the archived delivery zip in data/cvs/ (set at generation). */
   zipName?: string;
   /** Google Doc URL per generated language (Docs sink), filled after the upload. */

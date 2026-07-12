@@ -1,3 +1,4 @@
+import type { CoverLetterBodies } from "@/core/coverLetter/types";
 import type { Channel } from "@/core/registry/types";
 import type { LanguageChoice } from "@/core/types";
 
@@ -6,6 +7,9 @@ export const CHANNEL_OMIT = "__omit__";
 
 /** Sentinel select value meaning "sin foco" (default portfolio order). */
 export const FOCUS_NONE = "__none__";
+
+/** Sentinel select value meaning "sin cover letter". */
+export const COVER_LETTER_NONE = "__none__";
 
 /** Mutable wizard state. Notes and status are not set here — they live in the table. */
 export interface WizardData {
@@ -21,6 +25,12 @@ export interface WizardData {
   jobUrl: string;
   /** Portfolio focus profile id (from the spec) for the tracked links. "" = sin foco. */
   focus: string;
+  /** Selected cover letter template id. "" = sin cover letter. */
+  coverLetterTemplateId: string;
+  /** Per-language letter bodies: template resolved with the wizard fields, then hand-editable. */
+  coverLetterBodies: CoverLetterBodies;
+  /** True once the user touched a body — stops re-resolving over their edits. */
+  coverLetterEdited: boolean;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

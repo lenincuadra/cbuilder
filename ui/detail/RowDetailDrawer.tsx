@@ -29,6 +29,7 @@ import { languageLabel } from "@/core/types";
 import { ConfirmDelete, keepDrawerOnDialogInteraction } from "@/ui/ConfirmDelete";
 import { StatusToggle } from "@/ui/StatusToggle";
 import { useIsMobile } from "@/ui/useIsMobile";
+import { CoverLetterInfo } from "./CoverLetterInfo";
 import { DeliveryInfo } from "./DeliveryInfo";
 import { NotesTab } from "./NotesTab";
 import { RowEditForm } from "./RowEditForm";
@@ -266,6 +267,7 @@ export function RowDetailDrawer({
                   )}
                 </div>
                 <TrackedLinks code={row.code} focus={row.focus} links={row.links} />
+                <CoverLetterInfo row={row} />
                 <DeliveryInfo row={row} />
               </div>
             )}

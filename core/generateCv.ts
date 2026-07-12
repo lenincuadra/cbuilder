@@ -1,3 +1,5 @@
+import { buildCoverLetterDocx } from "./coverLetter/docx";
+import type { CoverLetterBodies, CoverLetterRecord } from "./coverLetter/types";
 import { toISODate } from "./dates";
 import { fillMaster } from "./docx";
 import { folderName, slugifyCompany } from "./folderName";
@@ -28,6 +30,12 @@ export interface GenerateCvInput {
   status?: ApplicationStatus;
   /** Portfolio focus profile id (from the spec) baked into the CV's tracked links. */
   focus?: string;
+  /**
+   * Cover letter to generate alongside the CV: final per-language markdown
+   * (variables already resolved and hand-edited in the wizard). Languages
+   * without a body simply ship without a letter.
+   */
+  coverLetter?: CoverLetterRecord;
   /**
    * Precomputed tracking code (e.g. from the wizard's folder-name preview).
    * When provided it is used as-is; otherwise a fresh, collision-checked code
@@ -94,11 +102,28 @@ export async function generateCv(
   const links = buildTrackedLinks(deps.spec, code, input.focus);
 
   const entries: CvEntry[] = [];
+  const sentBodies: CoverLetterBodies = {};
   for (const language of languagesFor(input.languageChoice)) {
     const master = await deps.loadMaster(language);
     const docx = await fillMaster(master, links);
-    entries.push({ folder: folderName({ language, company: input.company, code }), language, docx });
+    const letterBody = input.coverLetter?.bodies[language]?.trim();
+    let coverLetter: Uint8Array | undefined;
+    if (letterBody) {
+      coverLetter = await buildCoverLetterDocx({ language, bodyMarkdown: letterBody, date: input.date });
+      sentBodies[language] = letterBody;
+    }
+    entries.push({
+      folder: folderName({ language, company: input.company, code }),
+      language,
+      docx,
+      coverLetter,
+    });
   }
+  // Persist only what actually shipped (the faithful-record rule, like links).
+  const coverLetter: CoverLetterRecord | undefined =
+    input.coverLetter && Object.keys(sentBodies).length > 0
+      ? { ...input.coverLetter, bodies: sentBodies }
+      : undefined;
 
   const zip = await packageCvs(entries);
   const zipName =
@@ -121,6 +146,7 @@ export async function generateCv(
     language: input.languageChoice,
     focus: input.focus,
     links,
+    coverLetter,
     zipName,
     createdAt: now().toISOString(),
   };

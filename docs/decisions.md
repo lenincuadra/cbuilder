@@ -10,6 +10,31 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Cover letters: templates como data + letterhead programático (no un master por tipo)
+El feature de cover letters por tipo de aplicación se diseñó con **templates como data**
+(markdown con variables `{company}`/`{role}`/`{who}`, tabla `cover_letter_templates` con el
+patrón triple-store: file + Supabase + API) en vez del instinto natural de replicar el
+pipeline del CV con un master `.docx` por tipo × idioma. Razones: (1) escalar un tipo nuevo
+= crear una fila desde la card "Cover letters", no 2 archivos más; (2) el editor del usuario
+**rompe hyperlinks/placeholders** al editar masters (saga conocida de los v14/v15) — acá no
+hay archivo que romper. Por lo mismo, el **letterhead se genera programáticamente**
+(`core/coverLetter/docx.ts`: nombre + rol + contacto `hi@`/`hola@` + fecha localizada, misma
+paleta/tipografía del CV, **sin links trackeados**) — si algún día se quiere un letterhead
+diseñado a mano, se cambia detrás de `buildCoverLetterDocx` sin tocar el resto. Reglas:
+- **Flujo**: paso 4 (opcional) del wizard → elegir template → el cuerpo llega con las
+  variables resueltas y es **editable por aplicación** (lo que ves es lo que va al docx).
+  El texto final se persiste en `row.coverLetter` (`{templateId, templateName, bodies}`),
+  **read-only post-creación** — registro fiel de lo enviado, como `links`. Solo se
+  persisten los idiomas que efectivamente salieron con carta.
+- **Entrega**: `Lenin_Cuadra_Cover_Letter.docx` (sin tracking en el nombre) dentro de la
+  misma carpeta del zip → descarga + archivo local (`data/cvs`) la llevan gratis. **No va
+  al sink de Drive en v1**: el Apps Script nombra todo `Lenin_Cuadra_CV` (cambiar el
+  contrato = redeploy del script); el zip archivado ya es el registro fiel.
+- **Markdown mínimo** en el cuerpo: párrafos, saltos de línea, `- ` listas, **negrita**,
+  *cursiva*. Es una carta, no un documento.
+- Con "Ambos", cada carpeta lleva la carta solo si el template tiene cuerpo en ese idioma
+  (el paso avisa si falta).
+
 ## Ambientes: dev local (file store) / prod — sin staging; previews inofensivos por scoping
 Esquema final: **dev** local con file stores (sin `SUPABASE_*` en `.env.local` — el
 aislamiento sale gratis del diseño de las factories) y **prod** = `main` →
