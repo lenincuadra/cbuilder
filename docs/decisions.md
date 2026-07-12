@@ -10,6 +10,37 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Ambientes: dev local (file store) / prod — sin staging; previews inofensivos por scoping
+Esquema final: **dev** local con file stores (sin `SUPABASE_*` en `.env.local` — el
+aislamiento sale gratis del diseño de las factories) y **prod** = `main` →
+cbuilder.vercel.app contra Supabase. Regla de workflow: **no commitear directo a `main`** —
+feature branch → push → Vercel Preview (QA visual con URL propia) → merge = deploy a prod.
+La clave de seguridad es el **scoping de env vars en Vercel**: `SUPABASE_*` y `GDOCS_*` van
+**Production only** — así un preview arranca sin vars, cae al file store efímero (registro
+vacío; sink de Drive apagado → 501, ya manejado) y no puede tocar data real. Si quedaran en
+"All Environments", un preview escribiría en la DB de prod. `BASIC_AUTH_*` sí va también en
+Preview (candado en los previews).
+
+Se evaluó **staging real** (segundo proyecto Supabase para los previews; el esquema
+Dev/QA/Staging/Prod espejo del trabajo del usuario) y se **descartó**: con un solo dev y una
+capa de datos ya pautada (triple-store probado 3 veces, migraciones aditivas) un staging DB
+solo agrega mantenimiento (proyecto extra, schema drift, data de prueba que inventar) sin
+mitigar un riesgo real. Criterio explícito del usuario: el objetivo es conseguir trabajo;
+el aprendizaje de infra está bien solo si es gratis. Revisitar si un feature de data se
+quiere probar deployado antes de prod o si aparece un segundo usuario — agregarlo es
+reversible y sin refactor (crear proyecto + correr `supabase/schema.sql` + scopear sus
+`SUPABASE_*` a Preview). Pasos operativos en `docs/deploy.md` → "Ambientes".
+
+## Backlog: sigue en `TODO.md` (no GitHub Issues); ambos repos siguen públicos
+Se evaluó mover el backlog a GitHub Issues y se descartó **por ahora**: los issues de un
+repo público son públicos (no se pueden hacer privados por issue), y parte del backlog
+menciona empresas/estrategia — exactamente lo que `TODO.md` gitignoreado protege. Hacer el
+repo privado tampoco conviene: el **portfolio** necesita ser público (GitHub Pages free) y
+**cbuilder** funciona como work sample durante la búsqueda (el CV lleva un link trackeado a
+GitHub; un recruiter que entra debería ver este repo activo). Con un solo dev, `TODO.md` +
+el workflow de branches alcanza. Revisar si algún día hay colaboradores o se quiere roadmap
+público (ahí: issues solo para features publicables, `TODO.md` para lo privado).
+
 ## Notas + Links estables durables en Supabase (mismo patrón que el registro)
 Los tres documentos (registro, notas generales, links estables) ahora son durables en
 Supabase detrás de una **factory server-side por documento** (`getServerRegistryStore` /
