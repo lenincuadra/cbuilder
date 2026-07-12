@@ -6,18 +6,20 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import type { CoverLetterBodies, CoverLetterTemplate } from "@/core/coverLetter/types";
 import type { GenerateCvInput } from "@/core/generateCv";
 import { DEFAULT_ROLE } from "@/core/registry/types";
 import { generateCode } from "@/core/spec/code";
 import type { LinkSpec } from "@/core/spec/types";
 import { StepCompany } from "./StepCompany";
 import { StepConfirm } from "./StepConfirm";
+import { StepCoverLetter, resolveBodiesFor } from "./StepCoverLetter";
 import { StepLanguage } from "./StepLanguage";
 import { StepOptional } from "./StepOptional";
-import { emailRequirementMet, type WizardData } from "./types";
+import { emailRequirementMet, languagesFor, type WizardData } from "./types";
 
-const TOTAL_STEPS = 4;
-const STEP_TITLES = ["Empresa y fecha", "Opcionales", "Idioma y foco", "Confirmar"];
+const TOTAL_STEPS = 5;
+const STEP_TITLES = ["Empresa y fecha", "Opcionales", "Idioma y foco", "Cover letter", "Confirmar"];
 
 function initialData(): WizardData {
   return {
@@ -30,6 +32,9 @@ function initialData(): WizardData {
     who: "",
     jobUrl: "",
     focus: "",
+    coverLetterTemplateId: "",
+    coverLetterBodies: {},
+    coverLetterEdited: false,
   };
 }
 
@@ -38,6 +43,8 @@ export interface WizardProps {
   spec: LinkSpec | null;
   /** Codes already in the registry, for collision-checked preview. */
   existingCodes: string[];
+  /** Cover letter templates for the optional letter step. */
+  templates: CoverLetterTemplate[];
   /** True while a generation is in flight. */
   generating: boolean;
   /** Runs the generation; rejects on error (the caller surfaces the message). */
@@ -51,6 +58,7 @@ export interface WizardProps {
 export function Wizard({
   spec,
   existingCodes,
+  templates,
   generating,
   onGenerate,
   onCancel,
@@ -67,7 +75,23 @@ export function Wizard({
     step === 1 ? companyValid : step === 2 ? emailRequirementMet(data) : true;
 
   function goNext() {
-    if (step < 3) {
+    if (step === 3) {
+      // Entering the letter step: refresh the resolved bodies so earlier field
+      // changes (empresa/rol/quién/idioma) are reflected. Hand-edited texts win;
+      // resolution still fills languages added after the edit (EN → Ambos).
+      const template = templates.find((candidate) => candidate.id === data.coverLetterTemplateId);
+      if (template) {
+        const resolved = resolveBodiesFor(template, data);
+        set({
+          coverLetterBodies: data.coverLetterEdited
+            ? { ...resolved, ...data.coverLetterBodies }
+            : resolved,
+        });
+      }
+      setStep(4);
+      return;
+    }
+    if (step < 4) {
       setStep(step + 1);
       return;
     }
@@ -79,7 +103,7 @@ export function Wizard({
     try {
       const code = generateCode({ spec, date: data.date, existingCodes });
       setPreviewCode(code);
-      setStep(4);
+      setStep(5);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo generar el código.");
     }
@@ -91,6 +115,16 @@ export function Wizard({
 
   async function handleGenerate() {
     if (previewCode === null) return;
+    // Final letter bodies: only the languages this generation produces, only
+    // non-empty texts. No template or all-empty bodies → no letter.
+    const template = templates.find((candidate) => candidate.id === data.coverLetterTemplateId);
+    const letterBodies: CoverLetterBodies = {};
+    if (template) {
+      for (const language of languagesFor(data.language)) {
+        const body = data.coverLetterBodies[language]?.trim();
+        if (body) letterBodies[language] = body;
+      }
+    }
     try {
       await onGenerate({
         company: data.company,
@@ -102,6 +136,10 @@ export function Wizard({
         email: data.email,
         jobUrl: data.jobUrl,
         focus: data.focus === "" ? undefined : data.focus,
+        coverLetter:
+          template && Object.keys(letterBodies).length > 0
+            ? { templateId: template.id, templateName: template.name, bodies: letterBodies }
+            : undefined,
         code: previewCode,
       });
       // Success: reset for the next application.
@@ -129,8 +167,18 @@ export function Wizard({
         {step === 1 && <StepCompany data={data} set={set} container={container} />}
         {step === 2 && <StepOptional data={data} set={set} container={container} />}
         {step === 3 && <StepLanguage data={data} set={set} container={container} spec={spec} />}
-        {step === 4 && previewCode && (
-          <StepConfirm data={data} previewCode={previewCode} spec={spec} />
+        {step === 4 && (
+          <StepCoverLetter data={data} set={set} container={container} templates={templates} />
+        )}
+        {step === 5 && previewCode && (
+          <StepConfirm
+            data={data}
+            previewCode={previewCode}
+            spec={spec}
+            coverLetterName={
+              templates.find((candidate) => candidate.id === data.coverLetterTemplateId)?.name
+            }
+          />
         )}
       </div>
 

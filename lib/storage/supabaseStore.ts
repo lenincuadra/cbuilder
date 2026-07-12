@@ -7,6 +7,7 @@ import type {
   RegistryStore,
   StatusUpdate,
 } from "../../core/registry/types";
+import type { CoverLetterRecord } from "../../core/coverLetter/types";
 import type { TrackedLinks } from "../../core/spec/links";
 import type { Language, LanguageChoice } from "../../core/types";
 
@@ -29,6 +30,7 @@ interface RegistryRowDb {
   zip_name: string | null;
   drive_docs: Partial<Record<Language, string>> | null;
   links: TrackedLinks | null;
+  cover_letter: CoverLetterRecord | null;
   drive_folder: string | null;
   created_at: string | null;
   updates: StatusUpdate[] | null;
@@ -52,6 +54,7 @@ export function dbToRow(db: RegistryRowDb): RegistryRow {
     zipName: db.zip_name ?? undefined,
     driveDocs: db.drive_docs ?? undefined,
     links: db.links ?? undefined,
+    coverLetter: db.cover_letter ?? undefined,
     driveFolder: db.drive_folder ?? undefined,
     createdAt: db.created_at ?? undefined,
     updates: db.updates ?? undefined,
@@ -76,6 +79,7 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
     zip_name: row.zipName ?? null,
     drive_docs: row.driveDocs ?? null,
     links: row.links ?? null,
+    cover_letter: row.coverLetter ?? null,
     drive_folder: row.driveFolder ?? null,
     // These three columns are NOT NULL with a default in Postgres. An explicit
     // null would override the default and violate the constraint, so fall back to
@@ -100,6 +104,7 @@ export function editableToDb(fields: EditableFields): Partial<RegistryRowDb> {
   if ("zipName" in fields) out.zip_name = fields.zipName ?? null;
   if ("driveDocs" in fields) out.drive_docs = fields.driveDocs ?? null;
   if ("links" in fields) out.links = fields.links ?? null;
+  if ("coverLetter" in fields) out.cover_letter = fields.coverLetter ?? null;
   if ("driveFolder" in fields) out.drive_folder = fields.driveFolder ?? null;
   if ("notes" in fields) out.notes = fields.notes ?? null;
   if ("status" in fields) out.status = fields.status as string;

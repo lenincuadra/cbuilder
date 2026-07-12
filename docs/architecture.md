@@ -28,8 +28,13 @@ La regla de oro: **cv-builder ESCRIBE los links, el portfolio los RECIBE.** El
   - `tracking.ts` — generación del código (`MMDD` + letra + dígito), reservados, colisiones.
   - `links.ts` — `PORTFOLIO_BASE`, `LINK_ID` (P/L/G), `trackedLinks()`, perfiles de foco.
   - `docx.ts` — `fillMaster()`: reemplaza los placeholders `ref=li-cv` por los links reales.
+  - `coverLetter/` — templates por tipo de aplicación (`types.ts`: modelo + variables
+    `{company}`/`{role}`/`{who}` + store interface) y `docx.ts`:
+    `buildCoverLetterDocx()` genera la carta completa (letterhead programático con la
+    paleta del CV + cuerpo markdown → párrafos docx). Sin links trackeados.
   - `folderName.ts`, `zip.ts` — nombre de carpeta `[IDIOMA]_[empresa]_[código]`, empaquetado.
-  - `generateCv.ts` — orquesta todo: código → llena master(s) → zip → fila del registro.
+  - `generateCv.ts` — orquesta todo: código → llena master(s) → carta(s) opcionales → zip →
+    fila del registro.
   - `staleness.ts`, `dates.ts` — alerta de inactividad, formato de fechas.
   - `registry/types.ts`, `notes/types.ts` — modelos + interfaces de storage.
 - **`ui/`** — componentes React (la tabla, el wizard, el drawer, los cards).
@@ -64,7 +69,10 @@ Toast de éxito con dos CTAs: [Finder] (revela el zip) · [Detalles] (abre el dr
 Detalles de cada destino:
 
 1. **Descarga** — el `.zip` con `<carpeta>/Lenin_Cuadra_CV.docx` (o dos carpetas
-   para "Ambos"). El nombre del archivo entregable nunca lleva tracking.
+   para "Ambos"), más `Lenin_Cuadra_Cover_Letter.docx` en cada carpeta cuyo idioma
+   tenga carta (paso opcional del wizard: template resuelto + editable por
+   aplicación; el texto final se persiste en `row.coverLetter`, read-only). El
+   nombre del archivo entregable nunca lleva tracking.
 2. **Archivo local** (`data/cvs/`) — copia fiel de lo enviado. Los masters
    evolucionan (v13 → v14 → v15…), así que un CV pasado no se puede regenerar
    idéntico; este archivo es el único registro exacto. Gitignoreado. Ver
@@ -107,10 +115,12 @@ file store local. Se puede cambiar la implementación sin tocar `core/` ni `ui/`
 | Registro | `RegistryStore` | File store (`data/registry.json`) vía API + `ApiRegistryStore` | `SupabaseRegistryStore` — `getServerRegistryStore` |
 | Notas generales | `GeneralNotesStore` | File store (`data/notes.json`) vía API | `SupabaseGeneralNotesStore` — `getServerNotesStore` |
 | Links estables | `StableLinksStore` | File store (`data/stable-links.json`) vía API | `SupabaseStableLinksStore` — `getServerStableLinksStore` |
+| Cover letters (templates) | `CoverLetterTemplatesStore` | File store (`data/cover-letter-templates.json`) vía API | `SupabaseCoverLetterTemplatesStore` — `getServerCoverLetterTemplatesStore` |
 
-Las tres factories usan un cliente admin compartido (`getSupabaseAdmin`, service
+Las factories usan un cliente admin compartido (`getSupabaseAdmin`, service
 key, server-only). Las tablas Supabase (`registry`, `general_notes`,
-`stable_links`) tienen RLS on sin policy → solo la service key entra.
+`stable_links`, `cover_letter_templates`) tienen RLS on sin policy → solo la
+service key entra.
 
 Notas de los file stores: **acceso serializado** (cola serial → read-modify-write
 atómico) + **escritura atómica** (tmp + rename), para no perder filas ni corromper
@@ -134,6 +144,8 @@ Supabase ([`supabase-setup.md`](supabase-setup.md)).
 | `/api/gdocs` | POST | Reenvía el `.docx` al webhook de Apps Script del usuario (501 si no configurado) |
 | `/api/stable-links` | GET/POST | Lista / agrega links estables (touchpoints permanentes) |
 | `/api/stable-links/[ref]` | DELETE | Quita un link estable del registro |
+| `/api/cover-letters` | GET/POST | Lista / crea templates de cover letter |
+| `/api/cover-letters/[id]` | PATCH/DELETE | Edita / borra un template |
 
 ## Variables de entorno
 

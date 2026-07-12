@@ -48,7 +48,9 @@ GDOCS_TOKEN=...
 ```
 
 Sin `SUPABASE_*` → el registro usa el file store local. Sin `BASIC_AUTH_*` → sin
-candado (dev). En Vercel, seteá los cuatro.
+candado (dev). En Vercel, seteá los cuatro **scoped por ambiente** (ver
+"Ambientes" abajo — si `SUPABASE_*` queda en "All Environments", los previews
+escriben en la DB de prod).
 
 ## 3. Vercel
 
@@ -56,6 +58,46 @@ candado (dev). En Vercel, seteá los cuatro.
    `lenincuadra/cbuilder`.
 2. Framework: Next.js (autodetectado). Agregá las env vars del paso 2.
 3. **Deploy**. Al abrir la URL te va a pedir usuario + contraseña (el basic-auth).
+
+## Ambientes (dev / prod)
+
+Dos ambientes + previews descartables. Objetivo: **usar la app en prod todos
+los días mientras se sigue desarrollando**, sin que un branch en progreso pueda
+romper prod ni ensuciar su data. Se evaluó un staging real (segundo proyecto
+Supabase para los previews) y se descartó — ver `decisions.md` → "Ambientes".
+
+| Ambiente | Dónde corre | Data |
+|---|---|---|
+| **Dev** | `npm run dev` local | File stores (`data/*.json`) — `.env.local` **sin** vars de Supabase |
+| **Preview** (QA visual) | Vercel Preview (automático por branch) | File store **efímero y vacío** (sin vars de Supabase en Preview) |
+| **Prod** | `main` → cbuilder.vercel.app | Supabase prod |
+
+### Workflow
+
+- `main` = prod. **No se commitea directo a `main`**: cada feature va en un
+  branch (`feat/<nombre>`); al pushearlo, Vercel crea un Preview deployment con
+  URL propia — sirve para QA visual (desktop + teléfono). Merge a `main` =
+  deploy a prod.
+- Dev local nunca toca Supabase: sin `SUPABASE_*` en `.env.local`, las
+  factories caen al file store (`data/*.json`). Ese es el aislamiento de dev.
+- Los previews son **inofensivos por diseño**: sin `SUPABASE_*` arrancan con
+  registro vacío en el file store efímero de Vercel; la data de prueba muere
+  con el preview.
+
+### Scoping de env vars en Vercel
+
+Vercel scopea cada env var por ambiente (Production / Preview / Development):
+
+| Var | Production | Preview |
+|---|---|---|
+| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | ✓ | ✗ — ⚠️ en "All Environments" un preview escribiría en la DB de **prod** |
+| `GDOCS_SCRIPT_URL` / `GDOCS_TOKEN` | ✓ | ✗ (sink apagado → 501, ya manejado; evita Docs reales en Drive desde pruebas) |
+| `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` | ✓ | ✓ (los previews también con candado) |
+
+Si algún día hace falta staging real (un feature de data que se quiera probar
+deployado antes de prod, o un segundo usuario): crear un proyecto Supabase
+aparte, correr `supabase/schema.sql`, y scopear sus `SUPABASE_*` a Preview.
+Cero refactor — es solo env vars.
 
 ## Notas
 

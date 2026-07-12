@@ -10,6 +10,7 @@ import { downloadBytes } from "@/lib/download";
 import { createGoogleDoc } from "@/lib/gdocs";
 import { loadMaster } from "@/lib/masters";
 import { toastDeleted } from "@/ui/ConfirmDelete";
+import { CoverLettersCard } from "@/ui/CoverLettersCard";
 import { ExportButton } from "@/ui/ExportButton";
 import { GenerateCard } from "@/ui/GenerateCard";
 import { GeneralNotesCard } from "@/ui/GeneralNotesCard";
@@ -17,6 +18,7 @@ import { StableLinksCard } from "@/ui/StableLinksCard";
 import { RegistryTable } from "@/ui/RegistryTable";
 import { SegmentedControl, type SegmentedOption } from "@/ui/SegmentedControl";
 import { StatusFilterDropdown, type StatusFilter } from "@/ui/StatusFilterDropdown";
+import { useCoverLetterTemplates } from "@/ui/useCoverLetterTemplates";
 import { useRegistry } from "@/ui/useRegistry";
 import { useSpec } from "@/ui/useSpec";
 
@@ -25,6 +27,8 @@ type ArchiveView = "vigentes" | "archivado";
 export default function Home() {
   const { rows, loading, add, update, remove } = useRegistry();
   const { spec } = useSpec();
+  // One shared instance: the manager card edits it, the wizard reads it — in sync.
+  const coverLetters = useCoverLetterTemplates();
   const [generating, setGenerating] = useState(false);
   // Two orthogonal filters: archived-or-not (view) and status.
   const [view, setView] = useState<ArchiveView>("vigentes");
@@ -219,11 +223,13 @@ export default function Home() {
           <GenerateCard
             spec={spec}
             existingCodes={existingCodes}
+            templates={coverLetters.templates}
             generating={generating}
             onGenerate={handleGenerate}
           />
           <GeneralNotesCard />
           <StableLinksCard />
+          <CoverLettersCard store={coverLetters} />
         </aside>
       </div>
     </main>

@@ -60,8 +60,8 @@ reusable en **`ui/PanelCard.tsx`**:
   (un botón) para una card con acción explícita (Generar CV) o `onOpen` para hacer toda la
   card clickeable (Notas, Links estables).
 - Lo usan: **Generar un CV** (wizard en el drawer), **Notas generales** (editor), **Links
-  estables** (manager). **Para una card nueva**: reusá `PanelCard` + `PanelCardFace`; el
-  contenido pesado va en el cuerpo del drawer.
+  estables** (manager), **Cover letters** (manager de templates). **Para una card nueva**:
+  reusá `PanelCard` + `PanelCardFace`; el contenido pesado va en el cuerpo del drawer.
 
 **Layout responsive de las cards** (`aside` en `app/page.tsx`): grid **`auto-fit` con
 `minmax`** que responde al **ancho del contenedor**, no de la pantalla → 1 columna en la

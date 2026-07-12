@@ -2,6 +2,7 @@
 
 import { FilePlus2 } from "lucide-react";
 
+import type { CoverLetterTemplate } from "@/core/coverLetter/types";
 import type { GenerateCvInput } from "@/core/generateCv";
 import type { LinkSpec } from "@/core/spec/types";
 import { PanelCard, PanelCardFace } from "@/ui/PanelCard";
@@ -12,6 +13,8 @@ export interface GenerateCardProps {
   spec: LinkSpec | null;
   /** Codes already in the registry, for collision-checked preview. */
   existingCodes: string[];
+  /** Cover letter templates for the wizard's optional letter step. */
+  templates: CoverLetterTemplate[];
   /** True while a generation is in flight. */
   generating: boolean;
   /** Runs the generation; rejects on error (the caller surfaces the message). */
@@ -24,7 +27,13 @@ export interface GenerateCardProps {
  * pattern). The drawer node is threaded to the wizard so its dropdowns portal
  * inside it.
  */
-export function GenerateCard({ spec, existingCodes, generating, onGenerate }: GenerateCardProps) {
+export function GenerateCard({
+  spec,
+  existingCodes,
+  templates,
+  generating,
+  onGenerate,
+}: GenerateCardProps) {
   return (
     <PanelCard
       title="Generar un CV"
@@ -42,6 +51,7 @@ export function GenerateCard({ spec, existingCodes, generating, onGenerate }: Ge
         <Wizard
           spec={spec}
           existingCodes={existingCodes}
+          templates={templates}
           generating={generating}
           onGenerate={async (input) => {
             // Throws on error → the wizard stays on the confirm step with the message.

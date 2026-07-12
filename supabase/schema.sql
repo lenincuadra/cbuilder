@@ -18,6 +18,7 @@ create table if not exists public.registry (
   drive_docs  jsonb,                         -- Google Doc URL per language {"EN": url, "ES": url}
   drive_folder text,                         -- Drive folder holding this application's Doc(s)
   links       jsonb,                         -- the 3 tracked links baked into the CV {portfolio, linkedin, github}
+  cover_letter jsonb,                        -- cover letter sent {templateId, templateName, bodies: {EN?, ES?}}
   created_at  timestamptz not null default now(),
   updates     jsonb not null default '[]'::jsonb,  -- follow-up timeline [{at, message}]
   archived    boolean not null default false
@@ -55,5 +56,21 @@ create table if not exists public.stable_links (
 create index if not exists stable_links_created_at_idx on public.stable_links (created_at);
 alter table public.stable_links enable row level security;
 
--- Both tables: same privacy model as registry — RLS on, NO policy, reached only
+-- Cover letter templates: reusable markdown per application type. Bodies keyed
+-- by language {"EN": md, "ES": md}; {company}/{role}/{who} variables resolve in
+-- the wizard at generation time.
+create table if not exists public.cover_letter_templates (
+  id         text primary key,
+  name       text not null,
+  bodies     jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists cover_letter_templates_created_at_idx
+  on public.cover_letter_templates (created_at);
+alter table public.cover_letter_templates enable row level security;
+
+-- All tables: same privacy model as registry — RLS on, NO policy, reached only
 -- via the service role key from the server.
+
+-- Migration for a database created before cover letters existed (safe to re-run):
+--   alter table public.registry add column if not exists cover_letter jsonb;

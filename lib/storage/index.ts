@@ -1,6 +1,8 @@
+import type { CoverLetterTemplatesStore } from "@/core/coverLetter/types";
 import type { GeneralNotesStore } from "@/core/notes/types";
 import type { RegistryStore } from "@/core/registry/types";
 import type { StableLinksStore } from "@/core/stableLinks/types";
+import { ApiCoverLetterTemplatesStore } from "./apiCoverLetterTemplatesStore";
 import { ApiGeneralNotesStore } from "./apiNotesStore";
 import { ApiStableLinksStore } from "./apiStableLinksStore";
 import { ApiRegistryStore } from "./apiStore";
@@ -8,6 +10,7 @@ import { ApiRegistryStore } from "./apiStore";
 let store: RegistryStore | null = null;
 let notesStore: GeneralNotesStore | null = null;
 let stableLinksStore: StableLinksStore | null = null;
+let coverLetterTemplatesStore: CoverLetterTemplatesStore | null = null;
 
 /**
  * Single entry point to the registry store (client side). The browser **always**
@@ -39,4 +42,11 @@ export function getStableLinksStore(): StableLinksStore {
   if (stableLinksStore) return stableLinksStore;
   stableLinksStore = new ApiStableLinksStore();
   return stableLinksStore;
+}
+
+/** Single entry point to the cover-letter-templates store (API path; durable backend server-side). */
+export function getCoverLetterTemplatesStore(): CoverLetterTemplatesStore {
+  if (coverLetterTemplatesStore) return coverLetterTemplatesStore;
+  coverLetterTemplatesStore = new ApiCoverLetterTemplatesStore();
+  return coverLetterTemplatesStore;
 }

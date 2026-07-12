@@ -2,6 +2,7 @@
 
 import { FolderIcon } from "lucide-react";
 
+import { COVER_LETTER_FILENAME } from "@/core/coverLetter/docx";
 import { folderName } from "@/core/folderName";
 import { profileLabel } from "@/core/spec/profiles";
 import type { LinkSpec } from "@/core/spec/types";
@@ -13,6 +14,8 @@ export interface StepConfirmProps {
   data: WizardData;
   previewCode: string;
   spec: LinkSpec | null;
+  /** Name of the selected cover letter template, if any. */
+  coverLetterName?: string;
 }
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
@@ -24,11 +27,17 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Step 4 — Confirm. Shows a summary and a preview of the folder name(s) to be created. */
-export function StepConfirm({ data, previewCode, spec }: StepConfirmProps) {
-  const folders = languagesFor(data.language).map((language) =>
-    folderName({ language, company: data.company, code: previewCode }),
-  );
+/** Step 5 — Confirm. Shows a summary and a preview of the folder name(s) to be created. */
+export function StepConfirm({ data, previewCode, spec, coverLetterName }: StepConfirmProps) {
+  const folders = languagesFor(data.language).map((language) => ({
+    language,
+    name: folderName({ language, company: data.company, code: previewCode }),
+    // The folder carries a letter only when its language has a non-empty body.
+    withLetter:
+      data.coverLetterTemplateId !== "" &&
+      (data.coverLetterBodies[language]?.trim() ?? "") !== "",
+  }));
+  const anyLetter = folders.some((folder) => folder.withLetter);
 
   return (
     <div className="space-y-4">
@@ -46,6 +55,9 @@ export function StepConfirm({ data, previewCode, spec }: StepConfirmProps) {
         )}
         {data.who.trim() !== "" && <SummaryRow label="Quién" value={data.who} />}
         {data.jobUrl.trim() !== "" && <SummaryRow label="Link del puesto" value={data.jobUrl} />}
+        {anyLetter && coverLetterName && (
+          <SummaryRow label="Cover letter" value={coverLetterName} />
+        )}
       </div>
 
       <div className="space-y-2">
@@ -53,14 +65,19 @@ export function StepConfirm({ data, previewCode, spec }: StepConfirmProps) {
           Se va a generar {folders.length > 1 ? "un .zip con estas carpetas" : "esta carpeta"}:
         </p>
         {folders.map((folder) => (
-          <div key={folder} className="rounded-lg border bg-muted/40 p-2.5">
+          <div key={folder.name} className="rounded-lg border bg-muted/40 p-2.5">
             <div className="flex items-center gap-2 font-mono text-sm font-medium">
               <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
-              {folder}
+              {folder.name}
             </div>
             <div className="mt-1 pl-6 font-mono text-xs text-muted-foreground">
               └ {CV_FILENAME}
             </div>
+            {folder.withLetter && (
+              <div className="pl-6 font-mono text-xs text-muted-foreground">
+                └ {COVER_LETTER_FILENAME}
+              </div>
+            )}
           </div>
         ))}
         <p className="text-xs text-muted-foreground">
