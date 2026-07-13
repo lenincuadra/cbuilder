@@ -71,6 +71,20 @@ create index if not exists cover_letter_templates_created_at_idx
   on public.cover_letter_templates (created_at);
 alter table public.cover_letter_templates enable row level security;
 
+-- Screening questions bank: the unique pre-screening questions applications
+-- ask and the answers given, for fast reuse. `codes` lists the tracking codes
+-- of the applications where each question was asked.
+create table if not exists public.screening_questions (
+  id         text primary key,
+  question   text not null,
+  answer     text not null default '',
+  codes      jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists screening_questions_created_at_idx
+  on public.screening_questions (created_at);
+alter table public.screening_questions enable row level security;
+
 -- All tables: same privacy model as registry — RLS on, NO policy, reached only
 -- via the service role key from the server.
 

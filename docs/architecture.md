@@ -139,6 +139,7 @@ file store local. Se puede cambiar la implementación sin tocar `core/` ni `ui/`
 | Notas generales | `GeneralNotesStore` | File store (`data/notes.json`) vía API | `SupabaseGeneralNotesStore` — `getServerNotesStore` |
 | Links estables | `StableLinksStore` | File store (`data/stable-links.json`) vía API | `SupabaseStableLinksStore` — `getServerStableLinksStore` |
 | Cover letters (templates) | `CoverLetterTemplatesStore` | File store (`data/cover-letter-templates.json`) vía API | `SupabaseCoverLetterTemplatesStore` — `getServerCoverLetterTemplatesStore` |
+| Preguntas de pre-screening | `ScreeningStore` (`core/screening/types.ts`) | File store (`data/screening-questions.json`) vía API | `SupabaseScreeningStore` — `getServerScreeningStore` |
 | Archivo de CVs (binarios) | `CvArchiveStore` (`lib/storage/cvArchive.ts`) | File store (`data/cvs/<carpeta>/`) vía API | `SupabaseCvArchiveStore` — Storage bucket privado `cvs` — `getServerCvArchiveStore` |
 
 Las factories usan un cliente admin compartido (`getSupabaseAdmin`, service
@@ -171,6 +172,8 @@ Supabase ([`supabase-setup.md`](supabase-setup.md)).
 | `/api/stable-links/[ref]` | DELETE | Quita un link estable del registro |
 | `/api/cover-letters` | GET/POST | Lista / crea templates de cover letter |
 | `/api/cover-letters/[id]` | PATCH/DELETE | Edita / borra un template |
+| `/api/screening` | GET/POST | Lista / crea preguntas de pre-screening (banco global) |
+| `/api/screening/[id]` | PATCH/DELETE | Edita / borra una pregunta (incl. vincular códigos) |
 
 ## Variables de entorno
 

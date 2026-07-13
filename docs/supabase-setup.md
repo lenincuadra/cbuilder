@@ -33,10 +33,13 @@ app's API routes, so the private registry is never exposed by a public key.
    `SUPABASE_SERVICE_ROLE_KEY` (see `.env.local.example`). ⚠️ The service key is a
    full secret — never ship it to the client or commit it.
 
-> `schema.sql` also creates **`general_notes`** (single-row markdown doc) and
-> **`stable_links`**, behind the same server-only + RLS model as the registry
-> (stores: `getServerNotesStore` / `getServerStableLinksStore`). The Google Docs
-> sink is independent (see [`gdocs-setup.md`](gdocs-setup.md)).
+> `schema.sql` also creates **`general_notes`** (single-row markdown doc),
+> **`stable_links`**, **`cover_letter_templates`** and **`screening_questions`**
+> (pre-screening questions bank), behind the same server-only + RLS model as the
+> registry. For a database created before one of these existed, just re-run
+> `schema.sql` — `create table if not exists` adds the missing tables without
+> touching the rest. The Google Docs sink is independent (see
+> [`gdocs-setup.md`](gdocs-setup.md)).
 
 ## CV archive bucket
 

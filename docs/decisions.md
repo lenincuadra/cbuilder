@@ -10,6 +10,23 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Banco de preguntas de pre-screening: global, vinculado por código (sin tags/analytics en v1)
+Las aplicaciones hacen preguntas únicas que cuestan tiempo/pensamiento ("Project you are
+most proud of", "How well does your portfolio reflect your skills…"). El feature las
+registra para (1) reutilizar respuestas rápido y (2) ver qué preguntó cada empresa.
+Decisiones:
+- **Banco global** (card "Preguntas", triple-store `screening_questions`) y no entradas
+  por-fila: el objetivo #1 es reutilizar — si vivieran solo dentro de cada fila, encontrar
+  "qué respondí a algo parecido" sería revolver filas a mano. La vista por aplicación se
+  deriva: cada entrada referencia los códigos donde se usó (`codes`), y el tab
+  **Preguntas** del drawer filtra por el código de la fila (crear pre-vinculada, vincular
+  del banco, desvincular, copiar).
+- **"Si funcionó" no se trackea**: se lee del estado (Activo/Rechazado) de las filas
+  referenciadas. Cero modelo extra.
+- **Respuesta vacía permitida**: registra "me preguntaron esto" con la respuesta pendiente.
+- **v1 sin tags, buscador ni analytics** — ahí empezaría el feature creep; se escala si la
+  práctica lo pide.
+
 ## Registrar un proceso sin CV (código reservado, `cvPending`)
 Un proceso puede arrancar sin entregable (un recruiter escribe y la charla empieza antes
 de mandar nada); antes la única forma de "denotar que inicié el proceso" era generar el CV.
