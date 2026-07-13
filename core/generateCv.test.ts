@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
-import { generateCv } from "./generateCv";
+import { buildPendingRow, deferredGenerationFields, generateCv } from "./generateCv";
+import { MAX_UPDATES } from "./registry/types";
 import { CODE_DIGITS, CODE_LETTERS } from "./spec/code";
 import { TEST_SPEC } from "./spec/testSpec";
 import type { Language } from "./types";
@@ -178,5 +179,100 @@ describe("generateCv", () => {
     expect(result.row.coverLetter).toBeUndefined();
     const zip = await JSZip.loadAsync(result.zip);
     expect(zip.file("EN_acme_0628a2/Lenin_Cuadra_Cover_Letter.docx")).toBeNull();
+  });
+});
+
+describe("buildPendingRow", () => {
+  it("reserves a collision-checked code and marks the row pending, no CV fields", () => {
+    const row = buildPendingRow(
+      {
+        company: "  Acme  ",
+        date: new Date(2026, 5, 28),
+        who: "Jane Recruiter",
+        channel: "LinkedIn",
+      },
+      { spec: TEST_SPEC, existingCodes: ["0628a2"], rng: codeRng([[0, 0], [1, 1]]), now: fixedNow },
+    );
+
+    expect(row.code).toBe("0628b3"); // 0628a2 taken → next attempt
+    expect(row.cvPending).toBe(true);
+    expect(row.company).toBe("Acme");
+    expect(row.role).toBe("UX/UI Designer");
+    expect(row.status).toBe("Activo");
+    expect(row.date).toBe("2026-06-28");
+    expect(row.who).toBe("Jane Recruiter");
+    expect(row.createdAt).toBe("2026-06-28T12:00:00.000Z");
+    // Nothing CV-specific until the deferred generation.
+    expect(row.language).toBeUndefined();
+    expect(row.focus).toBeUndefined();
+    expect(row.links).toBeUndefined();
+    expect(row.zipName).toBeUndefined();
+  });
+
+  it("keeps the email only for the Email channel", () => {
+    const base = { company: "Acme", date: new Date(2026, 5, 28), email: "jobs@acme.com" };
+    const emailRow = buildPendingRow(
+      { ...base, channel: "Email" },
+      { spec: TEST_SPEC, existingCodes: [], rng: fixedRng, now: fixedNow },
+    );
+    expect(emailRow.email).toBe("jobs@acme.com");
+
+    const otherRow = buildPendingRow(
+      { ...base, channel: "LinkedIn" },
+      { spec: TEST_SPEC, existingCodes: [], rng: fixedRng, now: fixedNow },
+    );
+    expect(otherRow.email).toBeUndefined();
+  });
+});
+
+describe("deferredGenerationFields", () => {
+  it("clears the pending flag, applies the CV fields and logs 'CV generado'", async () => {
+    const pending = buildPendingRow(
+      { company: "Acme", date: new Date(2026, 5, 28) },
+      { spec: TEST_SPEC, existingCodes: [], rng: fixedRng, now: fixedNow },
+    );
+    const result = await generateCv(
+      {
+        company: "Acme",
+        languageChoice: "EN",
+        date: new Date(2026, 6, 15),
+        focus: "payments",
+        code: pending.code,
+      },
+      deps({ now: fixedNow }),
+    );
+
+    const fields = deferredGenerationFields(pending, result, () => new Date("2026-07-15T10:00:00.000Z"));
+    expect(fields.cvPending).toBe(false);
+    expect(fields.language).toBe("EN");
+    expect(fields.focus).toBe("payments");
+    expect(fields.links).toEqual(result.row.links);
+    expect(fields.zipName).toBe(result.zipName);
+    expect(fields.updates).toEqual([
+      { at: "2026-07-15T10:00:00.000Z", message: "CV generado" },
+    ]);
+    // The process-start date is not among the updated fields.
+    expect("date" in fields).toBe(false);
+  });
+
+  it("appends to the existing timeline and respects the cap", async () => {
+    const pending = buildPendingRow(
+      { company: "Acme", date: new Date(2026, 5, 28) },
+      { spec: TEST_SPEC, existingCodes: [], rng: fixedRng, now: fixedNow },
+    );
+    pending.updates = Array.from({ length: MAX_UPDATES }, (_, index) => ({
+      at: `2026-07-0${(index % 9) + 1}T00:00:00.000Z`,
+      message: `update ${index}`,
+    }));
+    const result = await generateCv(
+      { company: "Acme", languageChoice: "EN", date: new Date(2026, 6, 15), code: pending.code },
+      deps({ now: fixedNow }),
+    );
+
+    const fields = deferredGenerationFields(pending, result, () => new Date("2026-07-15T10:00:00.000Z"));
+    expect(fields.updates).toHaveLength(MAX_UPDATES);
+    // Oldest dropped, newest is the automatic entry.
+    expect(fields.updates?.[0].message).toBe("update 1");
+    expect(fields.updates?.at(-1)?.message).toBe("CV generado");
   });
 });

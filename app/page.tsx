@@ -3,9 +3,17 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { generateCv, type GenerateCvInput } from "@/core/generateCv";
+import { COVER_LETTER_FILENAME } from "@/core/coverLetter/docx";
+import {
+  buildPendingRow,
+  deferredGenerationFields,
+  generateCv,
+  type GenerateCvInput,
+  type PendingRowInput,
+} from "@/core/generateCv";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
-import { archiveCvZip, revealCvZip } from "@/lib/archive";
+import { CV_FILENAME } from "@/core/zip";
+import { archiveDeliveryFiles, revealDelivery, type DeliveryFile } from "@/lib/archive";
 import { downloadBytes } from "@/lib/download";
 import { createGoogleDoc } from "@/lib/gdocs";
 import { loadMaster } from "@/lib/masters";
@@ -14,6 +22,7 @@ import { CoverLettersCard } from "@/ui/CoverLettersCard";
 import { ExportButton } from "@/ui/ExportButton";
 import { GenerateCard } from "@/ui/GenerateCard";
 import { GeneralNotesCard } from "@/ui/GeneralNotesCard";
+import { PendingCvDrawer } from "@/ui/PendingCvDrawer";
 import { StableLinksCard } from "@/ui/StableLinksCard";
 import { RegistryTable } from "@/ui/RegistryTable";
 import { SegmentedControl, type SegmentedOption } from "@/ui/SegmentedControl";
@@ -35,6 +44,8 @@ export default function Home() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos");
   // External "open this row's detail panel" request (generation toast CTA).
   const [openRequest, setOpenRequest] = useState<{ code: string; nonce: number } | null>(null);
+  // Pending row whose deferred-generation wizard is open ("Generar CV" in the detail).
+  const [pendingTarget, setPendingTarget] = useState<RegistryRow | null>(null);
 
   const existingCodes = rows.map((row) => row.code);
 
@@ -94,7 +105,37 @@ export default function Home() {
     setOpenRequest({ code, nonce: Date.now() });
   }
 
-  async function handleGenerate(input: GenerateCvInput) {
+  /**
+   * Register a process without generating a CV (wizard's "Guardar sin CV"):
+   * the code is reserved now, the CV can be generated later from the row's
+   * detail panel. Throws on error so the wizard stays open with the message.
+   */
+  async function handleSavePending(input: PendingRowInput) {
+    if (!spec) {
+      toast.error("No se pudo leer el link-spec del portfolio. Revisá la conexión.");
+      throw new Error("link-spec unavailable");
+    }
+    try {
+      const row = buildPendingRow(input, { spec, existingCodes });
+      await add(row);
+      toast.success(`Proceso registrado · código ${row.code}`, {
+        duration: 10000,
+        description: "Generá el CV cuando haga falta desde el detalle de la fila.",
+        action: { label: "Detalles", onClick: () => openGeneratedRow(row.code) },
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo registrar el proceso.");
+      throw error;
+    }
+  }
+
+  /**
+   * Run a generation and deliver it. With `pending`, this is the deferred
+   * generation of a row registered without CV: the existing row is updated
+   * in place (same code) instead of adding a new one, and the timeline gets an
+   * automatic "CV generado" entry.
+   */
+  async function handleGenerate(input: GenerateCvInput, pending?: RegistryRow) {
     if (!spec) {
       toast.error("No se pudo leer el link-spec del portfolio. Revisá la conexión.");
       return;
@@ -102,17 +143,35 @@ export default function Home() {
     setGenerating(true);
     try {
       const result = await generateCv(input, { spec, existingCodes, loadMaster });
-      await add(result.row);
+      if (pending) {
+        await update(pending.code, deferredGenerationFields(pending, result));
+      } else {
+        await add(result.row);
+      }
       downloadBytes(result.zip, result.zipName);
 
-      // Keep a server-side copy (data/cvs/): masters evolve, so the archive is
-      // the only faithful record of what was sent. Never blocks the delivery.
-      // "off" (501, deploy) is expected — Drive holds the durable copy there.
+      // Keep a durable copy of each delivered file (data/cvs/ locally, Supabase
+      // Storage on a deploy): masters evolve, so the archive is the only
+      // faithful record of what was sent — and each file stays re-downloadable
+      // from the row's detail panel. Never blocks the delivery.
+      const deliveryFiles: DeliveryFile[] = result.entries.flatMap((entry) => [
+        { path: `${entry.folder}/${CV_FILENAME}`, bytes: entry.docx },
+        ...(entry.coverLetter
+          ? [{ path: `${entry.folder}/${COVER_LETTER_FILENAME}`, bytes: entry.coverLetter }]
+          : []),
+      ]);
       let archiveState: "ok" | "off" | "failed";
       try {
-        archiveState = (await archiveCvZip(result.zipName, result.zip)) ? "ok" : "off";
+        archiveState = (await archiveDeliveryFiles(deliveryFiles)) ? "ok" : "off";
       } catch {
         archiveState = "failed";
+      }
+      if (archiveState === "ok") {
+        await update(result.code, {
+          deliveryFiles: deliveryFiles.map((file) => file.path),
+        }).catch(() => {
+          // The files are archived; only the registry pointer failed — not fatal.
+        });
       }
 
       // Extra sink: create each CV in the user's Google Drive as a native Google
@@ -143,14 +202,14 @@ export default function Home() {
       }
 
       // Single success alert. Secondary button opens the Drive folder when the
-      // sink ran, otherwise reveals the archived zip in Finder — only when the
-      // archive actually ran (locally); on a deploy there's no zip to reveal.
+      // sink ran, otherwise reveals the archived CV in Finder — only when the
+      // archive actually ran locally; on a deploy there's no Finder.
       const finderButton =
         archiveState === "ok"
           ? {
               label: "Finder",
               onClick: () => {
-                revealCvZip(result.zipName)
+                revealDelivery(deliveryFiles[0].path)
                   .then((unavailable) => {
                     if (unavailable) toast.info(unavailable);
                   })
@@ -170,7 +229,7 @@ export default function Home() {
           : finderButton,
       });
       if (archiveState === "failed") {
-        toast.warning(`No se pudo archivar la copia de ${result.code} en data/cvs.`);
+        toast.warning(`No se pudo archivar la copia de ${result.code}.`);
       }
       if (gdocsFailed) {
         toast.warning(`No se pudo crear ${result.code} en Google Docs.`);
@@ -213,6 +272,7 @@ export default function Home() {
             loading={loading}
             onUpdate={handleUpdate}
             onDelete={handleDelete}
+            onGenerateCv={setPendingTarget}
             openRequest={openRequest}
             emptyMessage={
               statusFilter !== "todos"
@@ -235,12 +295,24 @@ export default function Home() {
             templates={coverLetters.templates}
             generating={generating}
             onGenerate={handleGenerate}
+            onSavePending={handleSavePending}
           />
           <GeneralNotesCard />
           <StableLinksCard />
           <CoverLettersCard store={coverLetters} />
         </aside>
       </div>
+
+      {/* Deferred generation: the wizard for a row registered without CV. */}
+      <PendingCvDrawer
+        row={pendingTarget}
+        onClose={() => setPendingTarget(null)}
+        spec={spec}
+        existingCodes={existingCodes}
+        templates={coverLetters.templates}
+        generating={generating}
+        onGenerate={(input) => handleGenerate(input, pendingTarget ?? undefined)}
+      />
     </main>
   );
 }

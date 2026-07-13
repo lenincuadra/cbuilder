@@ -3,7 +3,7 @@
 import { FilePlus2 } from "lucide-react";
 
 import type { CoverLetterTemplate } from "@/core/coverLetter/types";
-import type { GenerateCvInput } from "@/core/generateCv";
+import type { GenerateCvInput, PendingRowInput } from "@/core/generateCv";
 import type { LinkSpec } from "@/core/spec/types";
 import { PanelCard, PanelCardFace } from "@/ui/PanelCard";
 import { Wizard } from "@/ui/wizard/Wizard";
@@ -19,6 +19,8 @@ export interface GenerateCardProps {
   generating: boolean;
   /** Runs the generation; rejects on error (the caller surfaces the message). */
   onGenerate: (input: GenerateCvInput) => Promise<void>;
+  /** Registers a process without CV (wizard's "Guardar sin CV" exit). */
+  onSavePending: (input: PendingRowInput) => Promise<void>;
 }
 
 /**
@@ -33,6 +35,7 @@ export function GenerateCard({
   templates,
   generating,
   onGenerate,
+  onSavePending,
 }: GenerateCardProps) {
   return (
     <PanelCard
@@ -57,6 +60,10 @@ export function GenerateCard({
             // Throws on error → the wizard stays on the confirm step with the message.
             await onGenerate(input);
             close(); // success → close the drawer, ready for the next one.
+          }}
+          onSavePending={async (input) => {
+            await onSavePending(input);
+            close();
           }}
           onCancel={close}
           container={container}

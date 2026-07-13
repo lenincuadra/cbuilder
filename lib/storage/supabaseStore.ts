@@ -35,6 +35,8 @@ interface RegistryRowDb {
   created_at: string | null;
   updates: StatusUpdate[] | null;
   archived: boolean | null;
+  cv_pending: boolean | null;
+  delivery_files: string[] | null;
 }
 
 export function dbToRow(db: RegistryRowDb): RegistryRow {
@@ -59,6 +61,10 @@ export function dbToRow(db: RegistryRowDb): RegistryRow {
     createdAt: db.created_at ?? undefined,
     updates: db.updates ?? undefined,
     archived: db.archived ?? undefined,
+    // false (the column default, also every pre-existing row) maps back to
+    // "absent", so rows with a CV keep their original shape.
+    cvPending: db.cv_pending ? true : undefined,
+    deliveryFiles: db.delivery_files ?? undefined,
   };
 }
 
@@ -87,6 +93,8 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
     created_at: row.createdAt ?? new Date().toISOString(),
     updates: row.updates ?? [],
     archived: row.archived ?? false,
+    cv_pending: row.cvPending ?? false,
+    delivery_files: row.deliveryFiles ?? null,
   };
 }
 
@@ -110,6 +118,8 @@ export function editableToDb(fields: EditableFields): Partial<RegistryRowDb> {
   if ("status" in fields) out.status = fields.status as string;
   if ("updates" in fields) out.updates = fields.updates ?? [];
   if ("archived" in fields) out.archived = fields.archived ?? false;
+  if ("cvPending" in fields) out.cv_pending = fields.cvPending ?? false;
+  if ("deliveryFiles" in fields) out.delivery_files = fields.deliveryFiles ?? null;
   return out;
 }
 

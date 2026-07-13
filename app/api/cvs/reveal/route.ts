@@ -2,27 +2,28 @@ import { execFile } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { CV_ARCHIVE_DIR, isValidZipName } from "@/lib/storage/cvArchive";
+import { CV_ARCHIVE_DIR, isValidArchivePath, isValidZipName } from "@/lib/storage/cvArchive";
 
 // Talks to the local OS — never statically cached.
 export const dynamic = "force-dynamic";
 
 /**
- * Reveal an archived delivery zip in Finder (`open -R`). Local-first feature:
- * only meaningful on the user's Mac — 501 elsewhere (deploys have no Finder).
+ * Reveal an archived delivery in Finder (`open -R`): an archived file
+ * (`<folder>/<file>.docx`) or a legacy zip name. Local-first feature: only
+ * meaningful on the user's Mac — 501 elsewhere (deploys have no Finder).
  */
 export async function POST(request: Request) {
   if (process.env.VERCEL || process.platform !== "darwin") {
     return NextResponse.json(
-      { error: "Abrir en Finder solo funciona corriendo la app local en tu Mac (el zip vive en data/cvs de esa máquina)." },
+      { error: "Abrir en Finder solo funciona corriendo la app local en tu Mac (el archivo vive en data/cvs de esa máquina)." },
       { status: 501 },
     );
   }
 
   const body = (await request.json()) as { name?: unknown };
   const name = typeof body.name === "string" ? body.name : "";
-  if (!isValidZipName(name)) {
-    return NextResponse.json({ error: "Invalid zip name." }, { status: 400 });
+  if (!isValidZipName(name) && !isValidArchivePath(name)) {
+    return NextResponse.json({ error: "Invalid archive name." }, { status: 400 });
   }
 
   const target = path.join(CV_ARCHIVE_DIR, name);

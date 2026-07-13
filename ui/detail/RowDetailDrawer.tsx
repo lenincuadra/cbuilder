@@ -47,6 +47,8 @@ export interface RowDetailDrawerProps {
   onOpenChange: (open: boolean) => void;
   onUpdate: (code: string, fields: EditableFields) => void | Promise<void>;
   onDelete: (code: string) => void | Promise<void>;
+  /** Open the deferred-generation wizard for a pending row ("Generar CV"). */
+  onGenerateCv?: (row: RegistryRow) => void;
   /** Tab to show when the panel opens. */
   initialTab?: DetailTab;
   // --- navigation between table rows ---
@@ -78,6 +80,7 @@ export function RowDetailDrawer({
   onOpenChange,
   onUpdate,
   onDelete,
+  onGenerateCv,
   initialTab = "notas",
   position,
   total,
@@ -267,9 +270,12 @@ export function RowDetailDrawer({
                     </Field>
                   )}
                 </div>
-                <TrackedLinks code={row.code} focus={row.focus} links={row.links} />
+                {/* A pending row has no baked links yet — nothing was sent. */}
+                {!row.cvPending && (
+                  <TrackedLinks code={row.code} focus={row.focus} links={row.links} />
+                )}
                 <CoverLetterInfo row={row} />
-                <DeliveryInfo row={row} />
+                <DeliveryInfo row={row} onGenerateCv={() => onGenerateCv?.(row)} />
               </div>
             )}
 

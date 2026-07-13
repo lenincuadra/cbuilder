@@ -71,6 +71,8 @@ export interface RegistryTableProps {
   loading?: boolean;
   onUpdate: (code: string, fields: EditableFields) => void | Promise<void>;
   onDelete: (code: string) => void | Promise<void>;
+  /** Open the deferred-generation wizard for a pending row ("Generar CV"). */
+  onGenerateCv?: (row: RegistryRow) => void;
   emptyMessage?: string;
   /**
    * External request to open a row's detail panel (e.g. from the generation
@@ -99,6 +101,7 @@ export function RegistryTable({
   loading = false,
   onUpdate,
   onDelete,
+  onGenerateCv,
   emptyMessage,
   openRequest,
 }: RegistryTableProps) {
@@ -253,6 +256,11 @@ export function RegistryTable({
         onOpenChange={setDetailOpen}
         onUpdate={onUpdate}
         onDelete={onDelete}
+        onGenerateCv={(row) => {
+          // The wizard opens in its own drawer; close the detail panel first.
+          setDetailOpen(false);
+          onGenerateCv?.(row);
+        }}
         initialTab={detailTab}
         position={detailIndex + 1}
         total={rows.length}

@@ -80,6 +80,18 @@ export interface RegistryRow {
   updates?: StatusUpdate[];
   /** Archived = moved out of the active searches view. Independent of status. */
   archived?: boolean;
+  /**
+   * Process registered but no CV generated yet (e.g. a recruiter reached out).
+   * The code is already reserved; cleared when the CV is generated later.
+   * Absent on rows created by a generation (they always have a CV).
+   */
+  cvPending?: boolean;
+  /**
+   * Delivered files archived durably (paths under the CV archive, e.g.
+   * "EN_acme_0628r4/Lenin_Cuadra_CV.docx"), downloadable via GET /api/cvs/.
+   * Set after a successful archive — like driveDocs, absent means "not there".
+   */
+  deliveryFiles?: string[];
 }
 
 /**

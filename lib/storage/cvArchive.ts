@@ -1,12 +1,15 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-// Local archive of generated delivery zips: data/cvs/<zipName>. Gitignored
+// Local archive of delivered files: data/cvs/<folder>/<file>.docx. Gitignored
 // (/data/), same privacy rule as the registry — company names never reach git.
 export const CV_ARCHIVE_DIR = path.join(process.cwd(), "data", "cvs");
 
-// Zip names come from slugifyCompany + code, but never trust the client:
-// a strict allowlist keeps path traversal out (no separators, no leading dot).
+// One path segment: no separators, no leading dot — path traversal stays out.
+const SEGMENT_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+// Legacy zip archives (pre per-file layout) still live flat in data/cvs/;
+// the Finder reveal keeps accepting their names.
 const ZIP_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*\.zip$/;
 
 export function isValidZipName(name: string): boolean {
@@ -14,25 +17,64 @@ export function isValidZipName(name: string): boolean {
 }
 
 /**
- * Persist a generated delivery zip on disk. Masters evolve over time (v13 →
- * v14 → …), so a past delivery cannot be regenerated identically — this
- * archive is the faithful record of what was actually sent.
- *
- * Same-name writes overwrite (regenerating a preview twice is idempotent).
- * Atomic tmp+rename write, matching the registry/notes file stores.
+ * An archive path is exactly `<folder>/<file>.docx`, both segments from a
+ * strict allowlist (never trust the client): the delivery folder name plus the
+ * delivered file name, e.g. "EN_acme_0628r4/Lenin_Cuadra_CV.docx".
  */
-export async function saveCvArchive(
-  name: string,
-  bytes: Uint8Array,
-  archiveDir: string = CV_ARCHIVE_DIR,
-): Promise<string> {
-  if (!isValidZipName(name)) {
-    throw new Error(`Invalid zip name: ${JSON.stringify(name)}`);
+export function isValidArchivePath(archivePath: string): boolean {
+  const segments = archivePath.split("/");
+  if (segments.length !== 2) return false;
+  const [folder, file] = segments;
+  return (
+    SEGMENT_RE.test(folder) &&
+    SEGMENT_RE.test(file) &&
+    file.endsWith(".docx") &&
+    !archivePath.includes("..")
+  );
+}
+
+/**
+ * Durable archive of the delivered files. Masters evolve over time (v13 →
+ * v14 → …), so a past delivery cannot be regenerated identically — this
+ * archive is the faithful record of what was actually sent, and the source
+ * for re-downloading a CV later (GET /api/cvs/<path>).
+ */
+export interface CvArchiveStore {
+  /** Persist one delivered file. Same-path writes overwrite (idempotent). */
+  save(archivePath: string, bytes: Uint8Array): Promise<void>;
+  /** Read one archived file; null when it isn't there. */
+  read(archivePath: string): Promise<Uint8Array | null>;
+}
+
+/**
+ * Local implementation: data/cvs/<folder>/<file>. Atomic tmp+rename write,
+ * matching the registry/notes file stores.
+ */
+export class FileCvArchiveStore implements CvArchiveStore {
+  constructor(private readonly dir: string = CV_ARCHIVE_DIR) {}
+
+  private resolve(archivePath: string): string {
+    if (!isValidArchivePath(archivePath)) {
+      throw new Error(`Invalid archive path: ${JSON.stringify(archivePath)}`);
+    }
+    return path.join(this.dir, archivePath);
   }
-  await fs.mkdir(archiveDir, { recursive: true });
-  const target = path.join(archiveDir, name);
-  const tmp = `${target}.${process.pid}.tmp`;
-  await fs.writeFile(tmp, bytes);
-  await fs.rename(tmp, target);
-  return target;
+
+  async save(archivePath: string, bytes: Uint8Array): Promise<void> {
+    const target = this.resolve(archivePath);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    const tmp = `${target}.${process.pid}.tmp`;
+    await fs.writeFile(tmp, bytes);
+    await fs.rename(tmp, target);
+  }
+
+  async read(archivePath: string): Promise<Uint8Array | null> {
+    const target = this.resolve(archivePath);
+    try {
+      return new Uint8Array(await fs.readFile(target));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
+    }
+  }
 }
