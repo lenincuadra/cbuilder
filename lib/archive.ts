@@ -1,10 +1,11 @@
 /**
- * Ask the local server to reveal an archived zip in Finder. Local-first
+ * Ask the local server to reveal an archived delivery in Finder: an archived
+ * file path (`<folder>/<file>.docx`) or a legacy zip name. Local-first
  * feature: returns null when revealed, or a human message when it isn't
  * available here (501 — deploy, or the app isn't running on macOS). Callers
  * show that message as info, not as an error. Throws on real failures.
  */
-export async function revealCvZip(name: string): Promise<string | null> {
+export async function revealDelivery(name: string): Promise<string | null> {
   const response = await fetch("/api/cvs/reveal", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -20,23 +21,39 @@ export async function revealCvZip(name: string): Promise<string | null> {
   return null;
 }
 
+export interface DeliveryFile {
+  /** Archive path: `<folder>/<file>.docx`. */
+  path: string;
+  bytes: Uint8Array;
+}
+
+const DOCX_MIME =
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
 /**
- * Send a generated delivery zip to the server-side archive (data/cvs/).
- * Companion of the download: the archive keeps the faithful copy of what was
- * sent even after the masters change. Returns false when archiving isn't
- * available here (501 on a deploy — expected, not an error; Drive holds the
- * durable copy there). Throws on real failures.
+ * Send the delivered files to the durable archive (data/cvs/ locally, Supabase
+ * Storage on a deploy). Companion of the download: the archive keeps the
+ * faithful copy of what was sent even after the masters change, and each file
+ * stays re-downloadable via GET /api/cvs/<path>. Returns false when archiving
+ * isn't available here (501 — expected, not an error). Throws on real failures.
  */
-export async function archiveCvZip(name: string, zip: Uint8Array): Promise<boolean> {
-  const response = await fetch(`/api/cvs?name=${encodeURIComponent(name)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/zip" },
-    body: new Blob([zip.buffer as ArrayBuffer]),
-  });
-  if (response.status === 501) return false;
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(body?.error ?? `Archive failed (HTTP ${response.status}).`);
+export async function archiveDeliveryFiles(files: DeliveryFile[]): Promise<boolean> {
+  for (const file of files) {
+    const response = await fetch(`/api/cvs?path=${encodeURIComponent(file.path)}`, {
+      method: "POST",
+      headers: { "Content-Type": DOCX_MIME },
+      body: new Blob([file.bytes as BlobPart]),
+    });
+    if (response.status === 501) return false;
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(body?.error ?? `Archive failed (HTTP ${response.status}).`);
+    }
   }
   return true;
+}
+
+/** Browser URL to download one archived delivered file. */
+export function deliveryFileUrl(path: string): string {
+  return `/api/cvs/${path.split("/").map(encodeURIComponent).join("/")}`;
 }

@@ -1,30 +1,31 @@
 import { NextResponse } from "next/server";
-import { isValidZipName, saveCvArchive } from "@/lib/storage/cvArchive";
+import { isValidArchivePath } from "@/lib/storage/cvArchive";
+import { getServerCvArchiveStore } from "@/lib/storage/serverCvArchive";
 
-// Writes a local file — never statically cached.
+// Writes to the durable archive — never statically cached.
 export const dynamic = "force-dynamic";
 
-/** Archive a generated delivery zip (binary body, name in ?name=). */
+/** Archive one delivered file (binary body, `<folder>/<file>.docx` in ?path=). */
 export async function POST(request: Request) {
-  // Local-first feature: on a deploy the filesystem is ephemeral, so archiving
-  // there would silently lie. 501 = "feature off here" (same contract as gdocs);
-  // the durable deploy copy is the Drive sink.
-  if (process.env.VERCEL) {
+  const store = getServerCvArchiveStore();
+  // 501 = "feature off here" (deploy without Supabase Storage) — same contract
+  // as gdocs. The delivery itself (browser download) is never blocked by this.
+  if (!store) {
     return NextResponse.json(
-      { error: "El archivo local (data/cvs) solo existe corriendo la app en tu Mac." },
+      { error: "El archivo de CVs no está configurado acá (Supabase Storage)." },
       { status: 501 },
     );
   }
-  const name = new URL(request.url).searchParams.get("name") ?? "";
-  if (!isValidZipName(name)) {
-    return NextResponse.json({ error: "Invalid zip name." }, { status: 400 });
+  const path = new URL(request.url).searchParams.get("path") ?? "";
+  if (!isValidArchivePath(path)) {
+    return NextResponse.json({ error: "Invalid archive path." }, { status: 400 });
   }
   const bytes = new Uint8Array(await request.arrayBuffer());
   if (bytes.length === 0) {
     return NextResponse.json({ error: "Empty body." }, { status: 400 });
   }
   try {
-    await saveCvArchive(name, bytes);
+    await store.save(path, bytes);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(

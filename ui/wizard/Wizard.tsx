@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileClock, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { CoverLetterBodies, CoverLetterTemplate } from "@/core/coverLetter/types";
-import type { GenerateCvInput } from "@/core/generateCv";
-import { DEFAULT_ROLE } from "@/core/registry/types";
+import type { GenerateCvInput, PendingRowInput } from "@/core/generateCv";
+import { DEFAULT_ROLE, type RegistryRow } from "@/core/registry/types";
 import { generateCode } from "@/core/spec/code";
 import type { LinkSpec } from "@/core/spec/types";
 import { StepCompany } from "./StepCompany";
@@ -21,16 +21,22 @@ import { emailRequirementMet, languagesFor, type WizardData } from "./types";
 const TOTAL_STEPS = 5;
 const STEP_TITLES = ["Empresa y fecha", "Opcionales", "Idioma y foco", "Cover letter", "Confirmar"];
 
-function initialData(): WizardData {
+/**
+ * Fresh wizard state. With a pending row (deferred generation), steps 1–2 come
+ * prefilled from the row; `date` is today — it becomes the cover letter's
+ * letterhead date (the CV is generated now), while the row keeps its own
+ * process-start date untouched.
+ */
+function initialData(pendingRow?: RegistryRow): WizardData {
   return {
-    company: "",
+    company: pendingRow?.company ?? "",
     language: "EN",
     date: new Date(),
-    role: DEFAULT_ROLE,
-    channel: "",
-    email: "",
-    who: "",
-    jobUrl: "",
+    role: pendingRow?.role ?? DEFAULT_ROLE,
+    channel: pendingRow?.channel ?? "",
+    email: pendingRow?.email ?? "",
+    who: pendingRow?.who ?? "",
+    jobUrl: pendingRow?.jobUrl ?? "",
     focus: "",
     coverLetterTemplateId: "",
     coverLetterBodies: {},
@@ -49,7 +55,18 @@ export interface WizardProps {
   generating: boolean;
   /** Runs the generation; rejects on error (the caller surfaces the message). */
   onGenerate: (input: GenerateCvInput) => Promise<void>;
-  /** Optional: dismiss the wizard from step 1 (turns "Atrás" into "Cancelar"). */
+  /**
+   * Registers the process without generating a CV (reserves the code). When
+   * provided, step 2 offers a "Guardar sin CV" exit. Rejects on error.
+   */
+  onSavePending?: (input: PendingRowInput) => Promise<void>;
+  /**
+   * Deferred generation for a pending row: steps 1–2 are skipped (their data
+   * lives on the row, editable from the detail panel) and the confirm step
+   * uses the row's already-reserved code instead of generating one.
+   */
+  pendingRow?: RegistryRow;
+  /** Optional: dismiss the wizard from the first step (turns "Atrás" into "Cancelar"). */
   onCancel?: () => void;
   /** Portal target for the step dropdowns when the wizard runs inside a drawer. */
   container?: HTMLElement | null;
@@ -61,12 +78,16 @@ export function Wizard({
   templates,
   generating,
   onGenerate,
+  onSavePending,
+  pendingRow,
   onCancel,
   container,
 }: WizardProps) {
-  const [step, setStep] = useState(1);
-  const [data, setData] = useState<WizardData>(initialData);
+  const startStep = pendingRow ? 3 : 1;
+  const [step, setStep] = useState(startStep);
+  const [data, setData] = useState<WizardData>(() => initialData(pendingRow));
   const [previewCode, setPreviewCode] = useState<string | null>(null);
+  const [savingPending, setSavingPending] = useState(false);
 
   const set = (patch: Partial<WizardData>) => setData((current) => ({ ...current, ...patch }));
 
@@ -99,9 +120,10 @@ export function Wizard({
       toast.error("Esperando el link-spec del portfolio. Probá de nuevo en un momento.");
       return;
     }
-    // Entering the confirm step: lock in a collision-checked code for the preview.
+    // Entering the confirm step: lock in a collision-checked code for the
+    // preview — or the code already reserved when the process was registered.
     try {
-      const code = generateCode({ spec, date: data.date, existingCodes });
+      const code = pendingRow?.code ?? generateCode({ spec, date: data.date, existingCodes });
       setPreviewCode(code);
       setStep(5);
     } catch (error) {
@@ -110,7 +132,30 @@ export function Wizard({
   }
 
   function goBack() {
-    setStep((current) => Math.max(1, current - 1));
+    setStep((current) => Math.max(startStep, current - 1));
+  }
+
+  async function handleSavePending() {
+    if (!onSavePending) return;
+    setSavingPending(true);
+    try {
+      await onSavePending({
+        company: data.company,
+        date: data.date,
+        role: data.role,
+        who: data.who,
+        channel: data.channel === "" ? undefined : data.channel,
+        email: data.email,
+        jobUrl: data.jobUrl,
+      });
+      // Success: reset for the next application.
+      setData(initialData());
+      setStep(1);
+    } catch {
+      // The page already surfaced the error; stay on the step.
+    } finally {
+      setSavingPending(false);
+    }
   }
 
   async function handleGenerate() {
@@ -143,9 +188,9 @@ export function Wizard({
         code: previewCode,
       });
       // Success: reset for the next application.
-      setData(initialData());
+      setData(initialData(pendingRow));
       setPreviewCode(null);
-      setStep(1);
+      setStep(startStep);
     } catch {
       // The page already surfaced the error; stay on the confirm step.
     }
@@ -183,13 +228,13 @@ export function Wizard({
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        {step === 1 && onCancel ? (
+        {step === startStep && onCancel ? (
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={onCancel}
-            disabled={generating}
+            disabled={generating || savingPending}
           >
             <X className="size-4" />
             Cancelar
@@ -200,24 +245,44 @@ export function Wizard({
             variant="ghost"
             size="sm"
             onClick={goBack}
-            disabled={step === 1 || generating}
+            disabled={step === startStep || generating || savingPending}
           >
             <ChevronLeft className="size-4" />
             Atrás
           </Button>
         )}
 
-        {step < TOTAL_STEPS ? (
-          <Button type="button" size="sm" onClick={goNext} disabled={!canAdvance}>
-            Siguiente
-            <ChevronRight className="size-4" />
-          </Button>
-        ) : (
-          <Button type="button" size="sm" onClick={handleGenerate} disabled={generating}>
-            {generating ? <Loader2 className="size-4 animate-spin" /> : null}
-            Generar
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Fork: register the process now, generate the CV later (e.g. a
+              recruiter reached out). Steps 1–2 hold exactly the process data. */}
+          {step === 2 && onSavePending && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleSavePending}
+              disabled={!canAdvance || savingPending}
+            >
+              {savingPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <FileClock className="size-4" />
+              )}
+              Guardar sin CV
+            </Button>
+          )}
+          {step < TOTAL_STEPS ? (
+            <Button type="button" size="sm" onClick={goNext} disabled={!canAdvance || savingPending}>
+              Siguiente
+              <ChevronRight className="size-4" />
+            </Button>
+          ) : (
+            <Button type="button" size="sm" onClick={handleGenerate} disabled={generating}>
+              {generating ? <Loader2 className="size-4 animate-spin" /> : null}
+              Generar
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

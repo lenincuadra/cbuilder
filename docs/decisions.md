@@ -10,6 +10,37 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Registrar un proceso sin CV (código reservado, `cvPending`)
+Un proceso puede arrancar sin entregable (un recruiter escribe y la charla empieza antes
+de mandar nada); antes la única forma de "denotar que inicié el proceso" era generar el CV.
+Ahora el paso 2 del wizard ofrece **"Guardar sin CV"**: crea la fila con el **código ya
+reservado** (mismo `generateCode`, colisión-checked) y `cvPending: true`. Decisiones:
+- **El código se asigna al crear la entrada**, no al generar el CV. El MMDD del código
+  refleja el inicio del proceso (dato interno, no afecta el tracking); a cambio la PK y
+  todo el storage quedan intactos. Se descartó un ID provisional + refactor de PK.
+- **Una entrada puede quedar sin CV para siempre** (procesos que mueren temprano). El
+  estado pendiente es ortogonal a Activo/Rechazado y a archivado.
+- **UI**: ícono `FileClock` muted en la celda Seguimiento (convive con notas/updates/🚩/
+  inactividad); el CTA "Generar CV" vive en la card Entrega del drawer.
+- **Generación diferida**: abre el wizard en modo `pendingRow` (arranca en "Idioma y
+  foco", usa el código reservado) y actualiza la fila in-place. La **fecha de la fila no
+  cambia** (= inicio del proceso); la traza temporal queda en una update automática
+  **"CV generado"** en el timeline, y la carta lleva la fecha del día de generación.
+
+## Archivo por archivo, re-descargable (Supabase Storage en deploy)
+Reemplaza el archivo de zips: ahora se archivan los **archivos entregados sueltos**
+(`<carpeta>/Lenin_Cuadra_CV.docx` + carta si hay), detrás de `CvArchiveStore` — local en
+`data/cvs/`, en deploy en el **bucket privado `cvs` de Supabase Storage** (creado por
+`schema.sql`; service key, sin URLs públicas). Razón: el objetivo real es **"descargar
+este CV"** para compartirlo o subirlo en otro lado rápido — el zip mete fricción, sobre
+todo desde el teléfono. Cada archivo se re-descarga con un tap desde la card Entrega
+(`GET /api/cvs/<path>`), también en el deploy. El **zip de descarga inmediata al generar
+no cambia** (es el empaquetado para enviar); solo cambió la forma del archivo durable.
+Los paths archivados se persisten en `row.deliveryFiles` (como `driveDocs`: solo si el
+archivado corrió OK). Se descartó Drive/Apps Script para esto (servir bytes de vuelta por
+el webhook es más frágil que un GET al bucket; los Docs de Drive siguen cubriendo el caso
+"mirar en Drive").
+
 ## Columna "Foco" propia (header `Crosshair`), icon-only, entre Código y Empresa
 El icono de foco por perfil dejó de vivir junto al código (decisión previa, "Filtro de
 estado como dropdown-embudo; foco visible junto al código") y pasó a una **columna propia**
@@ -229,15 +260,14 @@ también se limpiaron el código horneado (`0708w8`) y el `&focus=` → placehol
 pasa como referencia; se transplanta el bloque XML con los placeholders restaurados.
 
 ## Archivo local de los .zip generados (`data/cvs/`)
-Cada generación, además de descargarse, se **archiva en `data/cvs/<zipName>`** (gitignoreado
+**Reemplazada por "Archivo por archivo, re-descargable" (más abajo)** — el archivo ya no
+guarda el zip sino los archivos sueltos, y en deploy va a Supabase Storage. Queda el
+razonamiento original: cada generación, además de descargarse, se **archiva** (gitignoreado
 vía `/data/`, misma regla de privacidad que el registro). Razón: los masters evolucionan
 (v13 → v14 → …), así que un delivery pasado **no se puede regenerar idéntico** — el archivo
-es el único registro fiel de lo que se envió. Ruta `POST /api/cvs?name=` (body binario) →
-`saveCvArchive()` en `lib/storage/cvArchive.ts` (nombre validado por allowlist contra path
-traversal; escritura atómica tmp+rename como los otros stores; mismo nombre sobreescribe).
-El archivado **nunca bloquea la entrega**: si falla, el zip igual se descarga y un toast
-warning lo avisa. En Vercel el filesystem es efímero — mismo caveat ya asumido por el file
-store del registro (para deploy real, Supabase Storage sería el equivalente).
+es el único registro fiel de lo que se envió. El archivado **nunca bloquea la entrega**:
+si falla, el zip igual se descarga y un toast warning lo avisa. Los zips ya archivados
+quedan como legacy (la card Entrega los muestra solo con reveal en Finder).
 
 ## Filtro de estado como dropdown-embudo; foco visible junto al código
 Dos cambios de UI de la tabla: (1) el filtro de **estado** dejó de ser `SegmentedControl`

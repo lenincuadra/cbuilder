@@ -11,8 +11,10 @@ import { packageCvs, type CvEntry } from "./zip";
 import {
   DEFAULT_ROLE,
   DEFAULT_STATUS,
+  MAX_UPDATES,
   type ApplicationStatus,
   type Channel,
+  type EditableFields,
   type RegistryRow,
 } from "./registry/types";
 
@@ -152,4 +154,83 @@ export async function generateCv(
   };
 
   return { code, folderNames: entries.map((entry) => entry.folder), entries, zipName, zip, row };
+}
+
+/** Process data captured when registering an application without a CV. */
+export interface PendingRowInput {
+  company: string;
+  date: Date;
+  role?: string;
+  who?: string;
+  channel?: Channel;
+  /** Email applied to — required (caller-side) when channel is "Email". */
+  email?: string;
+  jobUrl?: string;
+}
+
+export interface PendingRowDeps {
+  /** The link contract — supplies the code format and reserved refs. */
+  spec: LinkSpec;
+  /** Codes already in the registry (collision set). */
+  existingCodes: string[];
+  /** Injectable RNG for deterministic tests. */
+  rng?: () => number;
+  /** Injectable clock for the createdAt timestamp. */
+  now?: () => Date;
+}
+
+/**
+ * Build a registry row for a process that started without a CV (e.g. a
+ * recruiter reached out). Reserves a collision-checked tracking code now, so
+ * the deferred generation later uses the same identity; everything CV-specific
+ * (language, focus, links, letter, delivery) stays unset until then.
+ */
+export function buildPendingRow(input: PendingRowInput, deps: PendingRowDeps): RegistryRow {
+  const code = generateCode({
+    spec: deps.spec,
+    date: input.date,
+    existingCodes: deps.existingCodes,
+    rng: deps.rng,
+  });
+  const now = deps.now ?? (() => new Date());
+  return {
+    code,
+    company: input.company.trim(),
+    role: cleaned(input.role) ?? DEFAULT_ROLE,
+    channel: input.channel,
+    email: input.channel === "Email" ? cleaned(input.email) : undefined,
+    date: toISODate(input.date),
+    status: DEFAULT_STATUS,
+    who: cleaned(input.who),
+    jobUrl: cleaned(input.jobUrl),
+    createdAt: now().toISOString(),
+    cvPending: true,
+  };
+}
+
+/**
+ * Fields to apply on a pending row once its CV is generated: the CV-specific
+ * data from the generation, the cleared pending flag, and an automatic
+ * timeline entry ("CV generado") so the delay between registering the process
+ * and sending the CV stays visible. The row's date (process start) is kept.
+ */
+export function deferredGenerationFields(
+  row: RegistryRow,
+  result: GenerateCvResult,
+  now: () => Date = () => new Date(),
+): EditableFields {
+  const generated = result.row;
+  const updates = [
+    ...(row.updates ?? []),
+    { at: now().toISOString(), message: "CV generado" },
+  ].slice(-MAX_UPDATES);
+  return {
+    cvPending: false,
+    language: generated.language,
+    focus: generated.focus,
+    links: generated.links,
+    coverLetter: generated.coverLetter,
+    zipName: generated.zipName,
+    updates,
+  };
 }

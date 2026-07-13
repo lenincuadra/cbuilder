@@ -127,5 +127,8 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
   tope 12, más reciente abajo). El `TabsList` es full-width. Cada actualización es un item
   **editable** (texto, fecha/hora, flag). El **flag 🚩** marca algo por hacer/importante:
   se muestra en el item y, en la celda de Seguimiento, tras los íconos. La celda muestra
-  íconos según contenido, o un link "Agregar" si está vacía.
+  íconos según contenido, o un link "Agregar" si está vacía. Delante de los íconos de
+  contenido van los de **estado de la fila** (tooltip, no clickeables): `ClockAlert` ámbar
+  (sin actividad 2+ semanas) y `FileClock` muted (CV pendiente de generar — el CTA
+  "Generar CV" vive en la card Entrega del panel de detalle).
 - Referencias: `ui/RegistryTable.tsx`, `ui/detail/*`.

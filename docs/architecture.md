@@ -58,12 +58,13 @@ generateCv()  ── código único (colisión-checked) ── fillMaster() por 
 handleGenerate reparte a TRES destinos (ninguno bloquea a otro):               │
    │                                                                             │
    ├─ 1. Descarga  → downloadBytes(zip, zipName)          (siempre)             │
-   ├─ 2. Archivo   → POST /api/cvs        → data/cvs/<zipName>   (local)         │
+   ├─ 2. Archivo   → POST /api/cvs?path= (por archivo entregado)                │
+   │        → data/cvs/<carpeta>/ (local) o Supabase Storage (deploy)           │
    └─ 3. Google Docs → POST /api/gdocs (por idioma) → Drive del usuario (opcional)
         └─ las URLs se guardan en row.driveDocs vía update()
    │
    ▼
-Toast de éxito con dos CTAs: [Finder] (revela el zip) · [Detalles] (abre el drawer)
+Toast de éxito con dos CTAs: [Finder] (revela el CV archivado) · [Detalles] (abre el drawer)
 ```
 
 Detalles de cada destino:
@@ -73,16 +74,38 @@ Detalles de cada destino:
    tenga carta (paso opcional del wizard: template resuelto + editable por
    aplicación; el texto final se persiste en `row.coverLetter`, read-only). El
    nombre del archivo entregable nunca lleva tracking.
-2. **Archivo local** (`data/cvs/`) — copia fiel de lo enviado. Los masters
-   evolucionan (v13 → v14 → v15…), así que un CV pasado no se puede regenerar
-   idéntico; este archivo es el único registro exacto. Gitignoreado. Ver
-   [`decisions.md`](decisions.md) → "Archivo local de los .zip".
+2. **Archivo durable, por archivo** — copia fiel de cada archivo entregado
+   (`<carpeta>/<archivo>.docx`), detrás de `CvArchiveStore`: local en `data/cvs/`
+   (gitignoreado), en deploy en el bucket privado `cvs` de Supabase Storage. Los
+   masters evolucionan (v13 → v14 → v15…), así que un CV pasado no se puede
+   regenerar idéntico; este archivo es el único registro exacto **y la fuente para
+   re-descargar un CV después** (card `DeliveryInfo` → `GET /api/cvs/<path>`, un
+   tap incluso desde el teléfono). Ver [`decisions.md`](decisions.md) → "Archivo
+   por archivo, re-descargable".
 3. **Google Docs sink** (opcional) — cada CV se crea en el Drive del usuario como
    Google Doc nativo, listo para bajar como PDF. Apagado si faltan las env vars.
    Setup: [`gdocs-setup.md`](gdocs-setup.md).
 
-`zipName` y `driveDocs` se **persisten en la fila**, así el drawer muestra dónde
-quedó la entrega para siempre (no solo recién generado) — card `DeliveryInfo`.
+`zipName`, `deliveryFiles` y `driveDocs` se **persisten en la fila**, así el drawer
+muestra dónde quedó la entrega para siempre (no solo recién generado) — card
+`DeliveryInfo`.
+
+## Registrar sin CV (generación diferida)
+
+Un proceso puede arrancar sin entregable (ej. un recruiter escribe y la charla
+empieza antes de mandar nada). El paso 2 del wizard ofrece **"Guardar sin CV"**:
+`buildPendingRow()` (`core/generateCv.ts`) crea la fila con un **código reservado**
+(mismo `generateCode`, chequeado contra colisiones) y `cvPending: true` — sin
+idioma, foco, links ni carta. En la tabla, la celda Seguimiento muestra un
+`FileClock` muted; puede quedar así para siempre (procesos que mueren temprano).
+
+Cuando el CV hace falta, la card Entrega del drawer abre el wizard en **modo
+diferido** (`PendingCvDrawer` + prop `pendingRow`): arranca en "Idioma y foco"
+(los pasos 1–2 viven en la fila, editables desde el panel) y confirma con el
+código ya reservado. `deferredGenerationFields()` actualiza la fila in-place:
+limpia el flag, aplica los campos del CV y agrega la update automática
+**"CV generado"** al timeline. La fecha de la fila (inicio del proceso) no cambia;
+la carta lleva la fecha del día de generación.
 
 ## Modelo de tracking
 
@@ -116,6 +139,7 @@ file store local. Se puede cambiar la implementación sin tocar `core/` ni `ui/`
 | Notas generales | `GeneralNotesStore` | File store (`data/notes.json`) vía API | `SupabaseGeneralNotesStore` — `getServerNotesStore` |
 | Links estables | `StableLinksStore` | File store (`data/stable-links.json`) vía API | `SupabaseStableLinksStore` — `getServerStableLinksStore` |
 | Cover letters (templates) | `CoverLetterTemplatesStore` | File store (`data/cover-letter-templates.json`) vía API | `SupabaseCoverLetterTemplatesStore` — `getServerCoverLetterTemplatesStore` |
+| Archivo de CVs (binarios) | `CvArchiveStore` (`lib/storage/cvArchive.ts`) | File store (`data/cvs/<carpeta>/`) vía API | `SupabaseCvArchiveStore` — Storage bucket privado `cvs` — `getServerCvArchiveStore` |
 
 Las factories usan un cliente admin compartido (`getSupabaseAdmin`, service
 key, server-only). Las tablas Supabase (`registry`, `general_notes`,
@@ -139,8 +163,9 @@ Supabase ([`supabase-setup.md`](supabase-setup.md)).
 | `/api/registry` | GET/POST | Lista / agrega filas (file store) |
 | `/api/registry/[code]` | PATCH/DELETE | Edita / borra una fila |
 | `/api/notes` | GET/PUT | Lee / guarda las notas generales |
-| `/api/cvs` | POST | Archiva un zip en `data/cvs/` (nombre validado, escritura atómica). **501 en deploy** (archivo local apagado; Drive es la copia durable) |
-| `/api/cvs/reveal` | POST | Revela un zip archivado en Finder (`open -R`). **501 en deploy o fuera de macOS** — la UI lo muestra como info, no error |
+| `/api/cvs` | POST | Archiva un archivo entregado (`?path=<carpeta>/<archivo>.docx`, body binario, path validado). Local → `data/cvs/`; deploy → Supabase Storage. **501** si no hay store acá (deploy sin Supabase) |
+| `/api/cvs/[...path]` | GET | Descarga un archivo archivado (attachment `.docx`) — la re-descarga de la card Entrega |
+| `/api/cvs/reveal` | POST | Revela un archivo archivado (o un zip legacy) en Finder (`open -R`). **501 en deploy o fuera de macOS** — la UI lo muestra como info, no error |
 | `/api/gdocs` | POST | Reenvía el `.docx` al webhook de Apps Script del usuario (501 si no configurado) |
 | `/api/stable-links` | GET/POST | Lista / agrega links estables (touchpoints permanentes) |
 | `/api/stable-links/[ref]` | DELETE | Quita un link estable del registro |

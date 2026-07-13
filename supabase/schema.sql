@@ -21,7 +21,9 @@ create table if not exists public.registry (
   cover_letter jsonb,                        -- cover letter sent {templateId, templateName, bodies: {EN?, ES?}}
   created_at  timestamptz not null default now(),
   updates     jsonb not null default '[]'::jsonb,  -- follow-up timeline [{at, message}]
-  archived    boolean not null default false
+  archived    boolean not null default false,
+  cv_pending  boolean not null default false,      -- process registered, CV not generated yet
+  delivery_files jsonb                             -- archived delivered files ["<folder>/<file>.docx", ...]
 );
 
 -- Newest applications first when listing.
@@ -72,5 +74,14 @@ alter table public.cover_letter_templates enable row level security;
 -- All tables: same privacy model as registry — RLS on, NO policy, reached only
 -- via the service role key from the server.
 
--- Migration for a database created before cover letters existed (safe to re-run):
+-- CV archive: private Storage bucket holding the delivered .docx files
+-- (<folder>/<file>.docx). No public URLs; the app reads/writes it with the
+-- service role key through its own API routes (POST/GET /api/cvs).
+insert into storage.buckets (id, name, public)
+  values ('cvs', 'cvs', false)
+  on conflict (id) do nothing;
+
+-- Migrations for a database created before these fields existed (safe to re-run):
 --   alter table public.registry add column if not exists cover_letter jsonb;
+--   alter table public.registry add column if not exists cv_pending boolean not null default false;
+--   alter table public.registry add column if not exists delivery_files jsonb;

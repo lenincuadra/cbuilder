@@ -54,4 +54,31 @@ describe("supabase row mapping", () => {
     const updates = [{ at: "2026-06-28T13:00:00.000Z", message: "ok" }];
     expect(editableToDb({ updates })).toEqual({ updates });
   });
+
+  it("round-trips a pending row and its deferred-generation clear", () => {
+    const pending: RegistryRow = {
+      code: "0712c4",
+      company: "Acme",
+      role: "UX/UI Designer",
+      date: "2026-07-12",
+      status: "Activo",
+      cvPending: true,
+    };
+    const db = rowToDb(pending);
+    expect(db.cv_pending).toBe(true);
+    expect(db.delivery_files).toBeNull();
+    expect(dbToRow(db).cvPending).toBe(true);
+
+    // Clearing the flag maps to false in the db and back to "absent" on the row.
+    expect(editableToDb({ cvPending: false })).toEqual({ cv_pending: false });
+    expect(dbToRow({ ...db, cv_pending: false }).cvPending).toBeUndefined();
+  });
+
+  it("maps the archived delivery files", () => {
+    const files = ["EN_acme_0628a2/Lenin_Cuadra_CV.docx"];
+    expect(editableToDb({ deliveryFiles: files })).toEqual({ delivery_files: files });
+    const db = rowToDb({ ...fullRow, deliveryFiles: files });
+    expect(db.delivery_files).toEqual(files);
+    expect(dbToRow(db).deliveryFiles).toEqual(files);
+  });
 });

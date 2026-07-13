@@ -1,6 +1,6 @@
 "use client";
 
-import { ClockAlert, FileChartLine, StickyNote } from "lucide-react";
+import { ClockAlert, FileChartLine, FileClock, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { RegistryRow } from "@/core/registry/types";
@@ -25,11 +25,24 @@ function StaleAlert() {
   );
 }
 
+/** Muted file-clock shown while the process has no CV generated yet. */
+function PendingCvIcon() {
+  return (
+    <Tooltip>
+      <TooltipTrigger className="flex size-8 cursor-default items-center justify-center text-muted-foreground">
+        <FileClock className="size-4" />
+      </TooltipTrigger>
+      <TooltipContent>CV pendiente — generalo desde el detalle de la fila.</TooltipContent>
+    </Tooltip>
+  );
+}
+
 /**
  * Seguimiento column cell. Icons reflect content — sticky-note (notes) and/or
  * file-chart (updates) — and each opens the panel on its tab; a 🚩 after them
  * means at least one update is flagged; an amber clock-alert (front) means no
- * activity for 2+ weeks. With no content, an "Agregar" link.
+ * activity for 2+ weeks; a muted file-clock means the CV is pending. With no
+ * content, an "Agregar" link.
  *
  * Only the icons/link stop propagation: empty space falls through to the row.
  */
@@ -42,6 +55,7 @@ export function SeguimientoCell({ row, onOpen }: SeguimientoCellProps) {
   return (
     <div className="flex h-8 items-center gap-0.5">
       {stale && <StaleAlert />}
+      {row.cvPending && <PendingCvIcon />}
       {!hasNotes && !hasUpdates ? (
         <Button
           variant="link"
