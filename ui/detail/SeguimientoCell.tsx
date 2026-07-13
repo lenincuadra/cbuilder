@@ -41,8 +41,8 @@ function PendingCvIcon() {
  * Seguimiento column cell. Icons reflect content — sticky-note (notes) and/or
  * file-chart (updates) — and each opens the panel on its tab; a 🚩 after them
  * means at least one update is flagged; an amber clock-alert (front) means no
- * activity for 2+ weeks; a muted file-clock means the CV is pending. With no
- * content, an "Agregar" link.
+ * activity for 2+ weeks; a muted file-clock (last, so "Agregar" stays
+ * left-aligned) means the CV is pending. With no content, an "Agregar" link.
  *
  * Only the icons/link stop propagation: empty space falls through to the row.
  */
@@ -55,7 +55,6 @@ export function SeguimientoCell({ row, onOpen }: SeguimientoCellProps) {
   return (
     <div className="flex h-8 items-center gap-0.5">
       {stale && <StaleAlert />}
-      {row.cvPending && <PendingCvIcon />}
       {!hasNotes && !hasUpdates ? (
         <Button
           variant="link"
@@ -111,6 +110,8 @@ export function SeguimientoCell({ row, onOpen }: SeguimientoCellProps) {
           )}
         </>
       )}
+      {/* Last, so the "Agregar" link stays left-aligned across rows. */}
+      {row.cvPending && <PendingCvIcon />}
     </div>
   );
 }
