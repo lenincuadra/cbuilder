@@ -1,4 +1,7 @@
--- cv-builder registry — run this in the Supabase SQL editor.
+-- cv-builder — run this in the Supabase SQL editor (prod after merges that touch schema).
+-- schema_version: 3  (registry + notes + stable_links + cover_letter_templates
+--                     + screening_questions + cvs bucket + cv_pending/delivery_files)
+-- Bump schema_version when this file changes; see docs/versioning.md §3.
 -- Columns map to RegistryRow (camelCase) via snake_case; the app converts them.
 
 create table if not exists public.registry (

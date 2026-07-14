@@ -18,6 +18,7 @@ import { downloadBytes } from "@/lib/download";
 import { createGoogleDoc } from "@/lib/gdocs";
 import { loadMaster } from "@/lib/masters";
 import { toastDeleted } from "@/ui/ConfirmDelete";
+import { AppVersion } from "@/ui/AppVersion";
 import { CoverLettersCard } from "@/ui/CoverLettersCard";
 import { ExportButton } from "@/ui/ExportButton";
 import { GenerateCard } from "@/ui/GenerateCard";
@@ -249,7 +250,10 @@ export default function Home() {
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 p-4 md:p-6">
       <header className="mb-5">
-        <h1 className="text-xl font-semibold tracking-tight">cv-builder</h1>
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <h1 className="text-xl font-semibold tracking-tight">cv-builder</h1>
+          <AppVersion />
+        </div>
         <p className="text-sm text-muted-foreground">
           Generá el CV con tracking y mantené el registro de aplicaciones.
         </p>

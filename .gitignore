@@ -5,6 +5,8 @@
 docs/*tracking-registry*.md
 # Personal backlog — has company names; repo is public.
 /TODO.md
+# Misc personal assets — not part of the app.
+/assets/interesting-stuffs/
 
 # dependencies
 /node_modules

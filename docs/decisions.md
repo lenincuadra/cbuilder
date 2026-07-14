@@ -10,6 +10,16 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Versionado: cuatro ejes (app / masters / schema / spec), no un solo número
+La app, el contenido del CV, la forma de Supabase y el contrato del portfolio evolucionan
+a ritmos distintos — un SemVer único obligaría a bumpear software al editar un `.docx`, o
+al revés, y no dice qué re-correr en prod. Decisión: **cuatro convenciones separadas**
+(`package.json`, `assets/*_vNN`, `schema_version` en `schema.sql`,
+`SUPPORTED_SPEC_VERSION`), más un checklist post-merge a `main` (bump app, re-correr SQL,
+sync `public/masters/`, alinear spec). SemVer `0.x` hasta cerrar fase 2; tags git
+opcionales; sin `CHANGELOG.md` (git + este log alcanzan). Guía completa para decidir en
+el futuro: `docs/versioning.md`.
+
 ## Banco de preguntas de pre-screening: global, vinculado por código (sin tags/analytics en v1)
 Las aplicaciones hacen preguntas únicas que cuestan tiempo/pensamiento ("Project you are
 most proud of", "How well does your portfolio reflect your skills…"). El feature las
