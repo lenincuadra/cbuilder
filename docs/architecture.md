@@ -187,6 +187,8 @@ ellas la app corre 100% local con file stores.
 
 ## Masters del CV
 
+Versionado y workflow al editar: [`versioning.md`](versioning.md) §2.
+
 - `assets/Lenin_Cuadra_CV_{EN,ES}_vNN.docx` — los master versionados. **No
   editar salvo pedido explícito.** La app **no** genera desde `assets/` sino desde
   `public/masters/{EN,ES}.docx` (copiados del vNN vigente).

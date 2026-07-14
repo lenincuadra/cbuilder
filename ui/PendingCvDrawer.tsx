@@ -71,25 +71,24 @@ export function PendingCvDrawer({
             <X className="size-4" />
           </Button>
         </DrawerHeader>
-        <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-4">
-          {row && (
-            <Wizard
-              key={row.code}
-              spec={spec}
-              existingCodes={existingCodes}
-              templates={templates}
-              generating={generating}
-              pendingRow={row}
-              onGenerate={async (input) => {
-                // Throws on error → the wizard stays on the confirm step.
-                await onGenerate(input);
-                onClose();
-              }}
-              onCancel={onClose}
-              container={node}
-            />
-          )}
-        </div>
+        {/* The wizard renders the drawer body + pinned nav footer itself. */}
+        {row && (
+          <Wizard
+            key={row.code}
+            spec={spec}
+            existingCodes={existingCodes}
+            templates={templates}
+            generating={generating}
+            pendingRow={row}
+            onGenerate={async (input) => {
+              // Throws on error → the wizard stays on the confirm step.
+              await onGenerate(input);
+              onClose();
+            }}
+            onCancel={onClose}
+            container={node}
+          />
+        )}
       </DrawerContent>
     </Drawer>
   );

@@ -30,7 +30,7 @@ export function GeneralNotesCard() {
         />
       )}
     >
-      {() => <NotesTab notes={notes} onSave={save} placeholder={PLACEHOLDER} />}
+      {() => <NotesTab notes={notes} onSave={save} placeholder={PLACEHOLDER} inDrawer />}
     </PanelCard>
   );
 }

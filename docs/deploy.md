@@ -99,6 +99,11 @@ deployado antes de prod, o un segundo usuario): crear un proyecto Supabase
 aparte, correr `supabase/schema.sql`, y scopear sus `SUPABASE_*` a Preview.
 Cero refactor — es solo env vars.
 
+## Versionado
+
+Cuatro ejes independientes (app, masters, schema, spec), checklist al mergear a
+`main` y criterios para decidir bumps: [`versioning.md`](versioning.md).
+
 ## Notas
 
 - Migrar data local a Supabase: correr en el SQL editor los scripts generados
