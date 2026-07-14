@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, FileClock, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { DrawerBody, DrawerFooter } from "@/components/ui/drawer";
 import { Progress } from "@/components/ui/progress";
 import type { CoverLetterBodies, CoverLetterTemplate } from "@/core/coverLetter/types";
 import type { GenerateCvInput, PendingRowInput } from "@/core/generateCv";
@@ -196,38 +197,42 @@ export function Wizard({
     }
   }
 
+  // The wizard always runs inside a drawer, so it renders the drawer slots
+  // itself: the progress + step in the scrollable body, the nav pinned below.
   return (
-    <div className="flex flex-col gap-4">
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            Paso {step} de {TOTAL_STEPS}
-          </span>
-          <span className="font-medium text-foreground">{STEP_TITLES[step - 1]}</span>
+    <>
+      <DrawerBody className="gap-4">
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              Paso {step} de {TOTAL_STEPS}
+            </span>
+            <span className="font-medium text-foreground">{STEP_TITLES[step - 1]}</span>
+          </div>
+          <Progress value={(step / TOTAL_STEPS) * 100} />
         </div>
-        <Progress value={(step / TOTAL_STEPS) * 100} />
-      </div>
 
-      <div className="min-h-[260px]">
-        {step === 1 && <StepCompany data={data} set={set} container={container} />}
-        {step === 2 && <StepOptional data={data} set={set} container={container} />}
-        {step === 3 && <StepLanguage data={data} set={set} container={container} spec={spec} />}
-        {step === 4 && (
-          <StepCoverLetter data={data} set={set} container={container} templates={templates} />
-        )}
-        {step === 5 && previewCode && (
-          <StepConfirm
-            data={data}
-            previewCode={previewCode}
-            spec={spec}
-            coverLetterName={
-              templates.find((candidate) => candidate.id === data.coverLetterTemplateId)?.name
-            }
-          />
-        )}
-      </div>
+        <div className="min-h-[260px]">
+          {step === 1 && <StepCompany data={data} set={set} container={container} />}
+          {step === 2 && <StepOptional data={data} set={set} container={container} />}
+          {step === 3 && <StepLanguage data={data} set={set} container={container} spec={spec} />}
+          {step === 4 && (
+            <StepCoverLetter data={data} set={set} container={container} templates={templates} />
+          )}
+          {step === 5 && previewCode && (
+            <StepConfirm
+              data={data}
+              previewCode={previewCode}
+              spec={spec}
+              coverLetterName={
+                templates.find((candidate) => candidate.id === data.coverLetterTemplateId)?.name
+              }
+            />
+          )}
+        </div>
+      </DrawerBody>
 
-      <div className="flex items-center justify-between gap-2">
+      <DrawerFooter className="flex-row items-center justify-between">
         {step === startStep && onCancel ? (
           <Button
             type="button"
@@ -283,7 +288,7 @@ export function Wizard({
             </Button>
           )}
         </div>
-      </div>
-    </div>
+      </DrawerFooter>
+    </>
   );
 }

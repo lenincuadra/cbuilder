@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DrawerBody } from "@/components/ui/drawer";
 import {
   Empty,
   EmptyDescription,
@@ -254,7 +255,11 @@ export function CoverLettersCard({ store }: { store: UseCoverLetterTemplates }) 
         />
       )}
     >
-      {() => <CoverLettersManager store={store} />}
+      {() => (
+        <DrawerBody>
+          <CoverLettersManager store={store} />
+        </DrawerBody>
+      )}
     </PanelCard>
   );
 }

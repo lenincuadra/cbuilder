@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DrawerBody, DrawerFooter } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
@@ -40,7 +41,11 @@ export interface RowEditFormProps {
   portalContainer?: HTMLElement | null;
 }
 
-/** Edit a row's metadata (everything except the tracking code). Registry only. */
+/**
+ * Edit a row's metadata (everything except the tracking code). Registry only.
+ * Takes over the whole drawer below the header: fields in the scrollable
+ * DrawerBody, Cancelar/Guardar pinned in the DrawerFooter.
+ */
 export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditFormProps) {
   const [company, setCompany] = useState(row.company);
   const [role, setRole] = useState(row.role);
@@ -75,100 +80,104 @@ export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditF
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border p-3">
-      <div className="space-y-1.5">
-        <Label htmlFor="edit-company">
-          Empresa <span className="text-destructive">*</span>
-        </Label>
-        <Input
-          id="edit-company"
-          value={company}
-          onChange={(event) => setCompany(event.target.value)}
-        />
-      </div>
+    <>
+      <DrawerBody>
+        <div className="flex flex-col gap-3 rounded-lg border p-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-company">
+              Empresa <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="edit-company"
+              value={company}
+              onChange={(event) => setCompany(event.target.value)}
+            />
+          </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="edit-role">Rol</Label>
-        <Input id="edit-role" value={role} onChange={(event) => setRole(event.target.value)} />
-      </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-role">Rol</Label>
+            <Input id="edit-role" value={role} onChange={(event) => setRole(event.target.value)} />
+          </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="edit-channel">Canal</Label>
-        {/* Same IconSelect as the wizard; `container` = the drawer node keeps the
-            menu in the drawer's focus / pointer-events scope (non-modal internally). */}
-        <IconSelect
-          id="edit-channel"
-          aria-label="Canal"
-          value={channel === "" ? CHANNEL_OMIT : channel}
-          onChange={(value) => setChannel(value === CHANNEL_OMIT ? "" : (value as Channel))}
-          options={CHANNEL_OPTIONS}
-          container={portalContainer}
-        />
-      </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-channel">Canal</Label>
+            {/* Same IconSelect as the wizard; `container` = the drawer node keeps the
+                menu in the drawer's focus / pointer-events scope (non-modal internally). */}
+            <IconSelect
+              id="edit-channel"
+              aria-label="Canal"
+              value={channel === "" ? CHANNEL_OMIT : channel}
+              onChange={(value) => setChannel(value === CHANNEL_OMIT ? "" : (value as Channel))}
+              options={CHANNEL_OPTIONS}
+              container={portalContainer}
+            />
+          </div>
 
-      {channel === "Email" && (
-        <div className="space-y-1.5">
-          <Label htmlFor="edit-email">
-            Email <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="edit-email"
-            type="email"
-            placeholder="recruiter@empresa.com"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        </div>
-      )}
-
-      <div className="space-y-1.5">
-        <Label>Fecha</Label>
-        <DatePicker value={date} onChange={setDate} />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label>Idioma</Label>
-        <Tooltip>
-          <TooltipTrigger render={<div className="cursor-default" />}>
-            <InputGroup>
-              <InputGroupInput
-                value={languageLabel(row.language)}
-                readOnly
-                disabled
-                aria-label="Idioma"
+          {channel === "Email" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-email">
+                Email <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="edit-email"
+                type="email"
+                placeholder="recruiter@empresa.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
               />
-              <InputGroupAddon align="inline-end">
-                <Lock />
-              </InputGroupAddon>
-            </InputGroup>
-          </TooltipTrigger>
-          <TooltipContent>No editable · el CV ya está generado</TooltipContent>
-        </Tooltip>
-      </div>
+            </div>
+          )}
 
-      <div className="space-y-1.5">
-        <Label htmlFor="edit-who">Quién</Label>
-        <Input id="edit-who" value={who} onChange={(event) => setWho(event.target.value)} />
-      </div>
+          <div className="space-y-1.5">
+            <Label>Fecha</Label>
+            <DatePicker value={date} onChange={setDate} />
+          </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="edit-jobUrl">Link del puesto</Label>
-        <Input
-          id="edit-jobUrl"
-          type="url"
-          value={jobUrl}
-          onChange={(event) => setJobUrl(event.target.value)}
-        />
-      </div>
+          <div className="space-y-1.5">
+            <Label>Idioma</Label>
+            <Tooltip>
+              <TooltipTrigger render={<div className="cursor-default" />}>
+                <InputGroup>
+                  <InputGroupInput
+                    value={languageLabel(row.language)}
+                    readOnly
+                    disabled
+                    aria-label="Idioma"
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <Lock />
+                  </InputGroupAddon>
+                </InputGroup>
+              </TooltipTrigger>
+              <TooltipContent>No editable · el CV ya está generado</TooltipContent>
+            </Tooltip>
+          </div>
 
-      <div className="flex justify-end gap-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-who">Quién</Label>
+            <Input id="edit-who" value={who} onChange={(event) => setWho(event.target.value)} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-jobUrl">Link del puesto</Label>
+            <Input
+              id="edit-jobUrl"
+              type="url"
+              value={jobUrl}
+              onChange={(event) => setJobUrl(event.target.value)}
+            />
+          </div>
+        </div>
+      </DrawerBody>
+
+      <DrawerFooter className="flex-row justify-end">
         <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
           Cancelar
         </Button>
         <Button size="sm" onClick={save} disabled={saving || !canSave}>
           {saving ? "Guardando…" : "Guardar"}
         </Button>
-      </div>
-    </div>
+      </DrawerFooter>
+    </>
   );
 }

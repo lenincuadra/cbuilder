@@ -30,8 +30,11 @@ import { useIsMobile } from "@/ui/useIsMobile";
  * its drawer. See docs/DESIGN.md ("Cards de la columna derecha") — used by
  * Generar CV (wizard), Notas generales (editor) and Links estables (manager).
  *
- * `card` renders the compact face and gets `open()`; `children` renders the
- * drawer body and gets `close()` (so a flow like the wizard can dismiss itself).
+ * `card` renders the compact face and gets `open()`; `children` renders
+ * everything below the pinned header and gets `close()` (so a flow like the
+ * wizard can dismiss itself). Children compose the drawer slots themselves:
+ * wrap the content in `DrawerBody` (the scrollable middle) and put primary
+ * actions in a `DrawerFooter` (pinned at the bottom) when the flow has them.
  */
 export interface PanelCardProps {
   /** Drawer title. */
@@ -39,7 +42,10 @@ export interface PanelCardProps {
   /** Drawer subtitle. */
   description?: string;
   card: (open: () => void) => ReactNode;
-  /** Drawer body. `container` is the drawer node — pass it to popouts inside. */
+  /**
+   * Drawer content below the header — a `DrawerBody` plus optional
+   * `DrawerFooter`. `container` is the drawer node — pass it to popouts inside.
+   */
   children: (close: () => void, container: HTMLElement | null) => ReactNode;
 }
 
@@ -77,9 +83,7 @@ export function PanelCard({ title, description, card, children }: PanelCardProps
               <X className="size-4" />
             </Button>
           </DrawerHeader>
-          <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-4">
-            {children(() => setOpen(false), node)}
-          </div>
+          {children(() => setOpen(false), node)}
         </DrawerContent>
       </Drawer>
     </>

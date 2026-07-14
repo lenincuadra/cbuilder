@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
+  DrawerBody,
   DrawerContent,
   DrawerDescription,
   DrawerHeader,
@@ -227,63 +228,65 @@ export function RowDetailDrawer({
           )}
         </DrawerHeader>
 
-        {row && (
-          <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">
-            {editing ? (
-              <RowEditForm
-                row={row}
-                portalContainer={drawerNode}
-                onCancel={() => setEditing(false)}
-                onSave={async (fields) => {
-                  await onUpdate(row.code, fields);
-                  setEditing(false);
-                }}
-              />
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">Datos</span>
-                  <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-                    <Pencil className="size-4" />
-                    Editar
-                  </Button>
-                </div>
-                <div className="rounded-lg border px-3 py-1">
-                  {/* Only fields with a value are shown. */}
-                  <Field label="Rol">{row.role}</Field>
-                  <Field label="Fecha">
-                    <span className="tabular-nums">{formatDateLong(row.date)}</span>
-                  </Field>
-                  {row.channel && <Field label="Canal">{row.channel}</Field>}
-                  {row.email && (
-                    <Field label="Email">
-                      <span className="break-all">{row.email}</span>
-                    </Field>
-                  )}
-                  {row.who && <Field label="Quién">{row.who}</Field>}
-                  {row.language && <Field label="Idioma">{languageLabel(row.language)}</Field>}
-                  {row.jobUrl && (
-                    <Field label="Link del puesto">
-                      <a
-                        href={row.jobUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={row.jobUrl}
-                        className="block max-w-full truncate text-primary underline underline-offset-2"
-                      >
-                        {row.jobUrl}
-                      </a>
-                    </Field>
-                  )}
-                </div>
-                {/* A pending row has no baked links yet — nothing was sent. */}
-                {!row.cvPending && (
-                  <TrackedLinks code={row.code} focus={row.focus} links={row.links} />
-                )}
-                <CoverLetterInfo row={row} />
-                <DeliveryInfo row={row} onGenerateCv={() => onGenerateCv?.(row)} />
+        {/* Editing takes over everything below the header: fields in the
+            scrollable body, Cancelar/Guardar pinned in the footer. The tabs
+            come back on save/cancel. */}
+        {row && editing && (
+          <RowEditForm
+            row={row}
+            portalContainer={drawerNode}
+            onCancel={() => setEditing(false)}
+            onSave={async (fields) => {
+              await onUpdate(row.code, fields);
+              setEditing(false);
+            }}
+          />
+        )}
+        {row && !editing && (
+          <DrawerBody className="gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Datos</span>
+                <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+                  <Pencil className="size-4" />
+                  Editar
+                </Button>
               </div>
-            )}
+              <div className="rounded-lg border px-3 py-1">
+                {/* Only fields with a value are shown. */}
+                <Field label="Rol">{row.role}</Field>
+                <Field label="Fecha">
+                  <span className="tabular-nums">{formatDateLong(row.date)}</span>
+                </Field>
+                {row.channel && <Field label="Canal">{row.channel}</Field>}
+                {row.email && (
+                  <Field label="Email">
+                    <span className="break-all">{row.email}</span>
+                  </Field>
+                )}
+                {row.who && <Field label="Quién">{row.who}</Field>}
+                {row.language && <Field label="Idioma">{languageLabel(row.language)}</Field>}
+                {row.jobUrl && (
+                  <Field label="Link del puesto">
+                    <a
+                      href={row.jobUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={row.jobUrl}
+                      className="block max-w-full truncate text-primary underline underline-offset-2"
+                    >
+                      {row.jobUrl}
+                    </a>
+                  </Field>
+                )}
+              </div>
+              {/* A pending row has no baked links yet — nothing was sent. */}
+              {!row.cvPending && (
+                <TrackedLinks code={row.code} focus={row.focus} links={row.links} />
+              )}
+              <CoverLetterInfo row={row} />
+              <DeliveryInfo row={row} onGenerateCv={() => onGenerateCv?.(row)} />
+            </div>
 
             <Separator />
 
@@ -319,7 +322,7 @@ export function RowDetailDrawer({
                 <ScreeningTab code={row.code} screening={screening} container={drawerNode} />
               </TabsContent>
             </Tabs>
-          </div>
+          </DrawerBody>
         )}
       </DrawerContent>
     </Drawer>

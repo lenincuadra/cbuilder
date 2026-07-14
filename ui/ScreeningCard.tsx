@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DrawerBody } from "@/components/ui/drawer";
 import {
   Empty,
   EmptyDescription,
@@ -252,7 +253,11 @@ export function ScreeningCard({ store, rows }: ScreeningCardProps) {
         />
       )}
     >
-      {() => <ScreeningManager store={store} rows={rows} />}
+      {() => (
+        <DrawerBody>
+          <ScreeningManager store={store} rows={rows} />
+        </DrawerBody>
+      )}
     </PanelCard>
   );
 }

@@ -15,12 +15,21 @@ Antes de crear cualquier componente o comportamiento de UI:
    pedir confirmación (con ideas) **antes** de construirlo. No crear custom sin avisar.
 
 ## Drawers / paneles laterales
-- **Desktop: right-drawer (panel a la derecha). Mobile: bottom drawer (sube desde abajo,
-  casi hasta el borde superior).**
+- **Desktop: right-drawer (panel a la derecha, alto completo). Mobile: bottom drawer
+  siempre full-screen** — full width y altura fija = pantalla − 24px (gap superior de
+  24px donde se ve el overlay), sin ajustarse al contenido.
+- **Estructura fija en 3 zonas** (patrón shadcn "scrollable content"): `DrawerHeader`
+  (título + metadata + acciones de la entidad) **fijo arriba**, **`DrawerBody`** (el
+  medio, único scroll) y `DrawerFooter` (acciones primarias del flujo: nav del wizard,
+  Guardar/Cancelar de un editor) **fijo abajo**. No armar scroll a mano dentro del
+  drawer: el body es siempre `DrawerBody`.
+- Botones **contextuales de una sección** (ej. Guardar de un tab de Seguimiento) quedan
+  inline en el contenido; al footer van solo las acciones del drawer/flujo completo.
 - Implementación: shadcn `Drawer` (vaul) con `direction` responsive:
   `direction={isMobile ? "bottom" : "right"}`, usando el hook `useIsMobile()`
   (`ui/useIsMobile.ts`, breakpoint 768px).
-- Referencia: `ui/detail/RowDetailDrawer.tsx`.
+- Referencia: `ui/detail/RowDetailDrawer.tsx` (body + footer solo en modo edición) y
+  `ui/wizard/Wizard.tsx` (body + nav en footer).
 
 ## Contenido Markdown
 - Render con `react-markdown` + `remark-gfm`, estilado con Tailwind Typography
@@ -52,9 +61,11 @@ Cada card de acción de la columna derecha es una **cara compacta y clickeable**
 contenido completo vive en un **drawer** (right en desktop / bottom en mobile). Patrón
 reusable en **`ui/PanelCard.tsx`**:
 - **`PanelCard`** — maneja el drawer; recibe `title`/`description`, un render `card(open)`
-  (la cara) y `children(close, container)` (el cuerpo del drawer). `container` es el nodo
-  del drawer: pasalo a cualquier **popout** adentro (dropdowns, etc.) para que portalee en
-  el scope del drawer (ver la regla de dropdowns).
+  (la cara) y `children(close, container)` (todo lo que va debajo del header: envolvé el
+  contenido en `DrawerBody` y, si el flujo tiene acciones primarias, agregá un
+  `DrawerFooter` — ver la sección de drawers). `container` es el nodo del drawer: pasalo
+  a cualquier **popout** adentro (dropdowns, etc.) para que portalee en el scope del
+  drawer (ver la regla de dropdowns).
 - **`PanelCardFace`** — la cara compacta compartida (icono + título + descripción), para que
   las 3 cards se vean idénticas. `h-full` para que estiren al mismo alto en fila. Usá `cta`
   (un botón) para una card con acción explícita (Generar CV) o `onOpen` para hacer toda la
