@@ -1,9 +1,11 @@
 import type { CoverLetterTemplatesStore } from "@/core/coverLetter/types";
 import type { GeneralNotesStore } from "@/core/notes/types";
 import type { RegistryStore } from "@/core/registry/types";
+import type { ScreeningStore } from "@/core/screening/types";
 import type { StableLinksStore } from "@/core/stableLinks/types";
 import { ApiCoverLetterTemplatesStore } from "./apiCoverLetterTemplatesStore";
 import { ApiGeneralNotesStore } from "./apiNotesStore";
+import { ApiScreeningStore } from "./apiScreeningStore";
 import { ApiStableLinksStore } from "./apiStableLinksStore";
 import { ApiRegistryStore } from "./apiStore";
 
@@ -11,6 +13,7 @@ let store: RegistryStore | null = null;
 let notesStore: GeneralNotesStore | null = null;
 let stableLinksStore: StableLinksStore | null = null;
 let coverLetterTemplatesStore: CoverLetterTemplatesStore | null = null;
+let screeningStore: ScreeningStore | null = null;
 
 /**
  * Single entry point to the registry store (client side). The browser **always**
@@ -49,4 +52,11 @@ export function getCoverLetterTemplatesStore(): CoverLetterTemplatesStore {
   if (coverLetterTemplatesStore) return coverLetterTemplatesStore;
   coverLetterTemplatesStore = new ApiCoverLetterTemplatesStore();
   return coverLetterTemplatesStore;
+}
+
+/** Single entry point to the screening-questions store (API path; durable backend server-side). */
+export function getScreeningStore(): ScreeningStore {
+  if (screeningStore) return screeningStore;
+  screeningStore = new ApiScreeningStore();
+  return screeningStore;
 }

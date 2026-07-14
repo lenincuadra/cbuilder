@@ -123,8 +123,11 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
   ambas, o ninguna) → Notas. Click en un ícono de Seguimiento abre su tab explícito
   (`notas` / `updates`). El badge de Estado y los íconos hacen `stopPropagation`; el resto
   de la celda cae al click del row.
-- Seguimiento: el panel tiene tabs **Notas** (markdown) y **Actualizaciones** (timeline,
-  tope 12, más reciente abajo). El `TabsList` es full-width. Cada actualización es un item
+- Seguimiento: el panel tiene tabs **Notas** (markdown), **Actualizaciones** (timeline,
+  tope 12, más reciente abajo) y **Preguntas** (pre-screening de esa aplicación: entradas
+  del banco global vinculadas por código — copiar respuesta, crear pre-vinculada,
+  vincular/desvincular; el banco se administra en la card "Preguntas" de la columna
+  derecha). El `TabsList` es full-width. Cada actualización es un item
   **editable** (texto, fecha/hora, flag). El **flag 🚩** marca algo por hacer/importante:
   se muestra en el item y, en la celda de Seguimiento, tras los íconos. La celda muestra
   íconos según contenido, o un link "Agregar" si está vacía. Íconos de **estado de la

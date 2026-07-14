@@ -29,6 +29,7 @@ import { RowDetailDrawer, type DetailTab } from "@/ui/detail/RowDetailDrawer";
 import { FocusIcon } from "@/ui/FocusIcon";
 import { SeguimientoCell } from "@/ui/detail/SeguimientoCell";
 import { StatusToggle } from "@/ui/StatusToggle";
+import type { UseScreening } from "@/ui/useScreening";
 import { useSpec } from "@/ui/useSpec";
 
 /**
@@ -73,6 +74,8 @@ export interface RegistryTableProps {
   onDelete: (code: string) => void | Promise<void>;
   /** Open the deferred-generation wizard for a pending row ("Generar CV"). */
   onGenerateCv?: (row: RegistryRow) => void;
+  /** Shared screening-questions bank (drawer's Preguntas tab). */
+  screening: UseScreening;
   emptyMessage?: string;
   /**
    * External request to open a row's detail panel (e.g. from the generation
@@ -102,6 +105,7 @@ export function RegistryTable({
   onUpdate,
   onDelete,
   onGenerateCv,
+  screening,
   emptyMessage,
   openRequest,
 }: RegistryTableProps) {
@@ -261,6 +265,7 @@ export function RegistryTable({
           setDetailOpen(false);
           onGenerateCv?.(row);
         }}
+        screening={screening}
         initialTab={detailTab}
         position={detailIndex + 1}
         total={rows.length}

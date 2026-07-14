@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileChartLine,
+  MessageCircleQuestion,
   Pencil,
   StickyNote,
   Trash2,
@@ -30,15 +31,17 @@ import { languageLabel } from "@/core/types";
 import { ConfirmDelete, keepDrawerOnDialogInteraction } from "@/ui/ConfirmDelete";
 import { StatusToggle } from "@/ui/StatusToggle";
 import { useIsMobile } from "@/ui/useIsMobile";
+import type { UseScreening } from "@/ui/useScreening";
 import { CoverLetterInfo } from "./CoverLetterInfo";
 import { DeliveryInfo } from "./DeliveryInfo";
 import { NotesTab } from "./NotesTab";
 import { RowEditForm } from "./RowEditForm";
+import { ScreeningTab } from "./ScreeningTab";
 import { TrackedLinks } from "./TrackedLinks";
 import { UpdatesTab } from "./UpdatesTab";
 
 /** Which Seguimiento tab the panel opens on. */
-export type DetailTab = "notas" | "updates";
+export type DetailTab = "notas" | "updates" | "preguntas";
 
 export interface RowDetailDrawerProps {
   /** The open row (resolved fresh from the table's rows). */
@@ -49,6 +52,8 @@ export interface RowDetailDrawerProps {
   onDelete: (code: string) => void | Promise<void>;
   /** Open the deferred-generation wizard for a pending row ("Generar CV"). */
   onGenerateCv?: (row: RegistryRow) => void;
+  /** Shared screening-questions bank (Preguntas tab reads/writes it). */
+  screening: UseScreening;
   /** Tab to show when the panel opens. */
   initialTab?: DetailTab;
   // --- navigation between table rows ---
@@ -81,6 +86,7 @@ export function RowDetailDrawer({
   onUpdate,
   onDelete,
   onGenerateCv,
+  screening,
   initialTab = "notas",
   position,
   total,
@@ -295,6 +301,10 @@ export function RowDetailDrawer({
                   <FileChartLine />
                   Actualizaciones
                 </TabsTrigger>
+                <TabsTrigger value="preguntas">
+                  <MessageCircleQuestion />
+                  Preguntas
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="notas" className="pt-3">
                 <NotesTab notes={row.notes} onSave={(notes) => onUpdate(row.code, { notes })} />
@@ -304,6 +314,9 @@ export function RowDetailDrawer({
                   updates={updates}
                   onSave={(next) => onUpdate(row.code, { updates: next })}
                 />
+              </TabsContent>
+              <TabsContent value="preguntas" className="pt-3">
+                <ScreeningTab code={row.code} screening={screening} container={drawerNode} />
               </TabsContent>
             </Tabs>
           </div>
