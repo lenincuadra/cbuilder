@@ -23,13 +23,30 @@ Antes de crear cualquier componente o comportamiento de UI:
   medio, único scroll) y `DrawerFooter` (acciones primarias del flujo: nav del wizard,
   Guardar/Cancelar de un editor) **fijo abajo**. No armar scroll a mano dentro del
   drawer: el body es siempre `DrawerBody`.
-- Botones **contextuales de una sección** (ej. Guardar de un tab de Seguimiento) quedan
-  inline en el contenido; al footer van solo las acciones del drawer/flujo completo.
+- Al `DrawerFooter` van las **acciones primarias de la vista actual**: nav del wizard,
+  "+ Crear …" de un manager en vista lista, Cancelar/Guardar de un form. Botones
+  contextuales de una sección dentro del contenido (ej. "Nueva" de la sección Preguntas
+  del detalle) quedan inline — pero si abren un form, el form toma el drawer como vista
+  propia (takeover), nunca se expande inline dentro del scroll.
+- **Drawers-manager (lista ↔ form)**: los drawers que administran una colección
+  (Preguntas, Cover letters, Links estables) separan leer/usar de crear/editar:
+  - **Vista lista (default)**: body solo con los items guardados (o el `Empty`); la card
+    de cada item es **clickeable completa** y abre su edición (patrón accesible de
+    `PanelCardFace`: `role="button"` + Enter/Space; los íconos internos — copiar,
+    borrar — van en un contenedor con `stopPropagation`). Footer pinneado con la acción
+    de crear.
+  - **Vista form (crear/editar)**: takeover del drawer — body = heading ("Nueva/Editar …",
+    porque el header del PanelCard es estático) + campos; footer = **`DrawerFormFooter`**
+    (`ui/DrawerFormFooter.tsx`): Cancelar vuelve a la lista descartando, Guardar persiste
+    y vuelve. Siempre se vuelve al punto de inicio (misma vista/tab).
+  - Estado local por manager: `view: { mode: "list" } | { mode: "form"; item: T | null }`
+    (`item: null` = crear). El borrado queda en la vista lista (ConfirmDelete).
 - Implementación: shadcn `Drawer` (vaul) con `direction` responsive:
   `direction={isMobile ? "bottom" : "right"}`, usando el hook `useIsMobile()`
   (`ui/useIsMobile.ts`, breakpoint 768px).
-- Referencia: `ui/detail/RowDetailDrawer.tsx` (body + footer solo en modo edición) y
-  `ui/wizard/Wizard.tsx` (body + nav en footer).
+- Referencia: `ui/detail/RowDetailDrawer.tsx` (takeovers `edit`/`screening-new`),
+  `ui/wizard/Wizard.tsx` (body + nav en footer) y `ui/ScreeningCard.tsx` /
+  `ui/CoverLettersCard.tsx` / `ui/StableLinksCard.tsx` (managers lista ↔ form).
 
 ## Contenido Markdown
 - Render con `react-markdown` + `remark-gfm`, estilado con Tailwind Typography
@@ -71,8 +88,9 @@ reusable en **`ui/PanelCard.tsx`**:
   (un botón) para una card con acción explícita (Generar CV) o `onOpen` para hacer toda la
   card clickeable (Notas, Links estables).
 - Lo usan: **Generar un CV** (wizard en el drawer), **Notas generales** (editor), **Links
-  estables** (manager), **Cover letters** (manager de templates). **Para una card nueva**:
-  reusá `PanelCard` + `PanelCardFace`; el contenido pesado va en el cuerpo del drawer.
+  estables**, **Cover letters** y **Preguntas** (managers lista ↔ form — ver la sección
+  de drawers). **Para una card nueva**: reusá `PanelCard` + `PanelCardFace`; el contenido
+  pesado va en el cuerpo del drawer.
 
 **Layout responsive de las cards** (`aside` en `app/page.tsx`): grid **`auto-fit` con
 `minmax`** que responde al **ancho del contenedor**, no de la pantalla → 1 columna en la

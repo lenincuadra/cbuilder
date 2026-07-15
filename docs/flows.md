@@ -23,6 +23,7 @@ cambiar un flow visible al usuario, actualizá su tabla acá.
 | [Elegir el modelo](#8-elegir-el-modelo) | Soporte IA |
 | [Ver cartas enviadas](#9-ver-cartas-enviadas) | Cover letter |
 | [Generar gratis en Claude.ai](#10-generar-gratis-en-claudeai) | Fallback sin costo |
+| [Administrar un manager (Preguntas / Cover letters / Links estables)](#11-administrar-un-manager-preguntas--cover-letters--links-estables) | Managers |
 
 ## Generar un CV
 
@@ -77,10 +78,11 @@ Sin IA — un template es sustitución mecánica de variables.
 
 | # | Acción Hecha | Dónde/Qué sucede por detrás |
 |---|---|---|
-| 1 | Drawer de la aplicación → tab Detalles → sección Preguntas | El panel "Contexto para IA · \<modelo\>" está colapsado arriba; expandir para ajustar link/contexto/modelo (precargados de la fila) |
-| 2 | "Nueva" → escribir la pregunta → **"Sugerir y guardar"** | `POST /api/ai/screening-answer` con empresa/rol/foco/jobContext de la fila |
-| 3 | La entrada se crea en el banco al instante, con badge **"IA · sin revisar"** | `draft: true`; también persiste el jobUrl/jobContext editado en el panel |
-| 4 | Revisar/editar desde la card Preguntas (lápiz) | Guardar una edición manual limpia `draft` |
+| 1 | Drawer de la aplicación → tab Detalles → sección Preguntas → **"Nueva"** | El form toma el drawer como vista propia (`ScreeningNewForm`, mismo takeover que Editar); Cancelar vuelve al detalle |
+| 2 | Escribir la pregunta; el panel "Contexto para IA · \<modelo\>" viaja colapsado arriba del form | Expandir para ajustar link/contexto/modelo (precargados de la fila) |
+| 3 | **"Sugerir y guardar"** | `POST /api/ai/screening-answer` con empresa/rol/foco/jobContext de la fila |
+| 4 | La entrada se crea en el banco al instante, con badge **"IA · sin revisar"**, y se vuelve al detalle | `draft: true`; también persiste el jobUrl/jobContext editado en el panel |
+| 5 | Revisar/editar desde la card Preguntas (click en el item) | Guardar una edición manual limpia `draft` |
 
 ## 5. Sugerir respuesta — vinculada sin respuesta
 
@@ -133,3 +135,16 @@ mitad de una aplicación. Setup completo en
 | 3 | En un chat: pegar empresa/rol/foco + pregunta o pedido de carta | Mismas reglas de voz que `core/ai/prompt.ts` |
 | 4 | Copiar el resultado de vuelta a cbuilder (textarea de carta o respuesta) | Editable ahí como cualquier borrador |
 | 5 | Cuando el CV cambie materialmente: re-subir `background.md` a ambos | Igual que la re-extracción del context pack de la app |
+
+## 11. Administrar un manager (Preguntas / Cover letters / Links estables)
+
+Mismo patrón lista ↔ form en los tres managers de la columna derecha (ver
+[`DESIGN.md` → "Drawers-manager"](DESIGN.md#drawers--paneles-laterales)).
+
+| # | Acción Hecha | Dónde/Qué sucede por detrás |
+|---|---|---|
+| 1 | Click en la card compacta → se abre el drawer en la **vista lista** | Solo los items guardados (o el empty state); en Cover letters, tabs Templates/Enviadas pinneados arriba |
+| 2 | Leer/copiar/usar un item desde su card | Íconos de copiar/borrar por item; borrar confirma (`ConfirmDelete`) y no cierra el drawer |
+| 3 | **Click en la card de un item** → vista de edición | Takeover del drawer con los campos precargados; en Links estables, editar el ref no toca los links ya pegados afuera (`PUT /api/stable-links/[ref]`) |
+| 4 | **"+ Nueva pregunta" / "+ Crear template" / "+ Agregar link"** en el footer pinneado | Misma vista form, vacía; en Links estables incluye los chips de sugerencias |
+| 5 | **Guardar** persiste y vuelve a la lista; **Cancelar** vuelve descartando | Siempre se regresa al punto de inicio (misma vista/tab); en Cover letters el footer de crear existe solo en Templates (Enviadas es read-only) |

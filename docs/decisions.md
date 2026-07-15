@@ -10,6 +10,24 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Drawers-manager: leer/usar y crear/editar son vistas separadas (2026-07-15)
+**Decisión**: los drawers que administran una colección (Preguntas, Cover letters, Links
+estables) separan las dos intenciones en vistas: la **lista** de items guardados es el
+default (body solo con items o empty state; la card de cada item es clickeable completa y
+abre su edición) y **crear/editar** es un takeover del drawer con footer pinneado
+Cancelar/Guardar (`ui/DrawerFormFooter.tsx`) que siempre vuelve a la lista. La acción de
+crear vive en el `DrawerFooter` de la vista lista ("+ Nueva pregunta", "+ Crear template",
+"+ Agregar link"), no como form inline al fondo del body. Aplica también a "Nueva" de la
+sección Preguntas del detalle (`ScreeningNewForm`, mismo slot takeover que `RowEditForm`).
+Los links estables ganaron edición (antes add-only): `update()` en `StableLinksStore` +
+`PUT /api/stable-links/[ref]`.
+**Contexto/razón**: los managers mezclaban leer/copiar/usar con crear en un mismo scroll —
+el form empujaba la lista, no había footer y la jerarquía era ambigua. El wizard de Generar
+CV ya modelaba lo correcto (body = contenido, footer = acciones primarias del flujo);
+abrir un registro es la versión "leer" y Generar CV la versión "crear" del mismo patrón.
+Esto reemplaza la regla vieja de DESIGN.md de que todo botón de sección va inline: en un
+manager, crear ES la acción primaria de la sección → footer.
+
 ## Drawer de detalle: tabs arriba (Detalles/Notas/Actualizaciones), Preguntas como sección (2026-07-16)
 **Decisión**: el grupo de tabs del panel de detalle sube a quedar pegado debajo de la
 barra de acción (Status/Archivar/Borrar), con un tab **Detalles** nuevo al frente que

@@ -38,5 +38,7 @@ export function isValidStableRef(ref: string): boolean {
 export interface StableLinksStore {
   list(): Promise<StableLink[]>;
   add(link: StableLink): Promise<void>;
+  /** Rename a link and/or move it to a new ref. `ref` is the current one. */
+  update(ref: string, fields: Pick<StableLink, "name" | "ref">): Promise<void>;
   remove(ref: string): Promise<void>;
 }

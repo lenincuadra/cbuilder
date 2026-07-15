@@ -25,6 +25,15 @@ export class ApiStableLinksStore implements StableLinksStore {
     await ensureOk(response);
   }
 
+  async update(ref: string, fields: Pick<StableLink, "name" | "ref">): Promise<void> {
+    const response = await fetch(`${BASE}/${encodeURIComponent(ref)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(fields),
+    });
+    await ensureOk(response);
+  }
+
   async remove(ref: string): Promise<void> {
     const response = await fetch(`${BASE}/${encodeURIComponent(ref)}`, { method: "DELETE" });
     await ensureOk(response);

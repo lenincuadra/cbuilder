@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { Lock } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { DrawerBody, DrawerFooter } from "@/components/ui/drawer";
+import { DrawerBody } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
@@ -18,6 +17,7 @@ import {
   type RegistryRow,
 } from "@/core/registry/types";
 import { languageLabel } from "@/core/types";
+import { DrawerFormFooter } from "@/ui/DrawerFormFooter";
 import { IconSelect } from "@/ui/IconSelect";
 import { DatePicker } from "@/ui/wizard/DatePicker";
 import { CHANNEL_OPTIONS } from "@/ui/wizard/StepOptional";
@@ -185,14 +185,14 @@ export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditF
         </div>
       </DrawerBody>
 
-      <DrawerFooter className="flex-row justify-end">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
-          Cancelar
-        </Button>
-        <Button size="sm" onClick={save} disabled={saving || !canSave}>
-          {saving ? "Guardando…" : "Guardar"}
-        </Button>
-      </DrawerFooter>
+      <DrawerFormFooter
+        onCancel={onCancel}
+        onSubmit={save}
+        canSubmit={canSave}
+        saving={saving}
+        submitLabel="Guardar"
+        savingLabel="Guardando…"
+      />
     </>
   );
 }
