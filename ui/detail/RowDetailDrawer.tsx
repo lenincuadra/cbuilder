@@ -319,7 +319,21 @@ export function RowDetailDrawer({
                 />
               </TabsContent>
               <TabsContent value="preguntas" className="pt-3">
-                <ScreeningTab code={row.code} screening={screening} container={drawerNode} />
+                <ScreeningTab
+                  // Forces a remount on prev/next row navigation — otherwise
+                  // jobUrl/jobContext local state (seeded from props only at
+                  // first mount) stays stuck on whichever row loaded first.
+                  key={row.code}
+                  code={row.code}
+                  company={row.company}
+                  role={row.role}
+                  focus={row.focus}
+                  jobUrl={row.jobUrl}
+                  jobContext={row.jobContext}
+                  onUpdateJobFields={(fields) => onUpdate(row.code, fields)}
+                  screening={screening}
+                  container={drawerNode}
+                />
               </TabsContent>
             </Tabs>
           </DrawerBody>

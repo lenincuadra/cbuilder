@@ -14,10 +14,10 @@ import { generateCode } from "@/core/spec/code";
 import type { LinkSpec } from "@/core/spec/types";
 import { StepCompany } from "./StepCompany";
 import { StepConfirm } from "./StepConfirm";
-import { StepCoverLetter, resolveBodiesFor } from "./StepCoverLetter";
+import { AI_TEMPLATE_NAME, StepCoverLetter, resolveBodiesFor } from "./StepCoverLetter";
 import { StepLanguage } from "./StepLanguage";
 import { StepOptional } from "./StepOptional";
-import { emailRequirementMet, languagesFor, type WizardData } from "./types";
+import { COVER_LETTER_AI, emailRequirementMet, languagesFor, type WizardData } from "./types";
 
 const TOTAL_STEPS = 5;
 const STEP_TITLES = ["Empresa y fecha", "Opcionales", "Idioma y foco", "Cover letter", "Confirmar"];
@@ -29,6 +29,7 @@ const STEP_TITLES = ["Empresa y fecha", "Opcionales", "Idioma y foco", "Cover le
  * process-start date untouched.
  */
 function initialData(pendingRow?: RegistryRow): WizardData {
+  const draft = pendingRow?.coverLetterDraft;
   return {
     company: pendingRow?.company ?? "",
     language: "EN",
@@ -38,10 +39,13 @@ function initialData(pendingRow?: RegistryRow): WizardData {
     email: pendingRow?.email ?? "",
     who: pendingRow?.who ?? "",
     jobUrl: pendingRow?.jobUrl ?? "",
+    jobContext: pendingRow?.jobContext ?? "",
     focus: "",
-    coverLetterTemplateId: "",
-    coverLetterBodies: {},
-    coverLetterEdited: false,
+    coverLetterTemplateId: draft?.templateId ?? "",
+    coverLetterBodies: draft?.bodies ?? {},
+    // true when resuming a saved draft: keeps goNext's step 3→4 transition
+    // from overwriting it with a freshly-resolved (unedited) template body.
+    coverLetterEdited: draft !== undefined,
   };
 }
 
@@ -54,13 +58,29 @@ export interface WizardProps {
   templates: CoverLetterTemplate[];
   /** True while a generation is in flight. */
   generating: boolean;
-  /** Runs the generation; rejects on error (the caller surfaces the message). */
-  onGenerate: (input: GenerateCvInput) => Promise<void>;
+  /**
+   * Runs the generation; rejects on error (the caller surfaces the message).
+   * The second argument is the row this session ended up bound to (either the
+   * original `pendingRow` prop, or one silently created mid-session by an AI
+   * cover-letter draft) — present means "update this row", absent "add new".
+   */
+  onGenerate: (input: GenerateCvInput, activeRow?: RegistryRow) => Promise<void>;
   /**
    * Registers the process without generating a CV (reserves the code). When
    * provided, step 2 offers a "Guardar sin CV" exit. Rejects on error.
    */
   onSavePending?: (input: PendingRowInput) => Promise<void>;
+  /**
+   * Persists the cover letter step's AI draft the moment it's generated — a
+   * paid API call is never lost to a closed wizard. Creates a Borrador row
+   * (reserved code, `cvPending: true`) if this session doesn't have one yet,
+   * or patches the existing one. Returns the row so the wizard can track it.
+   */
+  onSaveDraft?: (
+    data: WizardData,
+    activeRow: RegistryRow | null,
+    draft: { templateId: string; templateName?: string; bodies: CoverLetterBodies },
+  ) => Promise<RegistryRow>;
   /**
    * Deferred generation for a pending row: steps 1–2 are skipped (their data
    * lives on the row, editable from the detail panel) and the confirm step
@@ -80,6 +100,7 @@ export function Wizard({
   generating,
   onGenerate,
   onSavePending,
+  onSaveDraft,
   pendingRow,
   onCancel,
   container,
@@ -89,6 +110,9 @@ export function Wizard({
   const [data, setData] = useState<WizardData>(() => initialData(pendingRow));
   const [previewCode, setPreviewCode] = useState<string | null>(null);
   const [savingPending, setSavingPending] = useState(false);
+  // The row this session is bound to — the `pendingRow` prop, or one silently
+  // created mid-session by an AI cover-letter draft (see StepCoverLetter).
+  const [activeRow, setActiveRow] = useState<RegistryRow | null>(pendingRow ?? null);
 
   const set = (patch: Partial<WizardData>) => setData((current) => ({ ...current, ...patch }));
 
@@ -122,9 +146,10 @@ export function Wizard({
       return;
     }
     // Entering the confirm step: lock in a collision-checked code for the
-    // preview — or the code already reserved when the process was registered.
+    // preview — or the code already reserved (pendingRow, or a Borrador
+    // silently created by an AI draft earlier in this same session).
     try {
-      const code = pendingRow?.code ?? generateCode({ spec, date: data.date, existingCodes });
+      const code = activeRow?.code ?? generateCode({ spec, date: data.date, existingCodes });
       setPreviewCode(code);
       setStep(5);
     } catch (error) {
@@ -148,6 +173,7 @@ export function Wizard({
         channel: data.channel === "" ? undefined : data.channel,
         email: data.email,
         jobUrl: data.jobUrl,
+        jobContext: data.jobContext,
       });
       // Success: reset for the next application.
       setData(initialData());
@@ -159,13 +185,30 @@ export function Wizard({
     }
   }
 
+  /**
+   * Persist an AI-generated cover letter draft immediately (see StepCoverLetter):
+   * creates the Borrador row on the first call this session, patches it on
+   * later ones. Errors surface via toast in the caller — the generated text
+   * still shows in the textarea either way.
+   */
+  async function persistDraft(draft: {
+    templateId: string;
+    templateName?: string;
+    bodies: CoverLetterBodies;
+  }) {
+    if (!onSaveDraft) return;
+    const row = await onSaveDraft(data, activeRow, draft);
+    setActiveRow(row);
+  }
+
   async function handleGenerate() {
     if (previewCode === null) return;
     // Final letter bodies: only the languages this generation produces, only
-    // non-empty texts. No template or all-empty bodies → no letter.
+    // non-empty texts. No template/AI mode or all-empty bodies → no letter.
     const template = templates.find((candidate) => candidate.id === data.coverLetterTemplateId);
+    const isAiMode = data.coverLetterTemplateId === COVER_LETTER_AI;
     const letterBodies: CoverLetterBodies = {};
-    if (template) {
+    if (template || isAiMode) {
       for (const language of languagesFor(data.language)) {
         const body = data.coverLetterBodies[language]?.trim();
         if (body) letterBodies[language] = body;
@@ -181,16 +224,22 @@ export function Wizard({
         channel: data.channel === "" ? undefined : data.channel,
         email: data.email,
         jobUrl: data.jobUrl,
+        jobContext: data.jobContext,
         focus: data.focus === "" ? undefined : data.focus,
         coverLetter:
-          template && Object.keys(letterBodies).length > 0
-            ? { templateId: template.id, templateName: template.name, bodies: letterBodies }
+          (template || isAiMode) && Object.keys(letterBodies).length > 0
+            ? {
+                templateId: isAiMode ? COVER_LETTER_AI : template!.id,
+                templateName: isAiMode ? AI_TEMPLATE_NAME : template!.name,
+                bodies: letterBodies,
+              }
             : undefined,
         code: previewCode,
-      });
+      }, activeRow ?? undefined);
       // Success: reset for the next application.
       setData(initialData(pendingRow));
       setPreviewCode(null);
+      setActiveRow(pendingRow ?? null);
       setStep(startStep);
     } catch {
       // The page already surfaced the error; stay on the confirm step.
@@ -217,7 +266,13 @@ export function Wizard({
           {step === 2 && <StepOptional data={data} set={set} container={container} />}
           {step === 3 && <StepLanguage data={data} set={set} container={container} spec={spec} />}
           {step === 4 && (
-            <StepCoverLetter data={data} set={set} container={container} templates={templates} />
+            <StepCoverLetter
+              data={data}
+              set={set}
+              container={container}
+              templates={templates}
+              onSaveDraft={onSaveDraft ? persistDraft : undefined}
+            />
           )}
           {step === 5 && previewCode && (
             <StepConfirm
@@ -225,7 +280,9 @@ export function Wizard({
               previewCode={previewCode}
               spec={spec}
               coverLetterName={
-                templates.find((candidate) => candidate.id === data.coverLetterTemplateId)?.name
+                data.coverLetterTemplateId === COVER_LETTER_AI
+                  ? AI_TEMPLATE_NAME
+                  : templates.find((candidate) => candidate.id === data.coverLetterTemplateId)?.name
               }
             />
           )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Pencil, Plus, Trash2 } from "lucide-react";
+import { Mail, Pencil, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +16,10 @@ import {
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { sanitizeBodies, type CoverLetterTemplate } from "@/core/coverLetter/types";
+import type { RegistryRow } from "@/core/registry/types";
 import { ConfirmDelete, toastDeleted } from "@/ui/ConfirmDelete";
 import { PanelCard, PanelCardFace } from "@/ui/PanelCard";
 import type { UseCoverLetterTemplates } from "@/ui/useCoverLetterTemplates";
@@ -237,11 +239,93 @@ function CoverLettersManager({ store }: { store: UseCoverLetterTemplates }) {
 }
 
 /**
- * Cover letter templates per application type. Compact card that opens the
- * manager (list + create/edit) in a drawer — the shared PanelCard pattern. The
- * store hook comes from the page so the wizard sees the same instance.
+ * One row per application whose letter actually shipped — template-based or
+ * "Generado con IA" alike, oldest→newest doesn't matter here, most recent
+ * first. Click opens that application's drawer (closes this one first).
  */
-export function CoverLettersCard({ store }: { store: UseCoverLetterTemplates }) {
+function SentLetterRow({ row, onOpen }: { row: RegistryRow; onOpen: () => void }) {
+  const letter = row.coverLetter;
+  if (!letter) return null;
+  const languages = (["EN", "ES"] as const).filter((language) => letter.bodies[language]);
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition-colors hover:bg-accent/40"
+    >
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm font-medium">{row.company}</span>
+          <span className="shrink-0 font-mono text-xs text-muted-foreground">{row.code}</span>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {letter.templateName ?? "Sin nombre"}
+        </span>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        {languages.map((language) => (
+          <Badge key={language} variant="secondary" className="font-mono text-[10px]">
+            {language}
+          </Badge>
+        ))}
+      </div>
+    </button>
+  );
+}
+
+/** Drawer body: every application whose letter actually shipped, most recent first. */
+function SentLettersList({
+  rows,
+  onOpenRow,
+}: {
+  rows: RegistryRow[];
+  onOpenRow: (code: string) => void;
+}) {
+  const sent = rows
+    .filter((row) => row.coverLetter)
+    .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
+
+  if (sent.length === 0) {
+    return (
+      <Empty className="py-4">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <Send />
+          </EmptyMedia>
+          <EmptyTitle>Sin cartas enviadas</EmptyTitle>
+          <EmptyDescription>
+            Las cartas que generes — con template o con IA — van a aparecer acá, con acceso directo
+            a la aplicación.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {sent.map((row) => (
+        <SentLetterRow key={row.code} row={row} onOpen={() => onOpenRow(row.code)} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Cover letter templates per application type, plus every letter that
+ * actually shipped (template-based or AI). Compact card that opens the
+ * manager in a drawer — the shared PanelCard pattern. The store hook comes
+ * from the page so the wizard sees the same instance; `rows` + `onOpenRow`
+ * come from the page's registry so "Enviadas" always reflects it live.
+ */
+export interface CoverLettersCardProps {
+  store: UseCoverLetterTemplates;
+  rows: RegistryRow[];
+  /** Opens an application's detail drawer (the page resets filters first). */
+  onOpenRow: (code: string) => void;
+}
+
+export function CoverLettersCard({ store, rows, onOpenRow }: CoverLettersCardProps) {
   return (
     <PanelCard
       title="Cover letters"
@@ -255,9 +339,32 @@ export function CoverLettersCard({ store }: { store: UseCoverLetterTemplates }) 
         />
       )}
     >
-      {() => (
+      {(close) => (
         <DrawerBody>
-          <CoverLettersManager store={store} />
+          <Tabs defaultValue="templates">
+            <TabsList className="w-full">
+              <TabsTrigger value="templates">
+                <Mail />
+                Templates
+              </TabsTrigger>
+              <TabsTrigger value="enviadas">
+                <Send />
+                Enviadas
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="templates" className="pt-3">
+              <CoverLettersManager store={store} />
+            </TabsContent>
+            <TabsContent value="enviadas" className="pt-3">
+              <SentLettersList
+                rows={rows}
+                onOpenRow={(code) => {
+                  close();
+                  onOpenRow(code);
+                }}
+              />
+            </TabsContent>
+          </Tabs>
         </DrawerBody>
       )}
     </PanelCard>

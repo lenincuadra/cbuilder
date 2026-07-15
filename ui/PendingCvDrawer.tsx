@@ -16,7 +16,7 @@ import type { GenerateCvInput } from "@/core/generateCv";
 import type { RegistryRow } from "@/core/registry/types";
 import type { LinkSpec } from "@/core/spec/types";
 import { useIsMobile } from "@/ui/useIsMobile";
-import { Wizard } from "@/ui/wizard/Wizard";
+import { Wizard, type WizardProps } from "@/ui/wizard/Wizard";
 
 export interface PendingCvDrawerProps {
   /** The pending row to generate for; null keeps the drawer closed. */
@@ -28,6 +28,8 @@ export interface PendingCvDrawerProps {
   generating: boolean;
   /** Runs the deferred generation; rejects on error (the caller surfaces it). */
   onGenerate: (input: GenerateCvInput) => Promise<void>;
+  /** Persists the cover letter step's AI draft as soon as it's regenerated. */
+  onSaveDraft?: WizardProps["onSaveDraft"];
 }
 
 /**
@@ -44,6 +46,7 @@ export function PendingCvDrawer({
   templates,
   generating,
   onGenerate,
+  onSaveDraft,
 }: PendingCvDrawerProps) {
   const isMobile = useIsMobile();
   // The drawer node — the wizard's dropdowns portal here (same as PanelCard).
@@ -80,6 +83,7 @@ export function PendingCvDrawer({
             templates={templates}
             generating={generating}
             pendingRow={row}
+            onSaveDraft={onSaveDraft}
             onGenerate={async (input) => {
               // Throws on error → the wizard stays on the confirm step.
               await onGenerate(input);

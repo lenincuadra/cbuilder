@@ -26,6 +26,7 @@ export async function POST(request: Request) {
       question,
       answer,
       codes,
+      draft: body.draft === true,
       createdAt: new Date().toISOString(),
     });
     return NextResponse.json({ ok: true }, { status: 201 });

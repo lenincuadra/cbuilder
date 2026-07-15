@@ -10,6 +10,178 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Pipeline AI: API de Anthropic in-app, borrador siempre persistido, estado Borrador real
+Objetivo: personalización de cartas y respuestas de pre-screening **a velocidad de
+generador de CV** — un click, no copiar/pegar contexto en claude.ai cada vez.
+Decisiones (2026-07-13, implementado 2026-07-14/15):
+- **API de Anthropic integrada** (`app/api/ai/*`, `ANTHROPIC_API_KEY` server-side,
+  mismo contrato 501 que `GDOCS_*`/`SUPABASE_*` — sin key o sin context pack, el
+  feature queda apagado) en vez de dejarlo manual en claude.ai: automatizar el
+  armado de contexto es el punto entero del feature.
+- **Workspace dedicado `cbuilder`** en console.anthropic.com con spend limit propio
+  ($5/mes), separado del workspace `Default` de la cuenta — así un uso futuro de la
+  API para otra cosa no comparte techo con este feature (ni viceversa). El límite de
+  organización queda sin tocar (es el techo que envuelve a todos los workspaces).
+- **Modelo Opus 4.8**: calidad para texto que lee un hiring manager; costo trivial al
+  volumen actual (~$0.07/generación, $5 ≈ 20 aplicaciones completas).
+- **Context pack en dos capas, sin duplicar el spec**:
+  - Estático (`data/profile/background.md`): bio/experiencia/skills/voz, extraído del
+    master del CV + portfolio. **Excepción trackeada** al gitignore de `/data/` — no
+    es data del registro (privada), es el mismo CV/portfolio ya público de Lenin, así
+    que tiene que llegar a prod vía git (mismo criterio que `public/masters/`). Se
+    re-extrae a mano cuando el CV cambia materialmente — no hay sync automático, y
+    Lenin lo revisa antes de que el modelo lo use por primera vez.
+  - Dinámico por foco (`core/ai/prompt.ts` → `focusCaseContext`): lee
+    `data/spec-cache.json` (el mismo cache del linking spec-driven) y arma los case
+    studies/proof points del foco de la aplicación. Se descartó copiar esta data a
+    `data/profile/`: viviría en dos lugares y se desalinearía con el portfolio real,
+    exactamente el problema que la arquitectura spec-driven ya resolvió una vez.
+  - **Contexto extra del puesto** (`RegistryRow.jobContext`, campo libre, opcional):
+    revisión de la decisión original ("sin input de la vacante") — empresa/rol/foco
+    solos daban poca señal por-posting, y un campo de texto es la forma barata de
+    sumar detalle real sin comprometerse a scrapear. **Sin headless browser**: un
+    Chromium serverless en Vercel es infra real (tamaño de deploy, límites de
+    tiempo) para un tool personal, y tampoco resuelve lo que de verdad bloquea el
+    scraping (paywalls/anti-bot de LinkedIn, Workday, etc. — eso persiste con o sin
+    JS). En cambio, `/api/job-context` busca el `JobPosting` en JSON-LD
+    (schema.org) que la mayoría de los ATS grandes ya emiten sin JS, para Google
+    Jobs — mejor esfuerzo con `fetch` común, sin infra nueva; si no lo encuentra,
+    el campo queda vacío y se completa a mano. Siempre 200, nunca bloquea.
+- **Cover letter AI reutiliza el modelo de datos existente**: el botón "Generar con
+  IA" con un template elegido **sobrescribe su cuerpo resuelto**, sin
+  `coverLetterTemplateId` sintético — evita tocar el gating de generación
+  (`coverLetterTemplateId !== ""`) y el `CoverLetterRecord` persistido; volver a
+  elegir el mismo template deshace el borrador (recalcula desde el texto del
+  template).
+  - **Revisión (2026-07-15)**: se agregó igual un `coverLetterTemplateId` sintético
+    (`COVER_LETTER_AI = "__ai__"`) — pero como una **opción explícita más** del
+    dropdown ("Compartir contexto"), no como default. Motivo: "elegí un template
+    primero, incluso uno mínimo" resultaba en fricción real (templates vacíos
+    creados solo como excusa para generar con IA). "Compartir contexto" resuelve
+    eso sin tocar el gating existente (`!== ""` sigue funcionando, el sentinel es
+    un string no vacío) — el trade-off que se aceptó al principio (no inventar un
+    id sintético) se abandonó cuando la fricción resultó peor que el riesgo.
+- **Sugerencia de pre-screening auto-guarda apenas se genera** (dos puntos del tab
+  Preguntas: al crear una pregunta nueva, y para una ya vinculada con
+  `answer === ""`): una llamada a la API no se puede deshacer, así que dejarla en
+  estado local (perdible si se cierra el drawer) desperdiciaba la generación sin
+  ganar nada — el banco ya trata las respuestas como editables siempre (no
+  read-only como `CoverLetterRecord`), así que no hay downside real en persistir
+  de una. Ajustes de wording después van por el editor de la card Preguntas
+  (lápiz), no por acá — este tab quedó scoped a vincular/crear, como ya estaba.
+- **El borrador de carta del wizard también persiste apenas se genera**, por el
+  mismo argumento (una llamada pagada, no recuperable, no debería perderse por
+  cerrar el wizard) — pero acá la solución es distinta porque el wizard es
+  inherentemente efímero (nada se guarda, ni empresa ni nada, hasta el paso final
+  "Generar"). Se evaluaron dos caminos:
+  - **localStorage del browser**: cubre todo el wizard, cero cambios al modelo de
+    datos — descartado a pedido explícito en favor de la fila real, para que el
+    borrador sea visible/recuperable desde cualquier lado (no solo el mismo
+    browser) y sobreviva un cierre de browser, no solo del wizard.
+  - **Elegido: reusar el mecanismo de "Guardar sin CV"** (`cvPending`, código
+    reservado). El primer "Generar con IA" sin fila todavía crea una silenciosamente
+    (`RegistryRow.coverLetterDraft`, campo nuevo y separado de `coverLetter` — este
+    último sigue siendo el registro fiel de lo enviado, nunca se toca pre-envío);
+    clicks siguientes actualizan esa misma fila. `Wizard.tsx` trackea la fila activa
+    en `activeRow` (arranca en `pendingRow` si ya existía uno, o se completa
+    mid-sesión) — la resolución de step 3→4 respeta el draft ya guardado
+    (`coverLetterEdited: true` al precargarlo, para no pisarlo con el template sin
+    resolver).
+  - **Por qué el estado se llama "Borrador" de verdad** (tercer valor de
+    `ApplicationStatus`, no un badge derivado de `cvPending`): la alternativa barata
+    era mostrar "Borrador" solo visualmente sin tocar el tipo — se descartó a pedido
+    explícito. El razonamiento a favor de un estado real: `cvPending` ya existía
+    antes de este feature y las filas "Guardar sin CV" mostraban **Activo** (verde),
+    que es semánticamente incorrecto — Activo/Rechazado son resultados de una
+    aplicación *enviada*, y una fila sin CV generado no es ninguna de las dos. El
+    fix corrige eso para *todas* las filas pending, no solo las creadas por IA.
+    "Borrador" no es togglea­ble a mano (`StatusToggle` lo renderiza como badge
+    fijo, no botón) — pasa a **Activo** solo cuando el CV se genera de verdad
+    (`deferredGenerationFields`). Costo real: toca el tipo `ApplicationStatus`,
+    `StatusToggle`, `StatusFilterDropdown`, y el constraint de `status` en
+    Supabase — **al mergear, re-correr `supabase/schema.sql`** (agrega
+    `cover_letter_draft`, `job_context`, y reemplaza el check constraint).
+
+- **Revisión (2026-07-15)**: cuatro ajustes tras usar el feature de verdad.
+  - **Modelo elegible por acción, con nombres reales**: `core/ai/models.ts`
+    (`AI_MODELS`: `claude-opus-4-8`, `claude-sonnet-5`,
+    `claude-haiku-4-5-20251001`, `claude-fable-5` — ids tal cual los devuelve
+    la API, sin capa de "rápido/calidad"). Se curó la lista a la generación
+    actual (se excluyen snapshots superadas como opus-4-1/4-5/4-6/4-7,
+    sonnet-4-5/4-6) para que el selector no crezca sin límite — agregar un
+    modelo nuevo es una línea. Elegible por acción (cover-letter vs
+    screening-answer usan selectores independientes), persistido en
+    `localStorage` (`ui/useAiModel.ts`) — preferencia de uso, no data de la
+    app, no hace falta backend para esto.
+  - **Se sacó "Generar con IA" del modo template real**: generar con IA sobre
+    un template solo sobrescribía lo que `resolveTemplateVars` ya resuelve
+    gratis ({company}/{role}/{who}) — pagar una llamada a Opus para eso no
+    agregaba nada. La IA ahora vive **solo** en "Compartir contexto"
+    (sin template); un template real vuelve a ser 100% mecánico, como antes
+    de este feature.
+  - **Un solo componente de contexto, reusado tal cual**: `ui/AiContextPanel.tsx`
+    (link del puesto + Detectar, contexto libre, modelo) es el mismo en el
+    wizard ("Compartir contexto") y en el tab Preguntas — mismo input en los
+    dos lugares donde hay un botón de generar, solo cambia el output. Esto
+    sacó a `jobContext` del paso 2 del wizard (dejó de tener sentido mostrarlo
+    ahí si solo importa cuando se genera con IA); `jobUrl` se queda en el paso
+    2 porque es un dato general de la aplicación, no específico de IA — el tab
+    Preguntas lo precarga desde la fila y lo re-guarda ahí (`onUpdateJobFields`)
+    apenas se usa para generar, no en cada tecla.
+  - **Las respuestas de pre-screening también quedan marcadas como borrador**:
+    `ScreeningQuestion.draft` (booleano, columna nueva en Supabase). Antes el
+    banco no distinguía "generado por IA, sin revisar" de "confirmado" — dado
+    que estas respuestas sirven dos veces (se mandan en esta aplicación *y*
+    quedan de template para las próximas), tiene sentido saber cuál está
+    revisada. A diferencia de `coverLetter`/`coverLetterDraft` (que si
+    distinguen un registro final inmutable), acá el banco siempre fue mutable
+    por diseño — `draft` es puramente informativo, no bloquea reuso ni
+    vinculación, se limpia con cualquier edición manual desde la card
+    Preguntas.
+  - **Tres bugs reales de esta vuelta, encontrados usando el feature**:
+    `/api/screening` y `/api/screening/[id]` tenían un allow-list de campos
+    que no incluía `draft` — se mandaba desde el cliente pero el server lo
+    tiraba en silencio (compilaba bien, se perdía en runtime; solo apareció
+    verificando en browser). `ScreeningTab` no tenía `key={row.code}` — al
+    navegar entre filas con prev/next del drawer, React no remontaba el
+    componente y `jobUrl`/`jobContext` quedaban pegados a la primera fila
+    vista en la sesión. Y `/api/job-context` solo buscaba JSON-LD — algunos
+    job boards regionales (ej. empleos.personal.com.ar) usan Microdata
+    (`itemprop="description"` como atributos HTML) en cambio; se agregó como
+    fallback. LinkedIn sigue sin funcionar — auth wall + vista de búsqueda sin
+    datos server-side, no hay fix sin headless + login.
+
+  - **"Enviadas" en la card Cover Letters, no una lista nueva**: se consideró
+    y descartó tratar las cartas con IA como si fueran templates (no tiene
+    sentido "reusar" una carta armada con contexto específico de una empresa
+    para otra). Lo que sí faltaba era **ver todo lo mandado en un lugar**, sin
+    entrar fila por fila — se agregó como un segundo tab en la misma card
+    (`SentLettersList`, lee `rows` filtradas por `coverLetter` seteado, sin
+    duplicar el dato) en vez de una card nueva, para no sumar otro ítem a la
+    columna derecha por algo que es, en esencia, otra vista de los templates.
+
+- **Pasada preventiva pre-commit (2026-07-16)** — el feature gasta plata, así
+  que los guardrails van del lado del server y las acciones caras confirman:
+  - `jobContext` se capa a 4000 chars en `buildContextBlock` (server-side):
+    "Detectar" ya cortaba ahí, pero un pegado manual no tenía límite — sin el
+    cap, el costo de input escalaba con lo que se pegara.
+  - Las rutas de IA **ecoan el modelo usado** en la respuesta: trazabilidad de
+    cada llamada paga y verificación de que el selector no cayó al default en
+    silencio.
+  - **Regenerar** una respuesta existente (ícono ✦ en el tab Preguntas)
+    **confirma antes** vía `ConfirmDelete`: pisa texto revisado Y gasta una
+    llamada — ambos irreversibles, así que no va directo como el resto de los
+    botones de IA (que solo escriben sobre campos vacíos o borradores).
+  - La IA **no** se agregó al banco global (card Preguntas): sin contexto de
+    aplicación la respuesta sale genérica — gasto con poco valor. Un hint en
+    el formulario del banco lo explica y apunta al tab por-aplicación.
+  - **Réplica sin costo en claude.ai** (`docs/claude-ai/`): Project + Skill
+    espejando `core/ai/prompt.ts`, con `background.md` y `spec-cache.json`
+    como knowledge. Para iterar gratis y como fallback si el crédito se agota
+    a mitad de una aplicación — el costo nunca bloquea una postulación. Las
+    copias del pack dentro del skill folder están gitignoreadas (solo
+    `SKILL.md` trackeado) para no duplicar la fuente.
+
 ## Versionado: cuatro ejes (app / masters / schema / spec), no un solo número
 La app, el contenido del CV, la forma de Supabase y el contrato del portfolio evolucionan
 a ritmos distintos — un SemVer único obligaría a bumpear software al editar un `.docx`, o

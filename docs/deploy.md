@@ -92,6 +92,7 @@ Vercel scopea cada env var por ambiente (Production / Preview / Development):
 |---|---|---|
 | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | ✓ | ✗ — ⚠️ en "All Environments" un preview escribiría en la DB de **prod** |
 | `GDOCS_SCRIPT_URL` / `GDOCS_TOKEN` | ✓ | ✗ (sink apagado → 501, ya manejado; evita Docs reales en Drive desde pruebas) |
+| `ANTHROPIC_API_KEY` | ✓ | ✗ (pipeline AI apagado → 501; evita que un preview queme el spend limit del workspace `cbuilder`) |
 | `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` | ✓ | ✓ (los previews también con candado) |
 
 Si algún día hace falta staging real (un feature de data que se quiera probar

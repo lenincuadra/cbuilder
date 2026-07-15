@@ -42,7 +42,14 @@ function EntryRow({
   return (
     <div className="space-y-1.5 rounded-lg border px-3 py-2">
       <div className="flex items-start justify-between gap-2">
-        <span className="min-w-0 text-sm font-medium break-words">{entry.question}</span>
+        <span className="min-w-0 text-sm font-medium break-words">
+          {entry.question}
+          {entry.draft && (
+            <span className="ml-1.5 text-[10px] font-normal text-muted-foreground italic">
+              IA · sin revisar
+            </span>
+          )}
+        </span>
         <div className="flex shrink-0 items-center">
           {entry.answer !== "" && <CopyButton text={entry.answer} title="Copiar respuesta" />}
           <Button
@@ -119,7 +126,8 @@ function ScreeningManager({ store, rows }: { store: UseScreening; rows: Registry
     setSaving(true);
     try {
       if (editing) {
-        await update(editing.id, { question: question.trim(), answer: answer.trim() });
+        // A human is confirming/editing this now — clears any "IA · sin revisar" flag.
+        await update(editing.id, { question: question.trim(), answer: answer.trim(), draft: false });
         toast.success("Pregunta actualizada.");
       } else {
         await add({ question: question.trim(), answer: answer.trim(), codes: [] });
@@ -213,7 +221,9 @@ function ScreeningManager({ store, rows }: { store: UseScreening; rows: Registry
 
         <p className="text-xs text-muted-foreground">
           Las preguntas se vinculan a cada aplicación desde el tab Preguntas del detalle de
-          la fila — ahí ves qué preguntó cada empresa.
+          la fila. La generación con IA también vive ahí (no acá): usa el contexto de esa
+          aplicación — empresa, rol, foco y detalle del puesto — para que la respuesta salga
+          dirigida y no genérica.
         </p>
 
         <div className="flex items-center justify-end gap-2">

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { COVER_LETTER_FILENAME } from "@/core/coverLetter/docx";
+import type { CoverLetterBodies } from "@/core/coverLetter/types";
 import {
   buildPendingRow,
   deferredGenerationFields,
@@ -33,6 +34,7 @@ import { useCoverLetterTemplates } from "@/ui/useCoverLetterTemplates";
 import { useRegistry } from "@/ui/useRegistry";
 import { useScreening } from "@/ui/useScreening";
 import { useSpec } from "@/ui/useSpec";
+import type { WizardData } from "@/ui/wizard/types";
 
 type ArchiveView = "vigentes" | "archivado";
 
@@ -132,6 +134,43 @@ export default function Home() {
       toast.error(error instanceof Error ? error.message : "No se pudo registrar el proceso.");
       throw error;
     }
+  }
+
+  /**
+   * Persist a cover letter AI draft (wizard step 4) immediately — a paid
+   * generation call is never lost to a closed wizard. First call this wizard
+   * session creates a Borrador row (same shape as "Guardar sin CV", reserved
+   * code, cvPending); later calls just patch the existing one. Returns the
+   * row so the wizard can track it for the rest of the session.
+   */
+  async function handleSaveCoverLetterDraft(
+    data: WizardData,
+    activeRow: RegistryRow | null,
+    draft: { templateId: string; templateName?: string; bodies: CoverLetterBodies },
+  ): Promise<RegistryRow> {
+    if (activeRow) {
+      await update(activeRow.code, { coverLetterDraft: draft });
+      return { ...activeRow, coverLetterDraft: draft };
+    }
+    if (!spec) throw new Error("No se pudo leer el link-spec del portfolio.");
+    const row: RegistryRow = {
+      ...buildPendingRow(
+        {
+          company: data.company,
+          date: data.date,
+          role: data.role,
+          who: data.who,
+          channel: data.channel === "" ? undefined : data.channel,
+          email: data.email,
+          jobUrl: data.jobUrl,
+          jobContext: data.jobContext,
+        },
+        { spec, existingCodes },
+      ),
+      coverLetterDraft: draft,
+    };
+    await add(row);
+    return row;
   }
 
   /**
@@ -285,7 +324,13 @@ export default function Home() {
             openRequest={openRequest}
             emptyMessage={
               statusFilter !== "todos"
-                ? `No hay ${statusFilter === "Activo" ? "activas" : "rechazadas"} en ${view === "archivado" ? "Archivado" : "Vigentes"}.`
+                ? `No hay ${
+                    statusFilter === "Activo"
+                      ? "activas"
+                      : statusFilter === "Rechazado"
+                        ? "rechazadas"
+                        : "borradores"
+                  } en ${view === "archivado" ? "Archivado" : "Vigentes"}.`
                 : view === "archivado"
                   ? "No hay búsquedas archivadas."
                   : "Generá tu primer CV desde el panel de la derecha."
@@ -305,10 +350,11 @@ export default function Home() {
             generating={generating}
             onGenerate={handleGenerate}
             onSavePending={handleSavePending}
+            onSaveDraft={handleSaveCoverLetterDraft}
           />
           <GeneralNotesCard />
           <StableLinksCard />
-          <CoverLettersCard store={coverLetters} />
+          <CoverLettersCard store={coverLetters} rows={rows} onOpenRow={openGeneratedRow} />
           <ScreeningCard store={screening} rows={rows} />
         </aside>
       </div>
@@ -322,6 +368,7 @@ export default function Home() {
         templates={coverLetters.templates}
         generating={generating}
         onGenerate={(input) => handleGenerate(input, pendingTarget ?? undefined)}
+        onSaveDraft={handleSaveCoverLetterDraft}
       />
     </main>
   );

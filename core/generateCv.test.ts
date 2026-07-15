@@ -198,7 +198,7 @@ describe("buildPendingRow", () => {
     expect(row.cvPending).toBe(true);
     expect(row.company).toBe("Acme");
     expect(row.role).toBe("UX/UI Designer");
-    expect(row.status).toBe("Activo");
+    expect(row.status).toBe("Borrador");
     expect(row.date).toBe("2026-06-28");
     expect(row.who).toBe("Jane Recruiter");
     expect(row.createdAt).toBe("2026-06-28T12:00:00.000Z");
@@ -244,6 +244,7 @@ describe("deferredGenerationFields", () => {
 
     const fields = deferredGenerationFields(pending, result, () => new Date("2026-07-15T10:00:00.000Z"));
     expect(fields.cvPending).toBe(false);
+    expect(fields.status).toBe("Activo"); // Borrador → Activo now that the CV shipped.
     expect(fields.language).toBe("EN");
     expect(fields.focus).toBe("payments");
     expect(fields.links).toEqual(result.row.links);

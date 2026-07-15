@@ -15,6 +15,13 @@ export interface ScreeningQuestion {
   answer: string;
   /** Tracking codes of the applications where this question was asked. */
   codes: string[];
+  /**
+   * True when `answer` was AI-generated and hasn't been human-reviewed since
+   * (set by "Sugerir y guardar", cleared by a manual edit in the Preguntas
+   * card). Doesn't affect reuse — a draft answer is still fully linkable/
+   * copyable, just flagged as "not confirmed yet" wherever it's shown.
+   */
+  draft?: boolean;
   /** Creation timestamp (ISO). */
   createdAt?: string;
 }
