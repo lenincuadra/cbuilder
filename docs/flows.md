@@ -18,12 +18,11 @@ cambiar un flow visible al usuario, actualizá su tabla acá.
 | [Retomar un borrador de carta](#3-retomar-un-borrador-de-carta) | Cover letter · IA |
 | [Sugerir respuesta — pregunta nueva](#4-sugerir-respuesta--pregunta-nueva) | Pre-screening · IA |
 | [Sugerir respuesta — vinculada sin respuesta](#5-sugerir-respuesta--vinculada-sin-respuesta) | Pre-screening · IA |
-| [Regenerar una respuesta existente](#6-regenerar-una-respuesta-existente) | Pre-screening · IA |
-| [Detectar contexto del puesto](#7-detectar-contexto-del-puesto) | Soporte IA |
-| [Elegir el modelo](#8-elegir-el-modelo) | Soporte IA |
-| [Ver cartas enviadas](#9-ver-cartas-enviadas) | Cover letter |
-| [Generar gratis en Claude.ai](#10-generar-gratis-en-claudeai) | Fallback sin costo |
-| [Administrar un manager (Preguntas / Cover letters / Links estables)](#11-administrar-un-manager-preguntas--cover-letters--links-estables) | Managers |
+| [Detectar contexto del puesto](#6-detectar-contexto-del-puesto) | Soporte IA |
+| [Elegir el modelo](#7-elegir-el-modelo) | Soporte IA |
+| [Ver cartas enviadas](#8-ver-cartas-enviadas) | Cover letter |
+| [Generar gratis en Claude.ai](#9-generar-gratis-en-claudeai) | Fallback sin costo |
+| [Administrar un manager (Preguntas / Cover letters / Links estables)](#10-administrar-un-manager-preguntas--cover-letters--links-estables) | Managers |
 
 ## Generar un CV
 
@@ -91,15 +90,7 @@ Sin IA — un template es sustitución mecánica de variables.
 | 1 | Una entrada vinculada muestra "sin respuesta todavía" + **"Sugerir y guardar"** | `ScreeningSection.tsx` → `suggestForEntry` |
 | 2 | Click → la respuesta se genera y guarda directo sobre esa entrada | `draft: true`, mismo contexto de la fila |
 
-## 6. Regenerar una respuesta existente
-
-| # | Acción Hecha | Dónde/Qué sucede por detrás |
-|---|---|---|
-| 1 | Una entrada **con** respuesta muestra un ícono ✦ junto al de copiar | Solo en la sección por-aplicación (el banco global no genera — sin contexto de empresa la respuesta sale genérica) |
-| 2 | Click → **diálogo de confirmación** | Pisa texto revisado Y gasta una llamada — ambos irreversibles, por eso confirma (patrón `ConfirmDelete`) |
-| 3 | Confirmar → regenera y guarda, vuelve a `draft: true` | Mismo endpoint y contexto; spinner en el ícono mientras corre |
-
-## 7. Detectar contexto del puesto
+## 6. Detectar contexto del puesto
 
 | # | Acción Hecha | Dónde/Qué sucede por detrás |
 |---|---|---|
@@ -107,22 +98,22 @@ Sin IA — un template es sustitución mecánica de variables.
 | 2 | El server busca `JobPosting` en JSON-LD; si no hay, en Microdata (`itemprop="description"`) | El fallback Microdata cubre job boards regionales. LinkedIn no funciona: auth wall, sin datos server-side |
 | 3 | Si encuentra: llena el campo (máx. 4000 chars). Si no: toast info, se pega a mano | Siempre 200, nunca bloquea |
 
-## 8. Elegir el modelo
+## 7. Elegir el modelo
 
 | # | Acción Hecha | Dónde/Qué sucede por detrás |
 |---|---|---|
-| 1 | En cualquier `AiContextPanel`, dropdown "Modelo" con ids reales de Anthropic | Allow-list en `core/ai/models.ts`; default `claude-opus-4-8` |
+| 1 | En cualquier `AiContextPanel`, dropdown "Modelo" con ids reales de Anthropic | Allow-list en `core/ai/models.ts`; default `claude-haiku-4-5` (el más barato — subir de modelo es elección explícita) |
 | 2 | La elección se recuerda **por acción** (carta vs. respuesta, independientes) | `localStorage` vía `ui/useAiModel.ts` |
 | 3 | El server valida contra el allow-list y ecoa el modelo usado en la respuesta | Modelo inválido/ausente → cae al default, nunca falla |
 
-## 9. Ver cartas enviadas
+## 8. Ver cartas enviadas
 
 | # | Acción Hecha | Dónde/Qué sucede por detrás |
 |---|---|---|
 | 1 | Card "Cover letters" → tab **"Enviadas"** | `SentLettersList` — toda fila con `coverLetter` seteado (template o IA), más reciente primero; lee `rows`, no duplica data |
 | 2 | Click en una carta → se abre el drawer de esa aplicación | Cierra el drawer de Cover Letters primero; ahí está el texto completo enviado |
 
-## 10. Generar gratis en Claude.ai
+## 9. Generar gratis en Claude.ai
 
 Fallback sin consumo de API — para iterar gratis o si el crédito se agota a
 mitad de una aplicación. Setup completo en
@@ -136,7 +127,7 @@ mitad de una aplicación. Setup completo en
 | 4 | Copiar el resultado de vuelta a cbuilder (textarea de carta o respuesta) | Editable ahí como cualquier borrador |
 | 5 | Cuando el CV cambie materialmente: re-subir `background.md` a ambos | Igual que la re-extracción del context pack de la app |
 
-## 11. Administrar un manager (Preguntas / Cover letters / Links estables)
+## 10. Administrar un manager (Preguntas / Cover letters / Links estables)
 
 Mismo patrón lista ↔ form en los tres managers de la columna derecha (ver
 [`DESIGN.md` → "Drawers-manager"](DESIGN.md#drawers--paneles-laterales)).

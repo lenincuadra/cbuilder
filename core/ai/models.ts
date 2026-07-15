@@ -13,7 +13,9 @@ export const AI_MODELS = [
 
 export type AiModel = (typeof AI_MODELS)[number];
 
-export const DEFAULT_AI_MODEL: AiModel = "claude-opus-4-8";
+// Cheapest of the allow-list on purpose: generation defaults to the low-cost
+// model and upgrading is an explicit per-action choice in the picker.
+export const DEFAULT_AI_MODEL: AiModel = "claude-haiku-4-5-20251001";
 
 export function isAiModel(value: unknown): value is AiModel {
   return typeof value === "string" && (AI_MODELS as readonly string[]).includes(value);
