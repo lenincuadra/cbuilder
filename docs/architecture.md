@@ -191,12 +191,12 @@ a paso, en [`flows.md`](flows.md)):
 
 | # | Acción hecha | Dónde/qué sucede por detrás |
 |---|---|---|
-| 1 | Usuario completa el bloque de contexto compartido: link del puesto + "Detectar", contexto libre, modelo | `ui/AiContextPanel.tsx` — un solo componente, usado tal cual en el wizard (paso 4, opción "Compartir contexto") y en la sección Preguntas del drawer (tab Detalles) |
-| 2 | "Detectar" (opcional): mejor esfuerzo, sin llamar a Anthropic | `POST /api/job-context` — busca `JobPosting` en JSON-LD del HTML (sin headless), `context: null` si no encuentra nada; nunca bloquea |
-| 3 | Click en "Generar con IA" / "Sugerir y guardar" / regenerar (ícono ✦ en una respuesta existente — **confirma antes**: pisa texto y gasta una llamada, ambos irreversibles) | Regeneración vía `ConfirmDelete` (mismo patrón de confirmación del app) |
+| 1 | Una acción explícita abre el bloque de contexto (**dos pasos siempre**, ver `DESIGN.md` → "Generación con IA"): "Compartir contexto" en el wizard, "Sugerir con IA" en preguntas | `ui/AiContextPanel.tsx` — un solo componente, usado tal cual en el wizard (paso 4) y en los takeovers de sugerencia del drawer (`ScreeningSuggestForm`, reveal en `ScreeningNewForm`); nunca fijo en vistas de lectura |
+| 2 | Usuario ajusta el contexto opcional: link del puesto + "Detectar", contexto libre, modelo (precargados de la fila) | "Detectar": `POST /api/job-context` — busca `JobPosting` en JSON-LD del HTML (sin headless), `context: null` si no encuentra nada; nunca bloquea ni llama a Anthropic |
+| 3 | Click en "Generar con IA" / "Generar y guardar" — la única llamada paga | Sin atajos one-click ni regenerar sobre respuestas existentes (misclick = texto pisado + llamada gastada) |
 | 4 | Llamada a `/api/ai/cover-letter` o `/api/ai/screening-answer` con el contexto compartido + el modelo elegido + lo específico del caso | `core/ai/prompt.ts` arma el prompt igual en ambos (capa `jobContext` a 4000 chars — un pegado gigante no infla el costo de input); `core/ai/models.ts` valida el `model` contra el allow-list (`DEFAULT_AI_MODEL` si falta o es inválido); la respuesta **ecoa el modelo usado** |
 | 5 | El resultado se persiste **inmediatamente**, marcado como borrador | Carta: fila **Borrador** + `coverLetterDraft` (ver abajo). Pregunta: entrada del banco con `draft: true` |
-| 6 | El usuario sigue editando después | Carta: mismo textarea. Pregunta: editor de la card Preguntas (lápiz) — guardar ahí limpia `draft` |
+| 6 | El usuario sigue editando después | Carta: mismo textarea. Pregunta: editor de la card Preguntas (click en el item) — guardar ahí limpia `draft` |
 
 La card Preguntas (banco global) **no genera** — solo gestiona/edita: sin
 contexto de aplicación la respuesta saldría genérica (gasto con poco valor);
@@ -259,7 +259,7 @@ verdad, `deferredGenerationFields` pasa el estado a **Activo**.
 
 **La respuesta de pre-screening también queda marcada como borrador hasta que
 un humano la confirma**: `ScreeningQuestion.draft` (booleano) — `true` cuando
-"Sugerir y guardar" la generó, se limpia solo al guardar una edición manual
+"Generar y guardar" la generó, se limpia solo al guardar una edición manual
 desde la card Preguntas. Aplica el mismo criterio que la carta (algo generado
 por IA no es "definitivo" hasta que se revisa) pero sin el split
 draft-vs-record-final de `coverLetter`: el banco entero siempre fue mutable

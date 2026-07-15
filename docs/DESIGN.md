@@ -57,6 +57,21 @@ Antes de crear cualquier componente o comportamiento de UI:
 - Usar el componente `Empty` de shadcn (`components/ui/empty.tsx`) en todos los vacíos
   (registro vacío, actualizaciones vacías, etc.), no texto suelto.
 
+## Generación con IA → siempre dos pasos (patrón global)
+**Ninguna llamada paga se dispara con un solo click.** Toda generación es: (1) una acción
+explícita ("Sugerir con IA", elegir "Compartir contexto" en el wizard) que **abre** los
+inputs de contexto opcionales (`ui/AiContextPanel.tsx`: link del puesto + Detectar,
+contexto extra, modelo — precargados de la fila); (2) recién ahí el botón que genera
+("Generar y guardar" / "Generar con IA") dispara la llamada y **persiste el borrador al
+instante** (`draft`/"IA · sin revisar" — una llamada nunca se pierde por cerrar algo).
+- El contexto **no vive fijo** (ni collapsible) en vistas de lectura: aparece solo dentro
+  de la acción de generar, pegado al botón que dispara.
+- En el drawer de detalle, sugerir abre un **takeover** (mismo slot que `RowEditForm`):
+  `ScreeningSuggestForm` (entrada vinculada sin respuesta) y el reveal dentro de
+  `ScreeningNewForm` (pregunta nueva).
+- Sin atajos de regenerar sobre respuestas existentes (un misclick = pisar texto revisado
+  + gastar una llamada).
+
 ## Borrado → confirmar + avisar (patrón global)
 **Todo borrado en la app** sigue el mismo patrón: un **modal de confirmación** primero, y
 después un **toast destructivo** de lo que pasó. Nunca borrar directo (sin confirmar) ni en

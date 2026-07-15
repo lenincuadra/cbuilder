@@ -10,6 +10,24 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Generación IA en dos pasos: el contexto vive dentro de la acción (2026-07-15)
+**Decisión**: ninguna llamada paga se dispara con un solo click. "Sugerir con IA" (paso 1)
+solo abre los inputs de contexto opcionales (`AiContextPanel`, precargados de la fila);
+"Generar y guardar" (paso 2) es la única llamada, y persiste el borrador al instante. El
+collapsible fijo "Contexto para IA · <modelo>" desaparece de la sección Preguntas y del
+form de pregunta nueva. Implementación: entrada vinculada sin respuesta → takeover
+`ScreeningSuggestForm` (mismo slot que `RowEditForm`); pregunta nueva → reveal del bloque
+de contexto dentro de `ScreeningNewForm`. `ScreeningSection` queda solo lectura +
+navegación (pierde todo el estado de IA); el estado compartido de contexto se extrajo a
+`useScreeningAiContext` (`ui/detail/screeningAi.ts`). Regla documentada en `DESIGN.md` →
+"Generación con IA". El wizard (paso 4) ya cumplía: elegir "Compartir contexto" es el
+paso 1.
+**Contexto/razón**: el collapsible siempre-visible empujaba la card al expandirse (anti-
+patrón, no es un dropdown del DS) y habilitaba generación one-click ("Sugerir y guardar"
+directo) — un click accidental = plata gastada + un draft indeseado. Con dos pasos, el
+contexto se revisa a conciencia justo antes de pagar, y el costo queda siempre detrás de
+una decisión explícita. Completa la línea de "IA: default Haiku + sin regenerar".
+
 ## IA: default Haiku + sin regenerar de un click (2026-07-15)
 **Decisión**: (1) `DEFAULT_AI_MODEL` pasa de `claude-opus-4-8` a
 `claude-haiku-4-5-20251001` — el más barato del allow-list; subir de modelo es una

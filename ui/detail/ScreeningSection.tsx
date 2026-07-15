@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, Link2, Loader2, Plus, Sparkles, Unlink } from "lucide-react";
+import { Link2, Plus, Sparkles, Unlink } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,27 +11,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { ScreeningQuestion } from "@/core/screening/types";
-import { AiContextPanel } from "@/ui/AiContextPanel";
 import { CopyButton } from "@/ui/CopyButton";
-import { useAiModel } from "@/ui/useAiModel";
 import type { UseScreening } from "@/ui/useScreening";
-import { requestAiAnswer, type AiAnswerContext } from "./screeningAi";
 
 export interface ScreeningSectionProps {
   /** Tracking code of the open application. */
   code: string;
-  /** Company/role/focus of this application — context for AI-suggested answers. */
-  company?: string;
-  role?: string;
-  focus?: string;
-  jobUrl?: string;
-  jobContext?: string;
-  /** Persists jobUrl/jobContext edits made from the shared AI context panel onto the row. */
-  onUpdateJobFields: (fields: { jobUrl?: string; jobContext?: string }) => void | Promise<void>;
   /** Shared bank instance (same one the Preguntas card manages). */
   screening: UseScreening;
   /** Opens the "Nueva pregunta" takeover view (ScreeningNewForm, owned by the drawer). */
   onStartNew: () => void;
+  /** Opens the "Sugerir respuesta" takeover for a linked entry with no answer yet. */
+  onSuggest: (entry: ScreeningQuestion) => void;
   /** Portal target for the dropdown (the drawer node). */
   container?: HTMLElement | null;
 }
@@ -45,52 +34,21 @@ export interface ScreeningSectionProps {
  * application's code, created pre-linked ("Nueva" opens the drawer-level
  * ScreeningNewForm takeover), and copied for reuse.
  *
- * AI suggestions exist only for entries with no answer yet ("Sugerir y
- * guardar" persists the draft the moment it's generated). There is no
- * one-click regenerate over an existing answer: a misclick would overwrite
- * reviewed text AND spend an API call. Wording tweaks go through the
- * Preguntas card's own edit flow, same as any other entry.
+ * This section only reads and navigates — generation lives in the takeover
+ * forms, following the two-step AI rule (docs/DESIGN.md → "Generación con
+ * IA"): "Sugerir con IA" opens the suggest view, never fires a call directly.
+ * Wording tweaks go through the Preguntas card's own edit flow.
  */
 export function ScreeningSection({
   code,
-  company,
-  role,
-  focus,
-  jobUrl: rowJobUrl,
-  jobContext: rowJobContext,
-  onUpdateJobFields,
   screening,
   onStartNew,
+  onSuggest,
   container,
 }: ScreeningSectionProps) {
   const { entries, update } = screening;
   const asked = entries.filter((entry) => entry.codes.includes(code));
   const linkable = entries.filter((entry) => !entry.codes.includes(code));
-
-  // Same shared context panel as the wizard's "Compartir contexto" — starts
-  // from the row's current values, edits here save back onto the row the
-  // moment they're used to generate (not on every keystroke).
-  const [jobUrl, setJobUrl] = useState(rowJobUrl ?? "");
-  const [jobContext, setJobContext] = useState(rowJobContext ?? "");
-  const [model, setModel] = useAiModel("screening-answer");
-  const aiContext: AiAnswerContext = { company, role, focus, jobContext, model };
-
-  const [suggestingId, setSuggestingId] = useState<string | null>(null);
-
-  async function suggestForEntry(entry: ScreeningQuestion) {
-    setSuggestingId(entry.id);
-    try {
-      const suggestion = await requestAiAnswer(entry.question, aiContext);
-      await Promise.all([
-        update(entry.id, { answer: suggestion, draft: true }),
-        onUpdateJobFields({ jobUrl, jobContext }),
-      ]);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo sugerir una respuesta.");
-    } finally {
-      setSuggestingId(null);
-    }
-  }
 
   async function link(entry: ScreeningQuestion) {
     try {
@@ -111,33 +69,6 @@ export function ScreeningSection({
   return (
     <div className="space-y-3 rounded-lg border px-3 py-2">
       <span className="text-xs font-medium text-muted-foreground">Preguntas</span>
-      <Collapsible>
-        <CollapsibleTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 w-full justify-between px-2 text-xs text-muted-foreground"
-            />
-          }
-        >
-          <span>Contexto para IA · {model}</span>
-          <ChevronDown className="size-3.5" />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-2">
-          <AiContextPanel
-            jobUrl={jobUrl}
-            onJobUrlChange={setJobUrl}
-            jobContext={jobContext}
-            onJobContextChange={setJobContext}
-            model={model}
-            onModelChange={setModel}
-            idPrefix="st"
-            container={container}
-          />
-        </CollapsibleContent>
-      </Collapsible>
 
       {asked.length === 0 ? (
         <p className="text-sm text-muted-foreground">
@@ -179,15 +110,10 @@ export function ScreeningSection({
                     variant="ghost"
                     size="sm"
                     className="h-6 px-2 text-xs"
-                    onClick={() => suggestForEntry(entry)}
-                    disabled={suggestingId === entry.id}
+                    onClick={() => onSuggest(entry)}
                   >
-                    {suggestingId === entry.id ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Sparkles className="size-3.5" />
-                    )}
-                    Sugerir y guardar
+                    <Sparkles className="size-3.5" />
+                    Sugerir con IA
                   </Button>
                 </div>
               ) : (

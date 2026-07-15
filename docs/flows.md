@@ -78,8 +78,8 @@ Sin IA — un template es sustitución mecánica de variables.
 | # | Acción Hecha | Dónde/Qué sucede por detrás |
 |---|---|---|
 | 1 | Drawer de la aplicación → tab Detalles → sección Preguntas → **"Nueva"** | El form toma el drawer como vista propia (`ScreeningNewForm`, mismo takeover que Editar); Cancelar vuelve al detalle |
-| 2 | Escribir la pregunta; el panel "Contexto para IA · \<modelo\>" viaja colapsado arriba del form | Expandir para ajustar link/contexto/modelo (precargados de la fila) |
-| 3 | **"Sugerir y guardar"** | `POST /api/ai/screening-answer` con empresa/rol/foco/jobContext de la fila |
+| 2 | Escribir la pregunta → **"Sugerir con IA"** | Paso 1 de la regla de dos pasos (ver `DESIGN.md` → "Generación con IA"): solo **revela** el bloque "Contexto (opcional)" — link + Detectar, contexto extra, modelo (precargados de la fila). No llama a nada |
+| 3 | **"Generar y guardar"** | Paso 2 — la única llamada: `POST /api/ai/screening-answer` con empresa/rol/foco/jobContext |
 | 4 | La entrada se crea en el banco al instante, con badge **"IA · sin revisar"**, y se vuelve al detalle | `draft: true`; también persiste el jobUrl/jobContext editado en el panel |
 | 5 | Revisar/editar desde la card Preguntas (click en el item) | Guardar una edición manual limpia `draft` |
 
@@ -87,8 +87,9 @@ Sin IA — un template es sustitución mecánica de variables.
 
 | # | Acción Hecha | Dónde/Qué sucede por detrás |
 |---|---|---|
-| 1 | Una entrada vinculada muestra "sin respuesta todavía" + **"Sugerir y guardar"** | `ScreeningSection.tsx` → `suggestForEntry` |
-| 2 | Click → la respuesta se genera y guarda directo sobre esa entrada | `draft: true`, mismo contexto de la fila |
+| 1 | Una entrada vinculada muestra "sin respuesta todavía" + **"Sugerir con IA"** | Paso 1: abre el takeover `ScreeningSuggestForm` (mismo slot que Editar) — pregunta read-only + contexto opcional precargado de la fila. No llama a nada |
+| 2 | Ajustar contexto/modelo si hace falta → **"Generar y guardar"** | Paso 2 — la única llamada; la respuesta se guarda directo sobre esa entrada (`draft: true`) y se vuelve al detalle |
+| 3 | Cancelar en cualquier momento | Vuelve al detalle sin gastar nada |
 
 ## 6. Detectar contexto del puesto
 

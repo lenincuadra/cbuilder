@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateLong } from "@/core/dates";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { languageLabel } from "@/core/types";
+import type { ScreeningQuestion } from "@/core/screening/types";
 import { ConfirmDelete, keepDrawerOnDialogInteraction } from "@/ui/ConfirmDelete";
 import { StatusToggle } from "@/ui/StatusToggle";
 import { useIsMobile } from "@/ui/useIsMobile";
@@ -38,6 +39,7 @@ import { NotesTab } from "./NotesTab";
 import { RowEditForm } from "./RowEditForm";
 import { ScreeningNewForm } from "./ScreeningNewForm";
 import { ScreeningSection } from "./ScreeningSection";
+import { ScreeningSuggestForm } from "./ScreeningSuggestForm";
 import { TrackedLinks } from "./TrackedLinks";
 import { UpdatesTab } from "./UpdatesTab";
 
@@ -46,9 +48,14 @@ export type DetailTab = "detalles" | "notas" | "updates";
 
 /**
  * What occupies the tab area: the read view, or one of the form takeovers
- * (each brings its own DrawerBody + pinned footer, same slot as the tabs body).
+ * (each brings its own DrawerBody + pinned footer, same slot as the tabs
+ * body). Suggest carries the entry the AI answer writes onto.
  */
-type DetailMode = "view" | "edit" | "screening-new";
+type DetailMode =
+  | { kind: "view" }
+  | { kind: "edit" }
+  | { kind: "screening-new" }
+  | { kind: "screening-suggest"; entry: ScreeningQuestion };
 
 export interface RowDetailDrawerProps {
   /** The open row (resolved fresh from the table's rows). */
@@ -107,7 +114,7 @@ export function RowDetailDrawer({
   const isMobile = useIsMobile();
   const updates = row?.updates ?? [];
   const [tab, setTab] = useState<DetailTab>(initialTab);
-  const [mode, setMode] = useState<DetailMode>("view");
+  const [mode, setMode] = useState<DetailMode>({ kind: "view" });
   const [confirmDelete, setConfirmDelete] = useState(false);
   // The edit form's Select portals its popup into this node (the drawer) so it stays inside
   // the drawer's pointer-events / stacking / focus scope — a base-ui popup portaled to <body>
@@ -134,7 +141,7 @@ export function RowDetailDrawer({
   const [prevRowSyncKey, setPrevRowSyncKey] = useState(rowSyncKey);
   if (rowSyncKey !== prevRowSyncKey) {
     setPrevRowSyncKey(rowSyncKey);
-    setMode("view");
+    setMode({ kind: "view" });
     setConfirmDelete(false);
   }
 
@@ -248,34 +255,34 @@ export function RowDetailDrawer({
                 as the "you are here" marker. */}
             <div className="shrink-0 px-4 pb-3">
               <TabsList className="w-full">
-                <TabsTrigger value="detalles" disabled={mode !== "view" && tab !== "detalles"}>
+                <TabsTrigger value="detalles" disabled={mode.kind !== "view" && tab !== "detalles"}>
                   <Info />
                   Detalles
                 </TabsTrigger>
-                <TabsTrigger value="notas" disabled={mode !== "view" && tab !== "notas"}>
+                <TabsTrigger value="notas" disabled={mode.kind !== "view" && tab !== "notas"}>
                   <StickyNote />
                   Notas
                 </TabsTrigger>
-                <TabsTrigger value="updates" disabled={mode !== "view" && tab !== "updates"}>
+                <TabsTrigger value="updates" disabled={mode.kind !== "view" && tab !== "updates"}>
                   <FileChartLine />
                   Actualizaciones
                 </TabsTrigger>
               </TabsList>
             </div>
 
-            {mode === "edit" ? (
+            {mode.kind === "edit" ? (
               // The form takes over the tab area: fields in the scrollable
               // body, Cancelar/Guardar pinned in the footer.
               <RowEditForm
                 row={row}
                 portalContainer={drawerNode}
-                onCancel={() => setMode("view")}
+                onCancel={() => setMode({ kind: "view" })}
                 onSave={async (fields) => {
                   await onUpdate(row.code, fields);
-                  setMode("view");
+                  setMode({ kind: "view" });
                 }}
               />
-            ) : mode === "screening-new" ? (
+            ) : mode.kind === "screening-new" ? (
               // Same takeover slot: a new screening question, pre-linked to this row.
               <ScreeningNewForm
                 code={row.code}
@@ -287,14 +294,28 @@ export function RowDetailDrawer({
                 onUpdateJobFields={(fields) => onUpdate(row.code, fields)}
                 screening={screening}
                 container={drawerNode}
-                onDone={() => setMode("view")}
+                onDone={() => setMode({ kind: "view" })}
+              />
+            ) : mode.kind === "screening-suggest" ? (
+              // Same takeover slot: step 2 of the two-step AI suggest for a linked entry.
+              <ScreeningSuggestForm
+                entry={mode.entry}
+                company={row.company}
+                role={row.role}
+                focus={row.focus}
+                jobUrl={row.jobUrl}
+                jobContext={row.jobContext}
+                onUpdateJobFields={(fields) => onUpdate(row.code, fields)}
+                screening={screening}
+                container={drawerNode}
+                onDone={() => setMode({ kind: "view" })}
               />
             ) : (
               <DrawerBody>
                 <TabsContent value="detalles" className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-muted-foreground">Datos</span>
-                    <Button variant="ghost" size="sm" onClick={() => setMode("edit")}>
+                    <Button variant="ghost" size="sm" onClick={() => setMode({ kind: "edit" })}>
                       <Pencil className="size-4" />
                       Editar
                     </Button>
@@ -334,19 +355,10 @@ export function RowDetailDrawer({
                   <CoverLetterInfo row={row} />
                   <DeliveryInfo row={row} onGenerateCv={() => onGenerateCv?.(row)} />
                   <ScreeningSection
-                    // Forces a remount on prev/next row navigation — otherwise
-                    // jobUrl/jobContext local state (seeded from props only at
-                    // first mount) stays stuck on whichever row loaded first.
-                    key={row.code}
                     code={row.code}
-                    company={row.company}
-                    role={row.role}
-                    focus={row.focus}
-                    jobUrl={row.jobUrl}
-                    jobContext={row.jobContext}
-                    onUpdateJobFields={(fields) => onUpdate(row.code, fields)}
                     screening={screening}
-                    onStartNew={() => setMode("screening-new")}
+                    onStartNew={() => setMode({ kind: "screening-new" })}
+                    onSuggest={(entry) => setMode({ kind: "screening-suggest", entry })}
                     container={drawerNode}
                   />
                 </TabsContent>
