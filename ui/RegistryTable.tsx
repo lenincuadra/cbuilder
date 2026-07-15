@@ -74,7 +74,7 @@ export interface RegistryTableProps {
   onDelete: (code: string) => void | Promise<void>;
   /** Open the deferred-generation wizard for a pending row ("Generar CV"). */
   onGenerateCv?: (row: RegistryRow) => void;
-  /** Shared screening-questions bank (drawer's Preguntas tab). */
+  /** Shared screening-questions bank (drawer's Preguntas section). */
   screening: UseScreening;
   emptyMessage?: string;
   /**
@@ -82,16 +82,6 @@ export interface RegistryTableProps {
    * toast). The nonce distinguishes repeated requests for the same code.
    */
   openRequest?: { code: string; nonce: number } | null;
-}
-
-/**
- * Default tab when opening a row generically: the tab with content when only one
- * has it (updates-only → Actualizaciones), otherwise Notas. Generic rule.
- */
-function defaultTabFor(row: RegistryRow): DetailTab {
-  const hasNotes = Boolean(row.notes?.trim());
-  const hasUpdates = Boolean(row.updates?.length);
-  return !hasNotes && hasUpdates ? "updates" : "notas";
 }
 
 /** Tooltip for the focus indicator: the profile's label once the spec is loaded, its raw id until then. */
@@ -112,11 +102,11 @@ export function RegistryTable({
   const { spec } = useSpec();
   const [detailCode, setDetailCode] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [detailTab, setDetailTab] = useState<DetailTab>("notas");
+  const [detailTab, setDetailTab] = useState<DetailTab>("detalles");
   const detailRow = detailCode ? (rows.find((row) => row.code === detailCode) ?? null) : null;
   const detailIndex = detailCode ? rows.findIndex((row) => row.code === detailCode) : -1;
 
-  function openDetail(code: string, tab: DetailTab = "notas") {
+  function openDetail(code: string, tab: DetailTab = "detalles") {
     setDetailCode(code);
     setDetailTab(tab);
     setDetailOpen(true);
@@ -127,14 +117,15 @@ export function RegistryTable({
   const [handledNonce, setHandledNonce] = useState<number | null>(null);
   if (openRequest && openRequest.nonce !== handledNonce) {
     setHandledNonce(openRequest.nonce);
-    const row = rows.find((candidate) => candidate.code === openRequest.code);
-    openDetail(openRequest.code, row ? defaultTabFor(row) : "notas");
+    openDetail(openRequest.code);
   }
 
   // Navigate to another row (by table order) without closing the panel.
+  // Re-passing the last requested tab keeps the drawer's initialTab prop
+  // unchanged, so it holds whatever tab the user is currently on.
   function goToRow(index: number) {
     const target = rows[index];
-    if (target) openDetail(target.code, defaultTabFor(target));
+    if (target) openDetail(target.code, detailTab);
   }
 
   return (
@@ -197,7 +188,7 @@ export function RegistryTable({
               rows.map((row) => (
                 <TableRow
                   key={row.code}
-                  onClick={() => openDetail(row.code, defaultTabFor(row))}
+                  onClick={() => openDetail(row.code)}
                   className="cursor-pointer"
                 >
                   <TableCell className="truncate">

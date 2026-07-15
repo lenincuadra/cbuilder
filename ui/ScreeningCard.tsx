@@ -220,8 +220,8 @@ function ScreeningManager({ store, rows }: { store: UseScreening; rows: Registry
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Las preguntas se vinculan a cada aplicación desde el tab Preguntas del detalle de
-          la fila. La generación con IA también vive ahí (no acá): usa el contexto de esa
+          Las preguntas se vinculan a cada aplicación desde la sección Preguntas del detalle
+          de la fila. La generación con IA también vive ahí (no acá): usa el contexto de esa
           aplicación — empresa, rol, foco y detalle del puesto — para que la respuesta salga
           dirigida y no genérica.
         </p>

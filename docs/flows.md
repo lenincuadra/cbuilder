@@ -77,7 +77,7 @@ Sin IA — un template es sustitución mecánica de variables.
 
 | # | Acción Hecha | Dónde/Qué sucede por detrás |
 |---|---|---|
-| 1 | Drawer de la aplicación → tab Preguntas | El panel "Contexto para IA · \<modelo\>" está colapsado arriba; expandir para ajustar link/contexto/modelo (precargados de la fila) |
+| 1 | Drawer de la aplicación → tab Detalles → sección Preguntas | El panel "Contexto para IA · \<modelo\>" está colapsado arriba; expandir para ajustar link/contexto/modelo (precargados de la fila) |
 | 2 | "Nueva" → escribir la pregunta → **"Sugerir y guardar"** | `POST /api/ai/screening-answer` con empresa/rol/foco/jobContext de la fila |
 | 3 | La entrada se crea en el banco al instante, con badge **"IA · sin revisar"** | `draft: true`; también persiste el jobUrl/jobContext editado en el panel |
 | 4 | Revisar/editar desde la card Preguntas (lápiz) | Guardar una edición manual limpia `draft` |
@@ -86,14 +86,14 @@ Sin IA — un template es sustitución mecánica de variables.
 
 | # | Acción Hecha | Dónde/Qué sucede por detrás |
 |---|---|---|
-| 1 | Una entrada vinculada muestra "sin respuesta todavía" + **"Sugerir y guardar"** | `ScreeningTab.tsx` → `suggestForEntry` |
+| 1 | Una entrada vinculada muestra "sin respuesta todavía" + **"Sugerir y guardar"** | `ScreeningSection.tsx` → `suggestForEntry` |
 | 2 | Click → la respuesta se genera y guarda directo sobre esa entrada | `draft: true`, mismo contexto de la fila |
 
 ## 6. Regenerar una respuesta existente
 
 | # | Acción Hecha | Dónde/Qué sucede por detrás |
 |---|---|---|
-| 1 | Una entrada **con** respuesta muestra un ícono ✦ junto al de copiar | Solo en el tab por-aplicación (el banco global no genera — sin contexto de empresa la respuesta sale genérica) |
+| 1 | Una entrada **con** respuesta muestra un ícono ✦ junto al de copiar | Solo en la sección por-aplicación (el banco global no genera — sin contexto de empresa la respuesta sale genérica) |
 | 2 | Click → **diálogo de confirmación** | Pisa texto revisado Y gasta una llamada — ambos irreversibles, por eso confirma (patrón `ConfirmDelete`) |
 | 3 | Confirmar → regenera y guarda, vuelve a `draft: true` | Mismo endpoint y contexto; spinner en el ícono mientras corre |
 

@@ -10,6 +10,23 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Drawer de detalle: tabs arriba (Detalles/Notas/Actualizaciones), Preguntas como sección (2026-07-16)
+**Decisión**: el grupo de tabs del panel de detalle sube a quedar pegado debajo de la
+barra de acción (Status/Archivar/Borrar), con un tab **Detalles** nuevo al frente que
+absorbe todo lo que antes se mostraba sin tabear (Datos, Links de tracking, Carta,
+Entrega) — y **Preguntas deja de ser tab**: pasa a ser la última sección de Detalles,
+con el mismo chrome de card que Entrega/Links (misma funcionalidad completa).
+**Contexto/razón**: con Preguntas como tercer tab, la info de la aplicación quedaba
+partida en dos alturas (secciones arriba + tabs abajo del separator) y Preguntas —
+que es info de la aplicación, como Entrega — vivía separada de sus pares. Tabs arriba
+dan una jerarquía única: primero elegís *qué* mirar, después scrolleás. Cambios de
+comportamiento que siguen de esto: (1) click genérico en la fila abre **Detalles**
+(murió la regla "tab por defecto según contenido" — los íconos de Seguimiento siguen
+abriendo `notas`/`updates` explícitos); (2) prev/next **conserva el tab actual** (antes
+recalculaba el default por fila); (3) en modo edición los tabs quedan **visibles pero
+los inactivos disabled** — antes el formulario tapaba todo y no sabías dónde estabas.
+`ScreeningTab.tsx` → `ScreeningSection.tsx` (renombrado: ya no es un tab).
+
 ## Pipeline AI: API de Anthropic in-app, borrador siempre persistido, estado Borrador real
 Objetivo: personalización de cartas y respuestas de pre-screening **a velocidad de
 generador de CV** — un click, no copiar/pegar contexto en claude.ai cada vez.
