@@ -211,7 +211,8 @@ aplicación. Setup completo en [`claude-ai/README.md`](claude-ai/README.md).
 **Modelo elegible por acción, sin abstracción**: `core/ai/models.ts` define
 `AI_MODELS` (ids reales de Anthropic — `claude-opus-4-8`, `claude-sonnet-5`,
 `claude-haiku-4-5-20251001`, `claude-fable-5`, sin nombres de marketing) y
-`DEFAULT_AI_MODEL`. Cada `AiContextPanel` trae su propio selector
+`DEFAULT_AI_MODEL` (**Haiku**, el más barato — subir de modelo es elección
+explícita). Cada `AiContextPanel` trae su propio selector
 (`IconSelect`, mismo componente que el resto de los dropdowns), persistido en
 `localStorage` **por acción** (`ui/useAiModel.ts`, key
 `cbuilder:ai-model:<action>`) — cover letters y respuestas de pre-screening

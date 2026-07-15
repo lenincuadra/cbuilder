@@ -10,6 +10,20 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## IA: default Haiku + sin regenerar de un click (2026-07-15)
+**Decisión**: (1) `DEFAULT_AI_MODEL` pasa de `claude-opus-4-8` a
+`claude-haiku-4-5-20251001` — el más barato del allow-list; subir de modelo es una
+elección explícita por acción en el picker (se recuerda en `localStorage`). (2) Se
+elimina el ícono ✦ "Regenerar respuesta" por entrada en la sección Preguntas del
+detalle (agregado en la pasada preventiva del 2026-07-16 — esto lo revierte). "Sugerir
+y guardar" queda solo para entradas **sin** respuesta.
+**Contexto/razón**: usando el feature en prod, el shortcut de regenerar quedaba a un
+misclick de pisar texto revisado y gastar una llamada — el diálogo de confirmación
+mitigaba pero el botón no pagaba su riesgo (regenerar casi no se usa). Y el default en
+opus hacía que el camino sin fricción fuera el más caro; con Haiku, el costo por
+descuido baja al mínimo y la calidad se elige a propósito. El plan mayor (contexto
+dentro de la acción de generar, dos pasos siempre) está en el backlog (`TODO.md`).
+
 ## Drawers-manager: leer/usar y crear/editar son vistas separadas (2026-07-15)
 **Decisión**: los drawers que administran una colección (Preguntas, Cover letters, Links
 estables) separan las dos intenciones en vistas: la **lista** de items guardados es el

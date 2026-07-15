@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { ScreeningQuestion } from "@/core/screening/types";
 import { AiContextPanel } from "@/ui/AiContextPanel";
-import { ConfirmDelete } from "@/ui/ConfirmDelete";
 import { CopyButton } from "@/ui/CopyButton";
 import { useAiModel } from "@/ui/useAiModel";
 import type { UseScreening } from "@/ui/useScreening";
@@ -46,10 +45,11 @@ export interface ScreeningSectionProps {
  * application's code, created pre-linked ("Nueva" opens the drawer-level
  * ScreeningNewForm takeover), and copied for reuse.
  *
- * Regenerating persists the AI draft the moment it's generated — a generation
- * call can't be undone, so nothing is left in unsaved local state to lose on
- * an accidental close. Wording tweaks after the fact go through the Preguntas
- * card's own edit flow, same as any other entry.
+ * AI suggestions exist only for entries with no answer yet ("Sugerir y
+ * guardar" persists the draft the moment it's generated). There is no
+ * one-click regenerate over an existing answer: a misclick would overwrite
+ * reviewed text AND spend an API call. Wording tweaks go through the
+ * Preguntas card's own edit flow, same as any other entry.
  */
 export function ScreeningSection({
   code,
@@ -76,9 +76,6 @@ export function ScreeningSection({
   const aiContext: AiAnswerContext = { company, role, focus, jobContext, model };
 
   const [suggestingId, setSuggestingId] = useState<string | null>(null);
-  // Regenerating over an EXISTING answer overwrites hand-written (or reviewed)
-  // text AND spends an API call — both irreversible, so it confirms first.
-  const [toRegenerate, setToRegenerate] = useState<ScreeningQuestion | null>(null);
 
   async function suggestForEntry(entry: ScreeningQuestion) {
     setSuggestingId(entry.id);
@@ -161,24 +158,7 @@ export function ScreeningSection({
                 </span>
                 <div className="flex shrink-0 items-center">
                   {entry.answer !== "" && (
-                    <>
-                      <CopyButton text={entry.answer} title="Copiar respuesta" />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-6 text-muted-foreground"
-                        title="Regenerar respuesta con IA (pisa la actual)"
-                        aria-label={`Regenerar respuesta de ${entry.question}`}
-                        disabled={suggestingId === entry.id}
-                        onClick={() => setToRegenerate(entry)}
-                      >
-                        {suggestingId === entry.id ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <Sparkles className="size-3.5" />
-                        )}
-                      </Button>
-                    </>
+                    <CopyButton text={entry.answer} title="Copiar respuesta" />
                   )}
                   <Button
                     variant="ghost"
@@ -219,29 +199,6 @@ export function ScreeningSection({
           ))}
         </div>
       )}
-
-      <ConfirmDelete
-        open={toRegenerate !== null}
-        onOpenChange={(open) => !open && setToRegenerate(null)}
-        title="Regenerar respuesta con IA"
-        description={
-          toRegenerate ? (
-            <>
-              Se va a <strong>pisar la respuesta actual</strong> de{" "}
-              <strong>{toRegenerate.question}</strong> con una nueva generada por IA
-              (una llamada a la API). El texto actual no se puede recuperar.
-            </>
-          ) : null
-        }
-        confirmLabel="Regenerar"
-        onConfirm={() => {
-          if (!toRegenerate) return;
-          const entry = toRegenerate;
-          setToRegenerate(null);
-          // Fire-and-track: suggestForEntry drives the row's spinner + toast.
-          void suggestForEntry(entry);
-        }}
-      />
 
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={onStartNew}>
