@@ -1,9 +1,11 @@
 # Arquitectura y features (cv-builder)
 
 Mapa del **qué y cómo** del sistema. El **por qué** (trade-offs, decisiones que
-cambiaron) vive en [`decisions.md`](decisions.md); las convenciones de UI, en
-[`DESIGN.md`](DESIGN.md); las reglas inviolables resumidas, en
-[`CLAUDE.md`](../CLAUDE.md). Este doc conecta las piezas.
+cambiaron) vive en [`decisions.md`](decisions.md); los flows a **altura de
+uso** (qué hace el usuario, paso a paso, catálogo completo), en
+[`flows.md`](flows.md); las convenciones de UI, en [`DESIGN.md`](DESIGN.md);
+las reglas inviolables resumidas, en [`CLAUDE.md`](../CLAUDE.md). Este doc
+conecta las piezas.
 
 ## Qué hace la app
 
@@ -183,8 +185,9 @@ Supabase ([`supabase-setup.md`](supabase-setup.md)).
 Dos rutas server (`/api/ai/cover-letter`, `/api/ai/screening-answer`) llaman a
 la API de Anthropic para producir un **borrador** — el usuario siempre
 revisa/edita, nunca se persiste como final sin pasar por ahí. Un solo flow,
-repetido en los dos puntos donde se genera (ver [`decisions.md`](decisions.md)
-→ "Pipeline AI"):
+repetido en los dos puntos donde se genera (el porqué en
+[`decisions.md`](decisions.md) → "Pipeline AI"; los use cases concretos, paso
+a paso, en [`flows.md`](flows.md)):
 
 | # | Acción hecha | Dónde/qué sucede por detrás |
 |---|---|---|
