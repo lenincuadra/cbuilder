@@ -120,12 +120,14 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
   las columnas no queden ilegibles. (Reemplaza la regla vieja "si no entran, scroll".)
 - **Filtros (dos dimensiones ortogonales, arriba de la tabla)**:
   (1) archivado — **Vigentes** (no archivadas) / **Archivado**, con `SegmentedControl`;
-  (2) estado — Todos / Activo / Rechazado, como **dropdown con icono de embudo**
+  (2) estado — Todos / Borrador / Activo / Rechazado, como **dropdown con icono de embudo**
   (`ui/StatusFilterDropdown.tsx`): botón siempre icon-only; con filtro activo aparece **al
   lado** un badge coloreado (paleta de `StatusToggle`) con una `X`, y clickearlo **quita el
   filtro** (vuelve a Todos); items `DropdownMenuCheckboxItem` con icono. Se combinan. Ojo
   con la semántica: "Vigentes" ≠
-  estado "Activo" (por eso no se llama "Activas").
+  estado "Activo" (por eso no se llama "Activas"). **Borrador** es system-derived (mirror de
+  `cvPending`) — `StatusToggle` lo renderiza como badge no interactivo (sin toggle manual),
+  distinto de Activo/Rechazado.
 - **Todas las vistas comparten exactamente la misma tabla**: misma estructura, columnas y
   comportamiento; lo único que cambia es qué filas se muestran (filtradas por `archived` +
   `status` en la página). No duplicar componentes ni variar columnas entre vistas.

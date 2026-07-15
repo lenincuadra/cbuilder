@@ -7,7 +7,7 @@ import { getScreeningStore } from "@/lib/storage";
 export interface UseScreening {
   entries: ScreeningQuestion[];
   loading: boolean;
-  add: (entry: Pick<ScreeningQuestion, "question" | "answer" | "codes">) => Promise<void>;
+  add: (entry: Pick<ScreeningQuestion, "question" | "answer" | "codes" | "draft">) => Promise<void>;
   update: (id: string, fields: EditableScreeningFields) => Promise<void>;
   remove: (id: string) => Promise<void>;
 }

@@ -1,6 +1,8 @@
 -- cv-builder — run this in the Supabase SQL editor (prod after merges that touch schema).
--- schema_version: 3  (registry + notes + stable_links + cover_letter_templates
---                     + screening_questions + cvs bucket + cv_pending/delivery_files)
+-- schema_version: 5  (registry + notes + stable_links + cover_letter_templates
+--                     + screening_questions + cvs bucket + cv_pending/delivery_files
+--                     + Borrador status + cover_letter_draft/job_context
+--                     + screening_questions.draft)
 -- Bump schema_version when this file changes; see docs/versioning.md §3.
 -- Columns map to RegistryRow (camelCase) via snake_case; the app converts them.
 
@@ -12,9 +14,10 @@ create table if not exists public.registry (
   email       text,                          -- required (app-side) when channel = 'Email'
   date        text not null,                 -- application date as "YYYY-MM-DD"
   notes       text,
-  status      text not null default 'Activo' check (status in ('Activo', 'Rechazado')),
+  status      text not null default 'Activo' check (status in ('Borrador', 'Activo', 'Rechazado')),
   who         text,
   job_url     text,
+  job_context text,                          -- free-text posting highlights, extra AI grounding
   language    text,
   focus       text,                          -- portfolio focus profile baked into the CV links
   zip_name    text,                          -- archived delivery zip file name (data/cvs/)
@@ -22,6 +25,7 @@ create table if not exists public.registry (
   drive_folder text,                         -- Drive folder holding this application's Doc(s)
   links       jsonb,                         -- the 3 tracked links baked into the CV {portfolio, linkedin, github}
   cover_letter jsonb,                        -- cover letter sent {templateId, templateName, bodies: {EN?, ES?}}
+  cover_letter_draft jsonb,                  -- cover letter draft in progress (pre-send, mutable) {templateId, templateName, bodies}
   created_at  timestamptz not null default now(),
   updates     jsonb not null default '[]'::jsonb,  -- follow-up timeline [{at, message}]
   archived    boolean not null default false,
@@ -82,6 +86,7 @@ create table if not exists public.screening_questions (
   question   text not null,
   answer     text not null default '',
   codes      jsonb not null default '[]'::jsonb,
+  draft      boolean not null default false,  -- AI-generated, not yet human-reviewed
   created_at timestamptz not null default now()
 );
 create index if not exists screening_questions_created_at_idx
@@ -102,3 +107,9 @@ insert into storage.buckets (id, name, public)
 --   alter table public.registry add column if not exists cover_letter jsonb;
 --   alter table public.registry add column if not exists cv_pending boolean not null default false;
 --   alter table public.registry add column if not exists delivery_files jsonb;
+--   alter table public.registry add column if not exists cover_letter_draft jsonb;
+--   alter table public.registry add column if not exists job_context text;
+--   alter table public.registry drop constraint if exists registry_status_check;
+--   alter table public.registry add constraint registry_status_check
+--     check (status in ('Borrador', 'Activo', 'Rechazado'));
+--   alter table public.screening_questions add column if not exists draft boolean not null default false;

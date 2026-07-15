@@ -16,6 +16,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   // Answer may be cleared (question recorded, answer pending) — keep "".
   if (typeof body.answer === "string") fields.answer = body.answer.trim();
   if ("codes" in body) fields.codes = sanitizeCodes(body.codes);
+  if (typeof body.draft === "boolean") fields.draft = body.draft;
   if (Object.keys(fields).length === 0) {
     return NextResponse.json({ error: "Nada para actualizar." }, { status: 400 });
   }

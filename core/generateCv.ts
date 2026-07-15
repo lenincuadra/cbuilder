@@ -28,6 +28,8 @@ export interface GenerateCvInput {
   /** Email applied to — required when channel is "Email". */
   email?: string;
   jobUrl?: string;
+  /** Free-text requirements/highlights from the posting — extra AI grounding. */
+  jobContext?: string;
   notes?: string;
   status?: ApplicationStatus;
   /** Portfolio focus profile id (from the spec) baked into the CV's tracked links. */
@@ -145,6 +147,7 @@ export async function generateCv(
     status: input.status ?? DEFAULT_STATUS,
     who: cleaned(input.who),
     jobUrl: cleaned(input.jobUrl),
+    jobContext: cleaned(input.jobContext),
     language: input.languageChoice,
     focus: input.focus,
     links,
@@ -166,6 +169,8 @@ export interface PendingRowInput {
   /** Email applied to — required (caller-side) when channel is "Email". */
   email?: string;
   jobUrl?: string;
+  /** Free-text requirements/highlights from the posting — extra AI grounding. */
+  jobContext?: string;
 }
 
 export interface PendingRowDeps {
@@ -200,9 +205,12 @@ export function buildPendingRow(input: PendingRowInput, deps: PendingRowDeps): R
     channel: input.channel,
     email: input.channel === "Email" ? cleaned(input.email) : undefined,
     date: toISODate(input.date),
-    status: DEFAULT_STATUS,
+    // Not yet sent — distinct from DEFAULT_STATUS ("Activo"), which implies a
+    // real submitted application. Flips to Activo in deferredGenerationFields.
+    status: "Borrador",
     who: cleaned(input.who),
     jobUrl: cleaned(input.jobUrl),
+    jobContext: cleaned(input.jobContext),
     createdAt: now().toISOString(),
     cvPending: true,
   };
@@ -226,6 +234,8 @@ export function deferredGenerationFields(
   ].slice(-MAX_UPDATES);
   return {
     cvPending: false,
+    // Borrador → Activo: the CV actually shipped now, same as a fresh row.
+    status: "Activo",
     language: generated.language,
     focus: generated.focus,
     links: generated.links,

@@ -8,6 +8,7 @@ import { DrawerBody, DrawerFooter } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toISODate } from "@/core/dates";
 import {
@@ -54,6 +55,7 @@ export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditF
   const [date, setDate] = useState<Date>(parseDate(row.date));
   const [who, setWho] = useState(row.who ?? "");
   const [jobUrl, setJobUrl] = useState(row.jobUrl ?? "");
+  const [jobContext, setJobContext] = useState(row.jobContext ?? "");
   const [saving, setSaving] = useState(false);
 
   const companyOk = company.trim() !== "";
@@ -72,6 +74,7 @@ export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditF
         date: toISODate(date),
         who: cleaned(who),
         jobUrl: cleaned(jobUrl),
+        jobContext: cleaned(jobContext),
         // language is intentionally not editable: the CV is already generated.
       });
     } finally {
@@ -165,6 +168,18 @@ export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditF
               type="url"
               value={jobUrl}
               onChange={(event) => setJobUrl(event.target.value)}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-jobContext">Contexto extra del puesto</Label>
+            <Textarea
+              id="edit-jobContext"
+              placeholder="Requisitos o highlights relevantes del posting (opcional)."
+              value={jobContext}
+              rows={4}
+              className="text-xs"
+              onChange={(event) => setJobContext(event.target.value)}
             />
           </div>
         </div>

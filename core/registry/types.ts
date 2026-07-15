@@ -1,4 +1,4 @@
-import type { CoverLetterRecord } from "../coverLetter/types";
+import type { CoverLetterBodies, CoverLetterRecord } from "../coverLetter/types";
 import type { TrackedLinks } from "../spec/links";
 import type { Language, LanguageChoice } from "../types";
 
@@ -12,7 +12,13 @@ export const CHANNELS = [
 
 export type Channel = (typeof CHANNELS)[number];
 
-export type ApplicationStatus = "Activo" | "Rechazado";
+/**
+ * "Borrador" is system-derived (mirrors `cvPending`), never manually set —
+ * it's what a row is while registered but not yet sent (via "Guardar sin CV"
+ * or an AI cover-letter draft started mid-wizard). It flips to "Activo" the
+ * moment the CV actually generates. Not user-toggleable like Activo/Rechazado.
+ */
+export type ApplicationStatus = "Borrador" | "Activo" | "Rechazado";
 
 export const DEFAULT_ROLE = "UX/UI Designer";
 export const DEFAULT_STATUS: ApplicationStatus = "Activo";
@@ -53,6 +59,12 @@ export interface RegistryRow {
   who?: string;
   /** Posting URL. */
   jobUrl?: string;
+  /**
+   * Free-text requirements/highlights from the posting — extra grounding for
+   * the AI pipeline beyond company/role/focus. Optional, hand-pasted or
+   * best-effort auto-filled from `jobUrl`'s JobPosting schema (JSON-LD).
+   */
+  jobContext?: string;
   /** Language choice the user picked (EN / ES / Ambos). */
   language?: LanguageChoice;
   /**
@@ -68,6 +80,13 @@ export interface RegistryRow {
    * record — read-only post-creation.
    */
   coverLetter?: CoverLetterRecord;
+  /**
+   * Cover letter draft in progress (pre-send) — written by the AI pipeline
+   * the moment it generates a body, so a paid generation is never lost to a
+   * closed wizard. Mutable, unlike `coverLetter`; only meaningful while
+   * `cvPending` is true (the wizard's step 4 preloads it on resume).
+   */
+  coverLetterDraft?: { templateId: string; templateName?: string; bodies: CoverLetterBodies };
   /** File name of the archived delivery zip in data/cvs/ (set at generation). */
   zipName?: string;
   /** Google Doc URL per generated language (Docs sink), filled after the upload. */

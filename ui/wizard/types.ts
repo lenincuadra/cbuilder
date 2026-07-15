@@ -11,6 +11,14 @@ export const FOCUS_NONE = "__none__";
 /** Sentinel select value meaning "sin cover letter". */
 export const COVER_LETTER_NONE = "__none__";
 
+/**
+ * Sentinel select value meaning "generate the letter with AI, no template" —
+ * skips picking a real template and goes straight to sharing context +
+ * "Generar con IA". `templateId`/`templateName` on the resulting
+ * `CoverLetterRecord` are this sentinel and a friendly display name.
+ */
+export const COVER_LETTER_AI = "__ai__";
+
 /** Mutable wizard state. Notes and status are not set here — they live in the table. */
 export interface WizardData {
   company: string;
@@ -23,6 +31,11 @@ export interface WizardData {
   email: string;
   who: string;
   jobUrl: string;
+  /**
+   * Free-text requirements/highlights from the posting — extra grounding for
+   * the AI pipeline beyond company/role/focus. Optional.
+   */
+  jobContext: string;
   /** Portfolio focus profile id (from the spec) for the tracked links. "" = sin foco. */
   focus: string;
   /** Selected cover letter template id. "" = sin cover letter. */

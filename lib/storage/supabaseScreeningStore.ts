@@ -12,6 +12,7 @@ interface ScreeningDb {
   question: string;
   answer: string | null;
   codes: string[] | null;
+  draft: boolean | null;
   created_at: string | null;
 }
 
@@ -35,6 +36,7 @@ export class SupabaseScreeningStore implements ScreeningStore {
         question: db.question,
         answer: db.answer ?? "",
         codes: db.codes ?? [],
+        draft: db.draft ?? undefined,
         createdAt: db.created_at ?? undefined,
       };
     });
@@ -46,6 +48,7 @@ export class SupabaseScreeningStore implements ScreeningStore {
       question: entry.question,
       answer: entry.answer,
       codes: entry.codes,
+      draft: entry.draft ?? false,
       created_at: entry.createdAt ?? new Date().toISOString(),
     });
     if (error) {
@@ -61,6 +64,7 @@ export class SupabaseScreeningStore implements ScreeningStore {
     if ("question" in fields) patch.question = fields.question;
     if ("answer" in fields) patch.answer = fields.answer ?? "";
     if ("codes" in fields) patch.codes = fields.codes ?? [];
+    if ("draft" in fields) patch.draft = fields.draft ?? false;
     const { error } = await this.client.from(TABLE).update(patch).eq("id", id);
     if (error) throw new Error(`Supabase screening update failed: ${error.message}`);
   }

@@ -1,0 +1,133 @@
+import type { LinkSpec } from "@/core/spec/types";
+import type { Language } from "@/core/types";
+
+/** Shared instructions every AI draft follows, regardless of what it's drafting. */
+const VOICE_PREAMBLE =
+  "You draft job-application material on behalf of Lenin Cuadra, a Senior Product " +
+  "Designer. Use ONLY the facts in the context below — never invent employers, " +
+  "metrics, tools, or projects. First person, confident, concise: lead with " +
+  "outcomes, not adjectives. This draft is a starting point Lenin edits before " +
+  "sending — prefer a strong, specific first pass over a safe, generic one.";
+
+/**
+ * Focus-specific case studies + proof points from the portfolio spec, in the
+ * target language. Returns "" if there's no focus or the spec doesn't have it —
+ * callers fall back to the background brief alone.
+ */
+export function focusCaseContext(
+  spec: LinkSpec | null,
+  focus: string | undefined,
+  language: Language,
+): string {
+  if (!spec || !focus) return "";
+  const profile = spec.profiles[focus];
+  if (!profile) return "";
+  const lang = language === "EN" ? "en" : "es";
+
+  const proofLines = profile.proofs.map((proof) => `- ${proof[lang]}`).join("\n");
+  const caseLines = profile.order
+    .map((slug) => spec.cases[slug])
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== undefined)
+    .slice(0, 3)
+    .map((entry) => `- ${entry.title[lang]}: ${entry.description[lang]}`)
+    .join("\n");
+
+  return (
+    `## Portfolio proof points for this application's focus ("${focus}")\n\n` +
+    `${proofLines}\n\n## Relevant case studies (most relevant first)\n\n${caseLines}`
+  );
+}
+
+/**
+ * Cap on the free-text posting context — mirrors /api/job-context's own
+ * extraction cap. "Detectar" already trims to this, but a hand-pasted wall of
+ * text has no client-side limit; without a server-side cap each generation's
+ * input cost would scale with whatever got pasted. 4000 chars ≈ 1k tokens.
+ */
+const MAX_JOB_CONTEXT_LENGTH = 4000;
+
+/**
+ * Full context block: static background brief + focus-specific portfolio
+ * proof + (if given) free-text posting highlights the user pasted or an
+ * auto-detected JobPosting description — the only per-posting grounding
+ * beyond company/role/focus.
+ */
+export function buildContextBlock(
+  background: string,
+  spec: LinkSpec | null,
+  focus: string | undefined,
+  language: Language,
+  jobContext?: string,
+): string {
+  const parts = [background];
+  const focusBlock = focusCaseContext(spec, focus, language);
+  if (focusBlock) parts.push(focusBlock);
+  const trimmedContext = jobContext?.trim().slice(0, MAX_JOB_CONTEXT_LENGTH);
+  if (trimmedContext) {
+    parts.push(`## Extra context about this specific posting (from the user)\n\n${trimmedContext}`);
+  }
+  return parts.join("\n\n");
+}
+
+export interface CoverLetterPromptInput {
+  context: string;
+  company: string;
+  role: string;
+  who?: string;
+  language: Language;
+}
+
+/**
+ * System + user prompt for a cover letter body. The letterhead (name, role,
+ * contact, date) is generated programmatically elsewhere — this draft is the
+ * full letter *body*: greeting through sign-off, markdown only (paragraphs,
+ * line breaks, "- " lists, **bold**, *italic* — matches the letter renderer).
+ */
+export function buildCoverLetterPrompt(input: CoverLetterPromptInput): {
+  system: string;
+  user: string;
+} {
+  const { context, company, role, who, language } = input;
+  const languageName = language === "EN" ? "English" : "Spanish";
+  const greeting = who?.trim()
+    ? `Address it to ${who.trim()}.`
+    : "No named contact — use a generic professional greeting (no \"To Whom It May Concern\").";
+
+  return {
+    system: `${VOICE_PREAMBLE}\n\n${context}`,
+    user:
+      `Write the body of a cover letter (greeting through sign-off, no letterhead) for an ` +
+      `application to ${company} for the role "${role}". ${greeting} Write it in ${languageName}. ` +
+      `3-4 short paragraphs: why this role/company, the strongest one or two relevant proof ` +
+      `points from the context above, a brief close. Markdown only: paragraphs, line breaks, ` +
+      `"- " lists, **bold**, *italic*.`,
+  };
+}
+
+export interface ScreeningAnswerPromptInput {
+  context: string;
+  question: string;
+  company?: string;
+  role?: string;
+}
+
+/** System + user prompt for a suggested pre-screening answer. */
+export function buildScreeningAnswerPrompt(input: ScreeningAnswerPromptInput): {
+  system: string;
+  user: string;
+} {
+  const { context, question, company, role } = input;
+  const applicationLine =
+    company || role
+      ? `This was asked by ${[company, role].filter(Boolean).join(" — ")}.`
+      : "";
+
+  return {
+    system: `${VOICE_PREAMBLE}\n\n${context}`,
+    user:
+      `Draft an answer to this pre-screening question: "${question}" ${applicationLine} ` +
+      `Answer in the same language as the question. Plain text, no markdown, no greeting — ` +
+      `just the answer, as if typed directly into an application form. Keep it as short as the ` +
+      `question warrants (a few sentences unless it clearly asks for more).`,
+  };
+}

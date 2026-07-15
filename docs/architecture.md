@@ -174,6 +174,101 @@ Supabase ([`supabase-setup.md`](supabase-setup.md)).
 | `/api/cover-letters/[id]` | PATCH/DELETE | Edita / borra un template |
 | `/api/screening` | GET/POST | Lista / crea preguntas de pre-screening (banco global) |
 | `/api/screening/[id]` | PATCH/DELETE | Edita / borra una pregunta (incl. vincular códigos) |
+| `/api/ai/cover-letter` | POST | Borrador de carta por idioma (Opus 4.8), grounded en el context pack. **501** si falta `ANTHROPIC_API_KEY` o el context pack |
+| `/api/ai/screening-answer` | POST | Respuesta sugerida a una pregunta de pre-screening (Opus 4.8), misma base. **501** en las mismas condiciones |
+| `/api/job-context` | POST | Mejor esfuerzo: extrae la descripción de `JobPosting` (JSON-LD) de una URL de posting, sin headless. Siempre 200, `{context: null}` si no encuentra nada |
+
+## Pipeline AI (cover letters / respuestas de pre-screening)
+
+Dos rutas server (`/api/ai/cover-letter`, `/api/ai/screening-answer`) llaman a
+la API de Anthropic para producir un **borrador** — el usuario siempre
+revisa/edita, nunca se persiste como final sin pasar por ahí. Un solo flow,
+repetido en los dos puntos donde se genera (ver [`decisions.md`](decisions.md)
+→ "Pipeline AI"):
+
+| # | Acción hecha | Dónde/qué sucede por detrás |
+|---|---|---|
+| 1 | Usuario completa el bloque de contexto compartido: link del puesto + "Detectar", contexto libre, modelo | `ui/AiContextPanel.tsx` — un solo componente, usado tal cual en el wizard (paso 4, opción "Compartir contexto") y en el tab Preguntas del drawer |
+| 2 | "Detectar" (opcional): mejor esfuerzo, sin llamar a Anthropic | `POST /api/job-context` — busca `JobPosting` en JSON-LD del HTML (sin headless), `context: null` si no encuentra nada; nunca bloquea |
+| 3 | Click en "Generar con IA" / "Sugerir y guardar" / regenerar (ícono ✦ en una respuesta existente — **confirma antes**: pisa texto y gasta una llamada, ambos irreversibles) | Regeneración vía `ConfirmDelete` (mismo patrón de confirmación del app) |
+| 4 | Llamada a `/api/ai/cover-letter` o `/api/ai/screening-answer` con el contexto compartido + el modelo elegido + lo específico del caso | `core/ai/prompt.ts` arma el prompt igual en ambos (capa `jobContext` a 4000 chars — un pegado gigante no infla el costo de input); `core/ai/models.ts` valida el `model` contra el allow-list (`DEFAULT_AI_MODEL` si falta o es inválido); la respuesta **ecoa el modelo usado** |
+| 5 | El resultado se persiste **inmediatamente**, marcado como borrador | Carta: fila **Borrador** + `coverLetterDraft` (ver abajo). Pregunta: entrada del banco con `draft: true` |
+| 6 | El usuario sigue editando después | Carta: mismo textarea. Pregunta: editor de la card Preguntas (lápiz) — guardar ahí limpia `draft` |
+
+La card Preguntas (banco global) **no genera** — solo gestiona/edita: sin
+contexto de aplicación la respuesta saldría genérica (gasto con poco valor);
+un hint en el formulario del banco apunta al tab por-aplicación.
+
+**Réplica sin costo en claude.ai**: `docs/claude-ai/` — un Project (custom
+instructions + `background.md`/`spec-cache.json` como knowledge) y un Skill
+(`cv-materials`), ambos espejando `core/ai/prompt.ts`. Para experimentar
+gratis y como fallback si el crédito de API se agota a mitad de una
+aplicación. Setup completo en [`claude-ai/README.md`](claude-ai/README.md).
+
+**Modelo elegible por acción, sin abstracción**: `core/ai/models.ts` define
+`AI_MODELS` (ids reales de Anthropic — `claude-opus-4-8`, `claude-sonnet-5`,
+`claude-haiku-4-5-20251001`, `claude-fable-5`, sin nombres de marketing) y
+`DEFAULT_AI_MODEL`. Cada `AiContextPanel` trae su propio selector
+(`IconSelect`, mismo componente que el resto de los dropdowns), persistido en
+`localStorage` **por acción** (`ui/useAiModel.ts`, key
+`cbuilder:ai-model:<action>`) — cover letters y respuestas de pre-screening
+recuerdan modelos distintos. El cliente manda `model` en el body; la ruta lo
+valida con `isAiModel()` y cae a `DEFAULT_AI_MODEL` si falta o no es válido.
+
+**Context pack** (el resto de la base, común a ambas rutas):
+
+- **Estático** (`data/profile/background.md` — excepción trackeada del
+  gitignore de `/data/`, porque es CV/portfolio ya público de Lenin, no data
+  del registro; tiene que llegar a prod): bio, experiencia, skills y guía de
+  voz, extraídos del master del CV y del portfolio. Se re-extrae a mano cuando
+  el CV cambia materialmente.
+- **Dinámico por foco**: `core/ai/prompt.ts` (`focusCaseContext`) lee
+  `data/spec-cache.json` (mismo cache del linking spec-driven) y arma los case
+  studies/proof points del foco de la aplicación. No se duplica en
+  `data/profile/`.
+- **Contexto extra del puesto** (`jobUrl`/`jobContext`, capturados por el
+  `AiContextPanel` — ver flow arriba): la ganancia por-aplicación más allá de
+  empresa/rol/foco. `jobUrl` también vive en el paso 2 "Opcionales" del wizard
+  (dato general de la aplicación); `jobContext` **solo** vive donde se genera
+  con IA — dejó de estar en el paso 2 (ver decisión).
+
+**Carta — dos caminos, uno mecánico y uno con IA, nunca mezclados**: el
+dropdown "Cover letter" (`StepCoverLetter.tsx`) ofrece un template real
+(resuelve `{company}`/`{role}`/`{who}` con `resolveTemplateVars`, sin IA — es
+sustitución de variables, no hace falta un LLM) **o** "Compartir contexto"
+(`COVER_LETTER_AI` sentinel en `ui/wizard/types.ts`, sin template, el
+`AiContextPanel` completo). La IA nunca toca el cuerpo resuelto de un template
+real. En modo IA, `CoverLetterRecord.templateId` queda `"__ai__"` /
+`templateName: "Generado con IA"` (`AI_TEMPLATE_NAME`, exportado de
+`StepCoverLetter.tsx`).
+
+**El borrador de carta persiste apenas se genera** — una llamada pagada nunca
+se pierde por cerrar el wizard. Primer click en "Generar con IA" sin fila
+todavía: crea una fila **Borrador** (`RegistryRow.status`, mismo mecanismo que
+"Guardar sin CV" — código reservado, `cvPending: true`) con el texto en
+`coverLetterDraft` (separado de `coverLetter`, que sigue siendo el registro
+fiel de lo efectivamente enviado); clicks siguientes actualizan esa misma
+fila. `Wizard.tsx` trackea esto en `activeRow` (empieza como `pendingRow` si
+existía, o se completa mid-sesión vía `onSaveDraft`) — `onGenerate` recibe ese
+`activeRow` para actualizar en vez de crear al confirmar. Al generar de
+verdad, `deferredGenerationFields` pasa el estado a **Activo**.
+
+**La respuesta de pre-screening también queda marcada como borrador hasta que
+un humano la confirma**: `ScreeningQuestion.draft` (booleano) — `true` cuando
+"Sugerir y guardar" la generó, se limpia solo al guardar una edición manual
+desde la card Preguntas. Aplica el mismo criterio que la carta (algo generado
+por IA no es "definitivo" hasta que se revisa) pero sin el split
+draft-vs-record-final de `coverLetter`: el banco entero siempre fue mutable
+(no hay "lo que se envió", solo "la respuesta actual"), así que acá el flag es
+puramente informativo — no bloquea reuso ni vinculación.
+
+**Dónde queda una carta ya enviada**: `row.coverLetter` (por aplicación,
+visible en su drawer) — no en la card "Cover Letters", que es específicamente
+la biblioteca de **templates reutilizables**, no un historial. La card sí
+suma un tab **"Enviadas"** (`ui/CoverLettersCard.tsx` → `SentLettersList`)
+que lista, en un solo lugar, cada fila con `coverLetter` seteado (template o
+IA), más reciente primero, con acceso directo a su drawer — sin duplicar el
+dato, solo lee `rows` (las mismas que la tabla) filtradas.
 
 ## Variables de entorno
 
@@ -184,6 +279,7 @@ ellas la app corre 100% local con file stores.
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` / `_ANON_KEY` | Registro durable en Supabase (deploy) | [supabase-setup.md](supabase-setup.md) |
 | `GDOCS_SCRIPT_URL` / `GDOCS_TOKEN` | Sink a Google Docs (server-side, nunca al browser) | [gdocs-setup.md](gdocs-setup.md) |
+| `ANTHROPIC_API_KEY` | Pipeline AI (cover letters / respuestas de pre-screening), server-side | esta sección |
 
 ## Masters del CV
 
