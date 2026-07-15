@@ -333,7 +333,7 @@ export default function Home() {
                   } en ${view === "archivado" ? "Archivado" : "Vigentes"}.`
                 : view === "archivado"
                   ? "No hay búsquedas archivadas."
-                  : "Generá tu primer CV desde el panel de la derecha."
+                  : "Registrá tu primera aplicación desde el panel de la derecha."
             }
           />
         </section>

@@ -28,8 +28,8 @@ import { useIsMobile } from "@/ui/useIsMobile";
  * Reusable right-column pattern: a compact card whose full content lives in a
  * drawer (right on desktop, bottom on mobile). One instance manages one card +
  * its drawer. See docs/DESIGN.md ("Cards de la columna derecha") — used by
- * Generar CV (wizard), Notas generales (editor) and the list ↔ form managers
- * (Links estables, Cover letters, Preguntas).
+ * Nueva aplicación (wizard), Notas generales (editor) and the list ↔ form
+ * managers (Links estables, Cover letters, Preguntas).
  *
  * `card` renders the compact face and gets `open()`; `children` renders
  * everything below the pinned header and gets `close()` (so a flow like the
@@ -95,7 +95,7 @@ export function PanelCard({ title, description, card, children }: PanelCardProps
  * Shared compact card face (icon + title + description), so the three
  * right-column cards look identical. `h-full` lets them stretch to equal height
  * when laid out in a row. Provide `cta` (a button) for a card with an explicit
- * action (Generar CV); otherwise pass `onOpen` to make the whole card clickable.
+ * action button; otherwise pass `onOpen` to make the whole card clickable.
  */
 export function PanelCardFace({
   icon: Icon,

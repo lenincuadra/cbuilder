@@ -341,7 +341,7 @@ export function Wizard({
           ) : (
             <Button type="button" size="sm" onClick={handleGenerate} disabled={generating}>
               {generating ? <Loader2 className="size-4 animate-spin" /> : null}
-              Generar
+              Generar CV
             </Button>
           )}
         </div>

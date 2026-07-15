@@ -102,7 +102,7 @@ reusable en **`ui/PanelCard.tsx`**:
   las 3 cards se vean idénticas. `h-full` para que estiren al mismo alto en fila. Usá `cta`
   (un botón) para una card con acción explícita (Generar CV) o `onOpen` para hacer toda la
   card clickeable (Notas, Links estables).
-- Lo usan: **Generar un CV** (wizard en el drawer), **Notas generales** (editor), **Links
+- Lo usan: **Nueva aplicación** (wizard en el drawer), **Notas generales** (editor), **Links
   estables**, **Cover letters** y **Preguntas** (managers lista ↔ form — ver la sección
   de drawers). **Para una card nueva**: reusá `PanelCard` + `PanelCardFace`; el contenido
   pesado va en el cuerpo del drawer.

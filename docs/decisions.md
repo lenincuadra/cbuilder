@@ -10,6 +10,16 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## La card principal se llama "Nueva aplicación" (antes "Generar un CV") (2026-07-15)
+**Decisión**: la card y el drawer del wizard pasan de "Generar un CV" a **"Nueva
+aplicación"**; el botón final del wizard pasa de "Generar" a **"Generar CV"** (más
+específico sobre lo que dispara). Empty state de la tabla: "Registrá tu primera
+aplicación…". "Guardar sin CV" y el drawer diferido "Generar CV · <empresa>" no cambian.
+**Contexto/razón**: el feature evolucionó — registra el **inicio de un proceso de
+aplicación**, con el CV como parte opcional (existe "Guardar sin CV" y el borrador por
+carta IA). "Generar un CV" describía solo un camino y quedaba atrasado como nombre del
+punto de entrada principal; "Nueva aplicación" escala a lo que la acción realmente es.
+
 ## Generación IA en dos pasos: el contexto vive dentro de la acción (2026-07-15)
 **Decisión**: ninguna llamada paga se dispara con un solo click. "Sugerir con IA" (paso 1)
 solo abre los inputs de contexto opcionales (`AiContextPanel`, precargados de la fila);
