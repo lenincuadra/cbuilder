@@ -31,10 +31,12 @@ export interface GenerateCardProps {
 }
 
 /**
- * Right-column CV generator. Compact card, clickable anywhere (same as the other
- * right-column cards); opens the full wizard in a drawer (shared PanelCard
- * pattern). The drawer node is threaded to the wizard so its dropdowns portal
- * inside it.
+ * Right-column entry point of the main flow: start a new application process
+ * (the tracked CV is generated here too, but a process can be registered
+ * without one — "Guardar sin CV"). Compact card, clickable anywhere (same as
+ * the other right-column cards); opens the full wizard in a drawer (shared
+ * PanelCard pattern). The drawer node is threaded to the wizard so its
+ * dropdowns portal inside it.
  */
 export function GenerateCard({
   spec,
@@ -47,13 +49,13 @@ export function GenerateCard({
 }: GenerateCardProps) {
   return (
     <PanelCard
-      title="Generar un CV"
-      description="Creá un CV trackeado y sumalo al registro."
+      title="Nueva aplicación"
+      description="Registrá una aplicación y generá su CV trackeado — o guardala sin CV."
       card={(open) => (
         <PanelCardFace
           icon={FilePlus2}
-          title="Generar un CV"
-          description="Creá un CV trackeado y sumalo al registro."
+          title="Nueva aplicación"
+          description="Registrá una aplicación y generá su CV trackeado — o guardala sin CV."
           onOpen={open}
         />
       )}

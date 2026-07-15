@@ -11,7 +11,7 @@ cambiar un flow visible al usuario, actualizá su tabla acá.
 
 | Flow | Tipo |
 |---|---|
-| [Generar un CV](#generar-un-cv) | Core |
+| [Nueva aplicación (generar un CV)](#nueva-aplicación-generar-un-cv) | Core |
 | [Registrar sin CV (generación diferida)](#registrar-sin-cv-generación-diferida) | Core |
 | [Carta con template](#1-carta-con-template) | Cover letter |
 | [Carta "Compartir contexto" (IA)](#2-carta-compartir-contexto-ia) | Cover letter · IA |
@@ -24,9 +24,11 @@ cambiar un flow visible al usuario, actualizá su tabla acá.
 | [Generar gratis en Claude.ai](#9-generar-gratis-en-claudeai) | Fallback sin costo |
 | [Administrar un manager (Preguntas / Cover letters / Links estables)](#10-administrar-un-manager-preguntas--cover-letters--links-estables) | Managers |
 
-## Generar un CV
+## Nueva aplicación (generar un CV)
 
-El flow principal, del wizard a los tres destinos del entregable. Tabla
+El flow principal — la card "Nueva aplicación" registra el inicio de un
+proceso y (opcionalmente ahí mismo) genera el CV trackeado; el CTA final del
+wizard es "Generar CV". Del wizard a los tres destinos del entregable: tabla
 completa (a altura de sistema) en [`architecture.md` → "Pipeline de
 generación"](architecture.md#pipeline-de-generación).
 

@@ -178,7 +178,7 @@ export function RegistryTable({
                       </EmptyMedia>
                       <EmptyTitle>No hay aplicaciones</EmptyTitle>
                       <EmptyDescription>
-                        {emptyMessage ?? "Generá tu primer CV desde el panel de la derecha."}
+                        {emptyMessage ?? "Registrá tu primera aplicación desde el panel de la derecha."}
                       </EmptyDescription>
                     </EmptyHeader>
                   </Empty>
