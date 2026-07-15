@@ -12,37 +12,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import type { AiModel } from "@/core/ai/models";
 import type { ScreeningQuestion } from "@/core/screening/types";
 import { AiContextPanel } from "@/ui/AiContextPanel";
 import { ConfirmDelete } from "@/ui/ConfirmDelete";
 import { CopyButton } from "@/ui/CopyButton";
 import { useAiModel } from "@/ui/useAiModel";
 import type { UseScreening } from "@/ui/useScreening";
-
-interface AiAnswerContext {
-  company?: string;
-  role?: string;
-  focus?: string;
-  jobContext?: string;
-  model: AiModel;
-}
-
-/** Ask the AI pipeline for a draft answer, grounded in the profile context pack. */
-async function requestAiAnswer(question: string, context: AiAnswerContext): Promise<string> {
-  const response = await fetch("/api/ai/screening-answer", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, ...context }),
-  });
-  const payload = (await response.json()) as { answer?: string; error?: string };
-  if (!response.ok) {
-    throw new Error(payload.error ?? `AI generation failed (HTTP ${response.status}).`);
-  }
-  return payload.answer ?? "";
-}
+import { requestAiAnswer, type AiAnswerContext } from "./screeningAi";
 
 export interface ScreeningSectionProps {
   /** Tracking code of the open application. */
@@ -57,6 +33,8 @@ export interface ScreeningSectionProps {
   onUpdateJobFields: (fields: { jobUrl?: string; jobContext?: string }) => void | Promise<void>;
   /** Shared bank instance (same one the Preguntas card manages). */
   screening: UseScreening;
+  /** Opens the "Nueva pregunta" takeover view (ScreeningNewForm, owned by the drawer). */
+  onStartNew: () => void;
   /** Portal target for the dropdown (the drawer node). */
   container?: HTMLElement | null;
 }
@@ -65,12 +43,13 @@ export interface ScreeningSectionProps {
  * Preguntas section of the Detalles tab (same card chrome as Entrega/Links de
  * tracking): the pre-screening questions this application asked. Entries live
  * in the global bank (Preguntas card); here they are linked/unlinked to this
- * application's code, created pre-linked, and copied for reuse.
+ * application's code, created pre-linked ("Nueva" opens the drawer-level
+ * ScreeningNewForm takeover), and copied for reuse.
  *
- * "Sugerir y guardar" persists the AI draft the moment it's generated — a
- * generation call can't be undone, so nothing is left in unsaved local state
- * to lose on an accidental close. Wording tweaks after the fact go through
- * the Preguntas card's own edit flow (pencil icon), same as any other entry.
+ * Regenerating persists the AI draft the moment it's generated — a generation
+ * call can't be undone, so nothing is left in unsaved local state to lose on
+ * an accidental close. Wording tweaks after the fact go through the Preguntas
+ * card's own edit flow, same as any other entry.
  */
 export function ScreeningSection({
   code,
@@ -81,9 +60,10 @@ export function ScreeningSection({
   jobContext: rowJobContext,
   onUpdateJobFields,
   screening,
+  onStartNew,
   container,
 }: ScreeningSectionProps) {
-  const { entries, add, update } = screening;
+  const { entries, update } = screening;
   const asked = entries.filter((entry) => entry.codes.includes(code));
   const linkable = entries.filter((entry) => !entry.codes.includes(code));
 
@@ -95,34 +75,10 @@ export function ScreeningSection({
   const [model, setModel] = useAiModel("screening-answer");
   const aiContext: AiAnswerContext = { company, role, focus, jobContext, model };
 
-  const [adding, setAdding] = useState(false);
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [suggestingNew, setSuggestingNew] = useState(false);
   const [suggestingId, setSuggestingId] = useState<string | null>(null);
   // Regenerating over an EXISTING answer overwrites hand-written (or reviewed)
   // text AND spends an API call — both irreversible, so it confirms first.
   const [toRegenerate, setToRegenerate] = useState<ScreeningQuestion | null>(null);
-
-  async function suggestForNew() {
-    if (question.trim() === "") return;
-    setSuggestingNew(true);
-    try {
-      const suggestion = await requestAiAnswer(question.trim(), aiContext);
-      await Promise.all([
-        add({ question: question.trim(), answer: suggestion, codes: [code], draft: true }),
-        onUpdateJobFields({ jobUrl, jobContext }),
-      ]);
-      setQuestion("");
-      setAnswer("");
-      setAdding(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo sugerir una respuesta.");
-    } finally {
-      setSuggestingNew(false);
-    }
-  }
 
   async function suggestForEntry(entry: ScreeningQuestion) {
     setSuggestingId(entry.id);
@@ -136,21 +92,6 @@ export function ScreeningSection({
       toast.error(error instanceof Error ? error.message : "No se pudo sugerir una respuesta.");
     } finally {
       setSuggestingId(null);
-    }
-  }
-
-  async function submitNew() {
-    if (question.trim() === "") return;
-    setSaving(true);
-    try {
-      await add({ question: question.trim(), answer: answer.trim(), codes: [code] });
-      setQuestion("");
-      setAnswer("");
-      setAdding(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo guardar la pregunta.");
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -302,77 +243,27 @@ export function ScreeningSection({
         }}
       />
 
-      {adding ? (
-        <div className="space-y-3 rounded-lg border p-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="st-question">Pregunta</Label>
-            <Textarea
-              id="st-question"
-              placeholder="Project you are most proud of (optional)"
-              value={question}
-              rows={2}
-              onChange={(event) => setQuestion(event.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="st-answer">Tu respuesta</Label>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={suggestForNew}
-                disabled={question.trim() === "" || suggestingNew}
-              >
-                {suggestingNew ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="size-3.5" />
-                )}
-                Sugerir y guardar
-              </Button>
-            </div>
-            <Textarea
-              id="st-answer"
-              placeholder="Podés dejarla vacía y completarla después."
-              value={answer}
-              rows={5}
-              className="text-xs"
-              onChange={(event) => setAnswer(event.target.value)}
-            />
-          </div>
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setAdding(false)} disabled={saving}>
-              Cancelar
-            </Button>
-            <Button size="sm" onClick={submitNew} disabled={question.trim() === "" || saving}>
-              Guardar
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
-            <Plus className="size-4" />
-            Nueva
-          </Button>
-          {linkable.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
-                <Link2 className="size-4" />
-                Vincular del banco
-              </DropdownMenuTrigger>
-              <DropdownMenuContent container={container} className="max-w-72">
-                {linkable.map((entry) => (
-                  <DropdownMenuItem key={entry.id} onClick={() => link(entry)}>
-                    <span className="truncate">{entry.question}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      )}
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={onStartNew}>
+          <Plus className="size-4" />
+          Nueva
+        </Button>
+        {linkable.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
+              <Link2 className="size-4" />
+              Vincular del banco
+            </DropdownMenuTrigger>
+            <DropdownMenuContent container={container} className="max-w-72">
+              {linkable.map((entry) => (
+                <DropdownMenuItem key={entry.id} onClick={() => link(entry)}>
+                  <span className="truncate">{entry.question}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
     </div>
   );
 }

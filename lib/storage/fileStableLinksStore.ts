@@ -63,6 +63,21 @@ export class FileStableLinksStore implements StableLinksStore {
     });
   }
 
+  update(ref: string, fields: Pick<StableLink, "name" | "ref">): Promise<void> {
+    return this.enqueue(async () => {
+      const links = await this.read();
+      const index = links.findIndex((link) => link.ref === ref);
+      if (index === -1) {
+        throw new Error(`No hay un link estable con ref "${ref}".`);
+      }
+      if (fields.ref !== ref && links.some((existing) => existing.ref === fields.ref)) {
+        throw new Error(`Ya existe un link estable con ref "${fields.ref}".`);
+      }
+      links[index] = { ...links[index], ...fields };
+      await this.write(links);
+    });
+  }
+
   remove(ref: string): Promise<void> {
     return this.enqueue(async () => {
       const links = await this.read();

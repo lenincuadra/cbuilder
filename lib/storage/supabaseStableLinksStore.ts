@@ -43,6 +43,19 @@ export class SupabaseStableLinksStore implements StableLinksStore {
     }
   }
 
+  async update(ref: string, fields: Pick<StableLink, "name" | "ref">): Promise<void> {
+    const { error } = await this.client
+      .from(TABLE)
+      .update({ name: fields.name, ref: fields.ref })
+      .eq("ref", ref);
+    if (error) {
+      if (error.code === "23505") {
+        throw new Error(`Ya existe un link estable con ref "${fields.ref}".`);
+      }
+      throw new Error(`Supabase stable-links update failed: ${error.message}`);
+    }
+  }
+
   async remove(ref: string): Promise<void> {
     const { error } = await this.client.from(TABLE).delete().eq("ref", ref);
     if (error) throw new Error(`Supabase stable-links remove failed: ${error.message}`);

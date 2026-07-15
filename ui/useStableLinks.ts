@@ -8,6 +8,7 @@ export interface UseStableLinks {
   links: StableLink[];
   loading: boolean;
   add: (link: Pick<StableLink, "name" | "ref">) => Promise<void>;
+  update: (ref: string, fields: Pick<StableLink, "name" | "ref">) => Promise<void>;
   remove: (ref: string) => Promise<void>;
 }
 
@@ -44,6 +45,14 @@ export function useStableLinks(): UseStableLinks {
     [reload],
   );
 
+  const update = useCallback(
+    async (ref: string, fields: Pick<StableLink, "name" | "ref">) => {
+      await getStableLinksStore().update(ref, fields);
+      await reload();
+    },
+    [reload],
+  );
+
   const remove = useCallback(
     async (ref: string) => {
       await getStableLinksStore().remove(ref);
@@ -52,5 +61,5 @@ export function useStableLinks(): UseStableLinks {
     [reload],
   );
 
-  return { links, loading, add, remove };
+  return { links, loading, add, update, remove };
 }

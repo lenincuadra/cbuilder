@@ -28,7 +28,8 @@ import { useIsMobile } from "@/ui/useIsMobile";
  * Reusable right-column pattern: a compact card whose full content lives in a
  * drawer (right on desktop, bottom on mobile). One instance manages one card +
  * its drawer. See docs/DESIGN.md ("Cards de la columna derecha") — used by
- * Generar CV (wizard), Notas generales (editor) and Links estables (manager).
+ * Generar CV (wizard), Notas generales (editor) and the list ↔ form managers
+ * (Links estables, Cover letters, Preguntas).
  *
  * `card` renders the compact face and gets `open()`; `children` renders
  * everything below the pinned header and gets `close()` (so a flow like the

@@ -36,12 +36,19 @@ import { CoverLetterInfo } from "./CoverLetterInfo";
 import { DeliveryInfo } from "./DeliveryInfo";
 import { NotesTab } from "./NotesTab";
 import { RowEditForm } from "./RowEditForm";
+import { ScreeningNewForm } from "./ScreeningNewForm";
 import { ScreeningSection } from "./ScreeningSection";
 import { TrackedLinks } from "./TrackedLinks";
 import { UpdatesTab } from "./UpdatesTab";
 
 /** Which panel tab the drawer opens on. */
 export type DetailTab = "detalles" | "notas" | "updates";
+
+/**
+ * What occupies the tab area: the read view, or one of the form takeovers
+ * (each brings its own DrawerBody + pinned footer, same slot as the tabs body).
+ */
+type DetailMode = "view" | "edit" | "screening-new";
 
 export interface RowDetailDrawerProps {
   /** The open row (resolved fresh from the table's rows). */
@@ -100,7 +107,7 @@ export function RowDetailDrawer({
   const isMobile = useIsMobile();
   const updates = row?.updates ?? [];
   const [tab, setTab] = useState<DetailTab>(initialTab);
-  const [editing, setEditing] = useState(false);
+  const [mode, setMode] = useState<DetailMode>("view");
   const [confirmDelete, setConfirmDelete] = useState(false);
   // The edit form's Select portals its popup into this node (the drawer) so it stays inside
   // the drawer's pointer-events / stacking / focus scope — a base-ui popup portaled to <body>
@@ -122,12 +129,12 @@ export function RowDetailDrawer({
     if (open) setTab(initialTab);
   }
 
-  // Leave edit mode (and drop any pending delete) when the panel opens or switches rows.
+  // Leave any form takeover (and drop any pending delete) when the panel opens or switches rows.
   const rowSyncKey = `${open}:${row?.code ?? ""}`;
   const [prevRowSyncKey, setPrevRowSyncKey] = useState(rowSyncKey);
   if (rowSyncKey !== prevRowSyncKey) {
     setPrevRowSyncKey(rowSyncKey);
-    setEditing(false);
+    setMode("view");
     setConfirmDelete(false);
   }
 
@@ -236,44 +243,58 @@ export function RowDetailDrawer({
             className="min-h-0 flex-1 gap-0"
           >
             {/* Pinned under the action bar; only the body below scrolls. While
-                editing, the inactive triggers disable so the form has to be
-                saved/cancelled first — the active one stays lit as the "you
-                are here" marker. */}
+                a form takeover is active, the inactive triggers disable so the
+                form has to be saved/cancelled first — the active one stays lit
+                as the "you are here" marker. */}
             <div className="shrink-0 px-4 pb-3">
               <TabsList className="w-full">
-                <TabsTrigger value="detalles" disabled={editing && tab !== "detalles"}>
+                <TabsTrigger value="detalles" disabled={mode !== "view" && tab !== "detalles"}>
                   <Info />
                   Detalles
                 </TabsTrigger>
-                <TabsTrigger value="notas" disabled={editing && tab !== "notas"}>
+                <TabsTrigger value="notas" disabled={mode !== "view" && tab !== "notas"}>
                   <StickyNote />
                   Notas
                 </TabsTrigger>
-                <TabsTrigger value="updates" disabled={editing && tab !== "updates"}>
+                <TabsTrigger value="updates" disabled={mode !== "view" && tab !== "updates"}>
                   <FileChartLine />
                   Actualizaciones
                 </TabsTrigger>
               </TabsList>
             </div>
 
-            {editing ? (
+            {mode === "edit" ? (
               // The form takes over the tab area: fields in the scrollable
               // body, Cancelar/Guardar pinned in the footer.
               <RowEditForm
                 row={row}
                 portalContainer={drawerNode}
-                onCancel={() => setEditing(false)}
+                onCancel={() => setMode("view")}
                 onSave={async (fields) => {
                   await onUpdate(row.code, fields);
-                  setEditing(false);
+                  setMode("view");
                 }}
+              />
+            ) : mode === "screening-new" ? (
+              // Same takeover slot: a new screening question, pre-linked to this row.
+              <ScreeningNewForm
+                code={row.code}
+                company={row.company}
+                role={row.role}
+                focus={row.focus}
+                jobUrl={row.jobUrl}
+                jobContext={row.jobContext}
+                onUpdateJobFields={(fields) => onUpdate(row.code, fields)}
+                screening={screening}
+                container={drawerNode}
+                onDone={() => setMode("view")}
               />
             ) : (
               <DrawerBody>
                 <TabsContent value="detalles" className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-muted-foreground">Datos</span>
-                    <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+                    <Button variant="ghost" size="sm" onClick={() => setMode("edit")}>
                       <Pencil className="size-4" />
                       Editar
                     </Button>
@@ -325,6 +346,7 @@ export function RowDetailDrawer({
                     jobContext={row.jobContext}
                     onUpdateJobFields={(fields) => onUpdate(row.code, fields)}
                     screening={screening}
+                    onStartNew={() => setMode("screening-new")}
                     container={drawerNode}
                   />
                 </TabsContent>
