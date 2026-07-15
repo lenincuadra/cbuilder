@@ -30,8 +30,10 @@ export interface AiContextPanelProps {
  * Shared "ground the AI" block: link del puesto + Detectar (best-effort
  * JSON-LD extraction, no headless — see /api/job-context), contexto libre, y
  * qué modelo usar. Reused as-is wherever a "Generar con IA"/"Sugerir" trigger
- * lives (wizard step 4, drawer Preguntas section) — the input is identical everywhere,
- * only the output/caller differs.
+ * lives (wizard step 4, the screening suggest takeovers) — the input is
+ * identical everywhere, only the output/caller differs. Per the two-step AI
+ * rule (docs/DESIGN.md) it only ever appears after an explicit user action,
+ * next to the button that fires the call.
  */
 export function AiContextPanel({
   jobUrl,
