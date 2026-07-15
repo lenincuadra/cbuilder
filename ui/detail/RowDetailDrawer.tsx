@@ -7,7 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileChartLine,
-  MessageCircleQuestion,
+  Info,
   Pencil,
   StickyNote,
   Trash2,
@@ -24,7 +24,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateLong } from "@/core/dates";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
@@ -37,12 +36,12 @@ import { CoverLetterInfo } from "./CoverLetterInfo";
 import { DeliveryInfo } from "./DeliveryInfo";
 import { NotesTab } from "./NotesTab";
 import { RowEditForm } from "./RowEditForm";
-import { ScreeningTab } from "./ScreeningTab";
+import { ScreeningSection } from "./ScreeningSection";
 import { TrackedLinks } from "./TrackedLinks";
 import { UpdatesTab } from "./UpdatesTab";
 
-/** Which Seguimiento tab the panel opens on. */
-export type DetailTab = "notas" | "updates" | "preguntas";
+/** Which panel tab the drawer opens on. */
+export type DetailTab = "detalles" | "notas" | "updates";
 
 export interface RowDetailDrawerProps {
   /** The open row (resolved fresh from the table's rows). */
@@ -53,7 +52,7 @@ export interface RowDetailDrawerProps {
   onDelete: (code: string) => void | Promise<void>;
   /** Open the deferred-generation wizard for a pending row ("Generar CV"). */
   onGenerateCv?: (row: RegistryRow) => void;
-  /** Shared screening-questions bank (Preguntas tab reads/writes it). */
+  /** Shared screening-questions bank (the Preguntas section reads/writes it). */
   screening: UseScreening;
   /** Tab to show when the panel opens. */
   initialTab?: DetailTab;
@@ -78,7 +77,9 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 /**
  * Full row detail panel in a responsive drawer (DS: right on desktop, bottom on
- * mobile). Shows all the application data, plus the Seguimiento tabs.
+ * mobile). Everything below the action bar lives in three tabs — Detalles (all
+ * the application data + the Preguntas section), Notas, Actualizaciones — with
+ * the TabsList pinned under the header so it survives body scroll.
  */
 export function RowDetailDrawer({
   row,
@@ -88,7 +89,7 @@ export function RowDetailDrawer({
   onDelete,
   onGenerateCv,
   screening,
-  initialTab = "notas",
+  initialTab = "detalles",
   position,
   total,
   hasPrev,
@@ -228,115 +229,117 @@ export function RowDetailDrawer({
           )}
         </DrawerHeader>
 
-        {/* Editing takes over everything below the header: fields in the
-            scrollable body, Cancelar/Guardar pinned in the footer. The tabs
-            come back on save/cancel. */}
-        {row && editing && (
-          <RowEditForm
-            row={row}
-            portalContainer={drawerNode}
-            onCancel={() => setEditing(false)}
-            onSave={async (fields) => {
-              await onUpdate(row.code, fields);
-              setEditing(false);
-            }}
-          />
-        )}
-        {row && !editing && (
-          <DrawerBody className="gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Datos</span>
-                <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-                  <Pencil className="size-4" />
-                  Editar
-                </Button>
-              </div>
-              <div className="rounded-lg border px-3 py-1">
-                {/* Only fields with a value are shown. */}
-                <Field label="Rol">{row.role}</Field>
-                <Field label="Fecha">
-                  <span className="tabular-nums">{formatDateLong(row.date)}</span>
-                </Field>
-                {row.channel && <Field label="Canal">{row.channel}</Field>}
-                {row.email && (
-                  <Field label="Email">
-                    <span className="break-all">{row.email}</span>
-                  </Field>
-                )}
-                {row.who && <Field label="Quién">{row.who}</Field>}
-                {row.language && <Field label="Idioma">{languageLabel(row.language)}</Field>}
-                {row.jobUrl && (
-                  <Field label="Link del puesto">
-                    <a
-                      href={row.jobUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title={row.jobUrl}
-                      className="block max-w-full truncate text-primary underline underline-offset-2"
-                    >
-                      {row.jobUrl}
-                    </a>
-                  </Field>
-                )}
-              </div>
-              {/* A pending row has no baked links yet — nothing was sent. */}
-              {!row.cvPending && (
-                <TrackedLinks code={row.code} focus={row.focus} links={row.links} />
-              )}
-              <CoverLetterInfo row={row} />
-              <DeliveryInfo row={row} onGenerateCv={() => onGenerateCv?.(row)} />
-            </div>
-
-            <Separator />
-
-            <Tabs
-              value={tab}
-              onValueChange={(value) => setTab(value as DetailTab)}
-              className="flex-1"
-            >
+        {row && (
+          <Tabs
+            value={tab}
+            onValueChange={(value) => setTab(value as DetailTab)}
+            className="min-h-0 flex-1 gap-0"
+          >
+            {/* Pinned under the action bar; only the body below scrolls. While
+                editing, the inactive triggers disable so the form has to be
+                saved/cancelled first — the active one stays lit as the "you
+                are here" marker. */}
+            <div className="shrink-0 px-4 pb-3">
               <TabsList className="w-full">
-                <TabsTrigger value="notas">
+                <TabsTrigger value="detalles" disabled={editing && tab !== "detalles"}>
+                  <Info />
+                  Detalles
+                </TabsTrigger>
+                <TabsTrigger value="notas" disabled={editing && tab !== "notas"}>
                   <StickyNote />
                   Notas
                 </TabsTrigger>
-                <TabsTrigger value="updates">
+                <TabsTrigger value="updates" disabled={editing && tab !== "updates"}>
                   <FileChartLine />
                   Actualizaciones
                 </TabsTrigger>
-                <TabsTrigger value="preguntas">
-                  <MessageCircleQuestion />
-                  Preguntas
-                </TabsTrigger>
               </TabsList>
-              <TabsContent value="notas" className="pt-3">
-                <NotesTab notes={row.notes} onSave={(notes) => onUpdate(row.code, { notes })} />
-              </TabsContent>
-              <TabsContent value="updates" className="pt-3">
-                <UpdatesTab
-                  updates={updates}
-                  onSave={(next) => onUpdate(row.code, { updates: next })}
-                />
-              </TabsContent>
-              <TabsContent value="preguntas" className="pt-3">
-                <ScreeningTab
-                  // Forces a remount on prev/next row navigation — otherwise
-                  // jobUrl/jobContext local state (seeded from props only at
-                  // first mount) stays stuck on whichever row loaded first.
-                  key={row.code}
-                  code={row.code}
-                  company={row.company}
-                  role={row.role}
-                  focus={row.focus}
-                  jobUrl={row.jobUrl}
-                  jobContext={row.jobContext}
-                  onUpdateJobFields={(fields) => onUpdate(row.code, fields)}
-                  screening={screening}
-                  container={drawerNode}
-                />
-              </TabsContent>
-            </Tabs>
-          </DrawerBody>
+            </div>
+
+            {editing ? (
+              // The form takes over the tab area: fields in the scrollable
+              // body, Cancelar/Guardar pinned in the footer.
+              <RowEditForm
+                row={row}
+                portalContainer={drawerNode}
+                onCancel={() => setEditing(false)}
+                onSave={async (fields) => {
+                  await onUpdate(row.code, fields);
+                  setEditing(false);
+                }}
+              />
+            ) : (
+              <DrawerBody>
+                <TabsContent value="detalles" className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">Datos</span>
+                    <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+                      <Pencil className="size-4" />
+                      Editar
+                    </Button>
+                  </div>
+                  <div className="rounded-lg border px-3 py-1">
+                    {/* Only fields with a value are shown. */}
+                    <Field label="Rol">{row.role}</Field>
+                    <Field label="Fecha">
+                      <span className="tabular-nums">{formatDateLong(row.date)}</span>
+                    </Field>
+                    {row.channel && <Field label="Canal">{row.channel}</Field>}
+                    {row.email && (
+                      <Field label="Email">
+                        <span className="break-all">{row.email}</span>
+                      </Field>
+                    )}
+                    {row.who && <Field label="Quién">{row.who}</Field>}
+                    {row.language && <Field label="Idioma">{languageLabel(row.language)}</Field>}
+                    {row.jobUrl && (
+                      <Field label="Link del puesto">
+                        <a
+                          href={row.jobUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={row.jobUrl}
+                          className="block max-w-full truncate text-primary underline underline-offset-2"
+                        >
+                          {row.jobUrl}
+                        </a>
+                      </Field>
+                    )}
+                  </div>
+                  {/* A pending row has no baked links yet — nothing was sent. */}
+                  {!row.cvPending && (
+                    <TrackedLinks code={row.code} focus={row.focus} links={row.links} />
+                  )}
+                  <CoverLetterInfo row={row} />
+                  <DeliveryInfo row={row} onGenerateCv={() => onGenerateCv?.(row)} />
+                  <ScreeningSection
+                    // Forces a remount on prev/next row navigation — otherwise
+                    // jobUrl/jobContext local state (seeded from props only at
+                    // first mount) stays stuck on whichever row loaded first.
+                    key={row.code}
+                    code={row.code}
+                    company={row.company}
+                    role={row.role}
+                    focus={row.focus}
+                    jobUrl={row.jobUrl}
+                    jobContext={row.jobContext}
+                    onUpdateJobFields={(fields) => onUpdate(row.code, fields)}
+                    screening={screening}
+                    container={drawerNode}
+                  />
+                </TabsContent>
+                <TabsContent value="notas">
+                  <NotesTab notes={row.notes} onSave={(notes) => onUpdate(row.code, { notes })} />
+                </TabsContent>
+                <TabsContent value="updates">
+                  <UpdatesTab
+                    updates={updates}
+                    onSave={(next) => onUpdate(row.code, { updates: next })}
+                  />
+                </TabsContent>
+              </DrawerBody>
+            )}
+          </Tabs>
         )}
       </DrawerContent>
     </Drawer>

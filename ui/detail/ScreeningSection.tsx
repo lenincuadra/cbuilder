@@ -44,7 +44,7 @@ async function requestAiAnswer(question: string, context: AiAnswerContext): Prom
   return payload.answer ?? "";
 }
 
-export interface ScreeningTabProps {
+export interface ScreeningSectionProps {
   /** Tracking code of the open application. */
   code: string;
   /** Company/role/focus of this application — context for AI-suggested answers. */
@@ -62,16 +62,17 @@ export interface ScreeningTabProps {
 }
 
 /**
- * Preguntas tab: the pre-screening questions this application asked. Entries
- * live in the global bank (Preguntas card); here they are linked/unlinked to
- * this application's code, created pre-linked, and copied for reuse.
+ * Preguntas section of the Detalles tab (same card chrome as Entrega/Links de
+ * tracking): the pre-screening questions this application asked. Entries live
+ * in the global bank (Preguntas card); here they are linked/unlinked to this
+ * application's code, created pre-linked, and copied for reuse.
  *
  * "Sugerir y guardar" persists the AI draft the moment it's generated — a
  * generation call can't be undone, so nothing is left in unsaved local state
  * to lose on an accidental close. Wording tweaks after the fact go through
  * the Preguntas card's own edit flow (pencil icon), same as any other entry.
  */
-export function ScreeningTab({
+export function ScreeningSection({
   code,
   company,
   role,
@@ -81,7 +82,7 @@ export function ScreeningTab({
   onUpdateJobFields,
   screening,
   container,
-}: ScreeningTabProps) {
+}: ScreeningSectionProps) {
   const { entries, add, update } = screening;
   const asked = entries.filter((entry) => entry.codes.includes(code));
   const linkable = entries.filter((entry) => !entry.codes.includes(code));
@@ -170,7 +171,8 @@ export function ScreeningTab({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 rounded-lg border px-3 py-2">
+      <span className="text-xs font-medium text-muted-foreground">Preguntas</span>
       <Collapsible>
         <CollapsibleTrigger
           render={

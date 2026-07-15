@@ -30,7 +30,7 @@ export interface AiContextPanelProps {
  * Shared "ground the AI" block: link del puesto + Detectar (best-effort
  * JSON-LD extraction, no headless — see /api/job-context), contexto libre, y
  * qué modelo usar. Reused as-is wherever a "Generar con IA"/"Sugerir" trigger
- * lives (wizard step 4, tab Preguntas) — the input is identical everywhere,
+ * lives (wizard step 4, drawer Preguntas section) — the input is identical everywhere,
  * only the output/caller differs.
  */
 export function AiContextPanel({

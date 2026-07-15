@@ -16,7 +16,7 @@ function readStored(action: string): AiModel {
 /**
  * Model choice per AI action, persisted in localStorage (client-only, no
  * server/DB — this is a personal preference, not application data). Both
- * callers (wizard step 4, tab Preguntas) only ever mount after a user
+ * callers (wizard step 4, drawer Preguntas section) only ever mount after a user
  * interaction (never part of the initial SSR pass), so reading localStorage
  * in the lazy `useState` initializer is safe — no hydration mismatch.
  */

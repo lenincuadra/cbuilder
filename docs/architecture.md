@@ -1,9 +1,11 @@
 # Arquitectura y features (cv-builder)
 
 Mapa del **qué y cómo** del sistema. El **por qué** (trade-offs, decisiones que
-cambiaron) vive en [`decisions.md`](decisions.md); las convenciones de UI, en
-[`DESIGN.md`](DESIGN.md); las reglas inviolables resumidas, en
-[`CLAUDE.md`](../CLAUDE.md). Este doc conecta las piezas.
+cambiaron) vive en [`decisions.md`](decisions.md); los flows a **altura de
+uso** (qué hace el usuario, paso a paso, catálogo completo), en
+[`flows.md`](flows.md); las convenciones de UI, en [`DESIGN.md`](DESIGN.md);
+las reglas inviolables resumidas, en [`CLAUDE.md`](../CLAUDE.md). Este doc
+conecta las piezas.
 
 ## Qué hace la app
 
@@ -183,12 +185,13 @@ Supabase ([`supabase-setup.md`](supabase-setup.md)).
 Dos rutas server (`/api/ai/cover-letter`, `/api/ai/screening-answer`) llaman a
 la API de Anthropic para producir un **borrador** — el usuario siempre
 revisa/edita, nunca se persiste como final sin pasar por ahí. Un solo flow,
-repetido en los dos puntos donde se genera (ver [`decisions.md`](decisions.md)
-→ "Pipeline AI"):
+repetido en los dos puntos donde se genera (el porqué en
+[`decisions.md`](decisions.md) → "Pipeline AI"; los use cases concretos, paso
+a paso, en [`flows.md`](flows.md)):
 
 | # | Acción hecha | Dónde/qué sucede por detrás |
 |---|---|---|
-| 1 | Usuario completa el bloque de contexto compartido: link del puesto + "Detectar", contexto libre, modelo | `ui/AiContextPanel.tsx` — un solo componente, usado tal cual en el wizard (paso 4, opción "Compartir contexto") y en el tab Preguntas del drawer |
+| 1 | Usuario completa el bloque de contexto compartido: link del puesto + "Detectar", contexto libre, modelo | `ui/AiContextPanel.tsx` — un solo componente, usado tal cual en el wizard (paso 4, opción "Compartir contexto") y en la sección Preguntas del drawer (tab Detalles) |
 | 2 | "Detectar" (opcional): mejor esfuerzo, sin llamar a Anthropic | `POST /api/job-context` — busca `JobPosting` en JSON-LD del HTML (sin headless), `context: null` si no encuentra nada; nunca bloquea |
 | 3 | Click en "Generar con IA" / "Sugerir y guardar" / regenerar (ícono ✦ en una respuesta existente — **confirma antes**: pisa texto y gasta una llamada, ambos irreversibles) | Regeneración vía `ConfirmDelete` (mismo patrón de confirmación del app) |
 | 4 | Llamada a `/api/ai/cover-letter` o `/api/ai/screening-answer` con el contexto compartido + el modelo elegido + lo específico del caso | `core/ai/prompt.ts` arma el prompt igual en ambos (capa `jobContext` a 4000 chars — un pegado gigante no infla el costo de input); `core/ai/models.ts` valida el `model` contra el allow-list (`DEFAULT_AI_MODEL` si falta o es inválido); la respuesta **ecoa el modelo usado** |
@@ -197,7 +200,7 @@ repetido en los dos puntos donde se genera (ver [`decisions.md`](decisions.md)
 
 La card Preguntas (banco global) **no genera** — solo gestiona/edita: sin
 contexto de aplicación la respuesta saldría genérica (gasto con poco valor);
-un hint en el formulario del banco apunta al tab por-aplicación.
+un hint en el formulario del banco apunta a la sección por-aplicación.
 
 **Réplica sin costo en claude.ai**: `docs/claude-ai/` — un Project (custom
 instructions + `background.md`/`spec-cache.json` como knowledge) y un Skill

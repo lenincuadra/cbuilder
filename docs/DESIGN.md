@@ -131,16 +131,22 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
 - **Todas las vistas comparten exactamente la misma tabla**: misma estructura, columnas y
   comportamiento; lo único que cambia es qué filas se muestran (filtradas por `archived` +
   `status` en la página). No duplicar componentes ni variar columnas entre vistas.
-- **Fila clickeable**: abre el panel de detalle en el **tab por defecto según contenido**
-  (regla genérica): si solo hay actualizaciones → Actualizaciones; si no (hay notas, o
-  ambas, o ninguna) → Notas. Click en un ícono de Seguimiento abre su tab explícito
-  (`notas` / `updates`). El badge de Estado y los íconos hacen `stopPropagation`; el resto
-  de la celda cae al click del row.
-- Seguimiento: el panel tiene tabs **Notas** (markdown), **Actualizaciones** (timeline,
-  tope 12, más reciente abajo) y **Preguntas** (pre-screening de esa aplicación: entradas
-  del banco global vinculadas por código — copiar respuesta, crear pre-vinculada,
-  vincular/desvincular; el banco se administra en la card "Preguntas" de la columna
-  derecha). El `TabsList` es full-width. Cada actualización es un item
+- **Fila clickeable**: abre el panel de detalle en el tab **Detalles**. Click en un ícono
+  de Seguimiento abre su tab explícito (`notas` / `updates`). El badge de Estado y los
+  íconos hacen `stopPropagation`; el resto de la celda cae al click del row. La navegación
+  prev/next dentro del panel **conserva el tab actual** (no lo resetea).
+- **Panel de detalle: tabs Detalles / Notas / Actualizaciones.** El `TabsList` es
+  full-width y va **fijo debajo de la barra de acción** (Status/Archivar/Borrar) — no
+  scrollea con el body. **Detalles** concentra todos los datos de la aplicación: card
+  Datos (con "Editar"), Links de tracking, Carta (si aplica), Entrega, y **Preguntas**
+  como sección al final con el mismo chrome de card (label + border): el pre-screening de
+  esa aplicación — entradas del banco global vinculadas por código, copiar respuesta,
+  crear pre-vinculada, vincular/desvincular, sugerir con IA; el banco se administra en la
+  card "Preguntas" de la columna derecha. **Modo edición** ("Editar" en Datos): el
+  formulario toma el área bajo los tabs; los triggers **inactivos se deshabilitan** hasta
+  guardar/cancelar y el activo queda marcado — se ve dónde estás parado.
+- Seguimiento: tabs **Notas** (markdown) y **Actualizaciones** (timeline, tope 12, más
+  reciente abajo). Cada actualización es un item
   **editable** (texto, fecha/hora, flag). El **flag 🚩** marca algo por hacer/importante:
   se muestra en el item y, en la celda de Seguimiento, tras los íconos. La celda muestra
   íconos según contenido, o un link "Agregar" si está vacía. Íconos de **estado de la
