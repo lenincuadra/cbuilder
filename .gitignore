@@ -8,6 +8,8 @@
 docs/*tracking-registry*.md
 # Personal backlog — has company names; repo is public.
 /TODO.md
+# Model selection guide — personal reference.
+docs/model-selection.md
 # Misc personal assets — not part of the app.
 /assets/interesting-stuffs/
 # Claude.ai skill build artifacts: copies of the source pack + the zip.
