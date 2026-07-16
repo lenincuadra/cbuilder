@@ -1,15 +1,28 @@
 /**
- * Storage abstraction for the app's general notes — a single free-text
- * (markdown) document that is NOT tied to any application row. Cross-cutting
- * notes about the job search as a whole.
- *
- * Mirrors RegistryStore: local file/API now, Supabase later, without touching
- * core/ or ui/. Modeled as its own table/document (not a registry row) so it
- * maps cleanly onto a future DB.
+ * General notes: free-standing markdown notes about the job search as a
+ * whole, NOT tied to any application row (compare `RegistryRow.notes`, a
+ * single per-row field). Several independent notes, each with a title.
+ */
+export interface GeneralNote {
+  /** Stable unique id (generated at creation). */
+  id: string;
+  title: string;
+  /** Markdown body. */
+  body: string;
+  /** Creation timestamp (ISO). */
+  createdAt?: string;
+}
+
+/** Fields editable after creation — everything except identity/timestamps. */
+export type EditableGeneralNoteFields = Partial<Omit<GeneralNote, "id" | "createdAt">>;
+
+/**
+ * Storage for the notes list. Same triple-store pattern as the registry:
+ * file store locally, Supabase on deploy, API store in the browser.
  */
 export interface GeneralNotesStore {
-  /** The current notes markdown; empty string when nothing has been saved yet. */
-  get(): Promise<string>;
-  /** Replace the notes markdown (empty string clears it). */
-  set(notes: string): Promise<void>;
+  list(): Promise<GeneralNote[]>;
+  add(note: GeneralNote): Promise<void>;
+  update(id: string, fields: EditableGeneralNoteFields): Promise<void>;
+  remove(id: string): Promise<void>;
 }

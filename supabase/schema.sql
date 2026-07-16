@@ -1,8 +1,8 @@
 -- cv-builder — run this in the Supabase SQL editor (prod after merges that touch schema).
--- schema_version: 5  (registry + notes + stable_links + cover_letter_templates
+-- schema_version: 6  (registry + notes + stable_links + cover_letter_templates
 --                     + screening_questions + cvs bucket + cv_pending/delivery_files
 --                     + Borrador status + cover_letter_draft/job_context
---                     + screening_questions.draft)
+--                     + screening_questions.draft + general_notes_entries)
 -- Bump schema_version when this file changes; see docs/versioning.md §3.
 -- Columns map to RegistryRow (camelCase) via snake_case; the app converts them.
 
@@ -46,14 +46,28 @@ alter table public.registry enable row level security;
 drop policy if exists "anon full access (dev)" on public.registry;
 
 
--- General notes: a single free-text markdown document about the job search as a
--- whole (not tied to any application). One row, pinned to id = 1.
+-- General notes (legacy): a single free-text markdown document about the job
+-- search as a whole. Superseded by general_notes_entries below (a list, each
+-- with a title) — kept here only so the migration snippet at the bottom can
+-- carry its content over; drop it once that's done.
 create table if not exists public.general_notes (
   id         smallint primary key default 1 check (id = 1),
   notes      text not null default '',
   updated_at timestamptz not null default now()
 );
 alter table public.general_notes enable row level security;
+
+-- General notes: several independent notes about the job search as a whole
+-- (not tied to any application), each with a title. One row per note.
+create table if not exists public.general_notes_entries (
+  id         text primary key,
+  title      text not null default '',
+  body       text not null default '',
+  created_at timestamptz not null default now()
+);
+create index if not exists general_notes_entries_created_at_idx
+  on public.general_notes_entries (created_at);
+alter table public.general_notes_entries enable row level security;
 
 -- Stable links: tracking refs for permanent touchpoints (LinkedIn, Behance…),
 -- not tied to a single application. One row per touchpoint, keyed by ref.
@@ -113,3 +127,11 @@ insert into storage.buckets (id, name, public)
 --   alter table public.registry add constraint registry_status_check
 --     check (status in ('Borrador', 'Activo', 'Rechazado'));
 --   alter table public.screening_questions add column if not exists draft boolean not null default false;
+
+-- One-time move from the old single-document general_notes to
+-- general_notes_entries (run once, then drop the old table):
+--   insert into public.general_notes_entries (id, title, body, created_at)
+--     select 'legacy', 'Notas', notes, updated_at
+--     from public.general_notes where id = 1 and notes <> ''
+--     on conflict (id) do nothing;
+--   drop table if exists public.general_notes;

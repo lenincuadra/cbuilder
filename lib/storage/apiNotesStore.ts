@@ -1,4 +1,4 @@
-import type { GeneralNotesStore } from "@/core/notes/types";
+import type { EditableGeneralNoteFields, GeneralNote, GeneralNotesStore } from "@/core/notes/types";
 
 const BASE = "/api/notes";
 
@@ -8,24 +8,34 @@ async function ensureOk(response: Response): Promise<void> {
   throw new Error(body.error ?? `Notes request failed (HTTP ${response.status}).`);
 }
 
-/**
- * Client-side GeneralNotesStore that talks to the app's own API route (which
- * persists to a local JSON file). Same contract; used in the browser.
- */
+/** Client-side GeneralNotesStore that talks to the app's API routes. */
 export class ApiGeneralNotesStore implements GeneralNotesStore {
-  async get(): Promise<string> {
+  async list(): Promise<GeneralNote[]> {
     const response = await fetch(BASE, { cache: "no-store" });
     await ensureOk(response);
-    const body = (await response.json()) as { notes?: string };
-    return body.notes ?? "";
+    return response.json();
   }
 
-  async set(notes: string): Promise<void> {
+  async add(note: GeneralNote): Promise<void> {
     const response = await fetch(BASE, {
-      method: "PUT",
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notes }),
+      body: JSON.stringify(note),
     });
+    await ensureOk(response);
+  }
+
+  async update(id: string, fields: EditableGeneralNoteFields): Promise<void> {
+    const response = await fetch(`${BASE}/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(fields),
+    });
+    await ensureOk(response);
+  }
+
+  async remove(id: string): Promise<void> {
+    const response = await fetch(`${BASE}/${encodeURIComponent(id)}`, { method: "DELETE" });
     await ensureOk(response);
   }
 }

@@ -10,6 +10,26 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Notas generales: de documento único a lista de notas (título + contenido) (2026-07-15)
+**Decisión**: "Notas generales" deja de ser un documento markdown único (preview-first,
+click-to-edit vía `NotesTab`) y pasa a ser un **manager lista ↔ form** — mismo patrón que
+Preguntas/Cover letters/Links estables: lista de notas (solo título por card, click abre
+la edición), footer pinneado **"+ Nueva nota"**, form con **Título** (requerido) +
+**Contenido** (Textarea markdown libre). Sin vista de lectura renderizada intermedia
+(confirmado con el usuario: prioridad a la consistencia entre managers sobre preservar el
+render de markdown que tenía el documento único). `core/notes/types.ts` pasa de
+`GeneralNotesStore.get()/set()` a CRUD (`list/add/update/remove`, mismo shape que
+`ScreeningStore`) — reemplaza la entrada vieja "Notas generales: card propio + store
+separado" de más abajo. Tabla Supabase nueva `general_notes_entries` (`schema_version`
+5→6); la `general_notes` vieja (singleton `id=1`) queda de paso para la migración
+comentada en `schema.sql` (traspasa su contenido como primera nota, después se dropea a
+mano). El file store local (`data/notes.json`) migra la forma vieja **sola**, al primer
+`list()` — sin paso manual en dev, el contenido real no se pierde.
+**Contexto/razón**: pedido explícito de paridad con Preguntas — varias notas
+independientes en vez de un solo bloque de texto que crecía sin estructura. No toca
+`ui/detail/NotesTab.tsx` (sigue usándose para `row.notes`, el campo por-fila del tab
+Notas del detalle — concepto distinto).
+
 ## Cover letters: lista única — Template/Enviada es metadata, no tabs (2026-07-15)
 **Decisión**: el drawer de Cover letters deja los tabs Templates/Enviadas y pasa a una
 **lista única**: primero los templates (editables — click abre el form, patrón manager)
@@ -613,6 +633,9 @@ acortador tipo Bitly: el dominio propio ya es corto, es primera parte (sin depen
 terceros ni destino oculto) y no requiere un link por aplicación.
 
 ## Notas generales: card propio + store separado (misma infra, DB futura)
+_Superseded por "Notas generales: de documento único a lista de notas" más arriba — el
+`get()/set()` de un documento único que describe esta entrada ya no es el contrato._
+
 Se sumó un card **"Notas generales"** en la columna derecha: notas markdown
 **genéricas del proceso** (no atadas a ninguna fila del registro). Reusa `NotesTab`
 (preview-first, click para editar, Guardar) con un `placeholder` propio. Una flecha

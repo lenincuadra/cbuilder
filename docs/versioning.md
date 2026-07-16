@@ -284,7 +284,7 @@ inyecta en build (`next.config.ts`).
 |---|---|---|
 | App | `0.2.0` | `package.json` |
 | Masters | **v15** (EN y ES) | `lib/version.ts` → `MASTER_VERSION` + `public/masters/` |
-| Schema | **3** | `lib/version.ts` → `SCHEMA_VERSION` + header de `schema.sql` |
+| Schema | **6** | `lib/version.ts` → `SCHEMA_VERSION` + header de `schema.sql` |
 | Spec | **1** | `core/spec/types.ts` → `SUPPORTED_SPEC_VERSION` |
 
 ---

@@ -130,7 +130,7 @@ la carta lleva la fecha del día de generación.
 
 ## Capas de storage
 
-Tres documentos independientes, cada uno detrás de su interfaz. El cliente siempre
+Varios documentos independientes, cada uno detrás de su interfaz. El cliente siempre
 habla con las API routes (`Api*Store`); en el server, una factory por documento
 (`getServer*Store`) elige Supabase con la service key (si están las env vars) o el
 file store local. Se puede cambiar la implementación sin tocar `core/` ni `ui/`.
@@ -138,16 +138,16 @@ file store local. Se puede cambiar la implementación sin tocar `core/` ni `ui/`
 | Documento | Interfaz | Default local | Durable (deploy) — factory server |
 |---|---|---|---|
 | Registro | `RegistryStore` | File store (`data/registry.json`) vía API + `ApiRegistryStore` | `SupabaseRegistryStore` — `getServerRegistryStore` |
-| Notas generales | `GeneralNotesStore` | File store (`data/notes.json`) vía API | `SupabaseGeneralNotesStore` — `getServerNotesStore` |
+| Notas generales (lista) | `GeneralNotesStore` (`core/notes/types.ts`) | File store (`data/notes.json`) vía API — migra sola el documento único viejo a la primera nota | `SupabaseGeneralNotesStore` contra `general_notes_entries` — `getServerNotesStore` |
 | Links estables | `StableLinksStore` | File store (`data/stable-links.json`) vía API | `SupabaseStableLinksStore` — `getServerStableLinksStore` |
 | Cover letters (templates) | `CoverLetterTemplatesStore` | File store (`data/cover-letter-templates.json`) vía API | `SupabaseCoverLetterTemplatesStore` — `getServerCoverLetterTemplatesStore` |
 | Preguntas de pre-screening | `ScreeningStore` (`core/screening/types.ts`) | File store (`data/screening-questions.json`) vía API | `SupabaseScreeningStore` — `getServerScreeningStore` |
 | Archivo de CVs (binarios) | `CvArchiveStore` (`lib/storage/cvArchive.ts`) | File store (`data/cvs/<carpeta>/`) vía API | `SupabaseCvArchiveStore` — Storage bucket privado `cvs` — `getServerCvArchiveStore` |
 
 Las factories usan un cliente admin compartido (`getSupabaseAdmin`, service
-key, server-only). Las tablas Supabase (`registry`, `general_notes`,
-`stable_links`, `cover_letter_templates`) tienen RLS on sin policy → solo la
-service key entra.
+key, server-only). Las tablas Supabase (`registry`, `general_notes_entries`,
+`stable_links`, `cover_letter_templates`, `screening_questions`) tienen RLS on
+sin policy → solo la service key entra.
 
 Notas de los file stores: **acceso serializado** (cola serial → read-modify-write
 atómico) + **escritura atómica** (tmp + rename), para no perder filas ni corromper

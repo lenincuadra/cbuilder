@@ -1,24 +1,31 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { EditableGeneralNoteFields, GeneralNote } from "@/core/notes/types";
 import { getGeneralNotesStore } from "@/lib/storage";
 
 export interface UseGeneralNotes {
-  notes: string;
+  notes: GeneralNote[];
   loading: boolean;
-  /** Persist the notes (undefined/empty clears them). */
-  save: (notes: string | undefined) => Promise<void>;
+  add: (note: Pick<GeneralNote, "title" | "body">) => Promise<void>;
+  update: (id: string, fields: EditableGeneralNoteFields) => Promise<void>;
+  remove: (id: string) => Promise<void>;
 }
 
-/** React access to the general-notes store: holds the value in state and keeps it in sync. */
+/** React access to the general notes list: holds it in state and keeps it in sync. */
 export function useGeneralNotes(): UseGeneralNotes {
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState<GeneralNote[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const reload = useCallback(async () => {
+    const value = await getGeneralNotesStore().list();
+    setNotes(value);
+  }, []);
 
   useEffect(() => {
     let active = true;
     getGeneralNotesStore()
-      .get()
+      .list()
       .then((value) => {
         if (active) setNotes(value);
       })
@@ -30,11 +37,29 @@ export function useGeneralNotes(): UseGeneralNotes {
     };
   }, []);
 
-  const save = useCallback(async (next: string | undefined) => {
-    const value = next ?? "";
-    await getGeneralNotesStore().set(value);
-    setNotes(value);
-  }, []);
+  const add = useCallback(
+    async (note: Pick<GeneralNote, "title" | "body">) => {
+      await getGeneralNotesStore().add({ id: crypto.randomUUID(), ...note });
+      await reload();
+    },
+    [reload],
+  );
 
-  return { notes, loading, save };
+  const update = useCallback(
+    async (id: string, fields: EditableGeneralNoteFields) => {
+      await getGeneralNotesStore().update(id, fields);
+      await reload();
+    },
+    [reload],
+  );
+
+  const remove = useCallback(
+    async (id: string) => {
+      await getGeneralNotesStore().remove(id);
+      await reload();
+    },
+    [reload],
+  );
+
+  return { notes, loading, add, update, remove };
 }

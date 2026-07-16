@@ -46,7 +46,8 @@ Antes de crear cualquier componente o comportamiento de UI:
   (`ui/useIsMobile.ts`, breakpoint 768px).
 - Referencia: `ui/detail/RowDetailDrawer.tsx` (takeovers `edit`/`screening-new`),
   `ui/wizard/Wizard.tsx` (body + nav en footer) y `ui/ScreeningCard.tsx` /
-  `ui/CoverLettersCard.tsx` / `ui/StableLinksCard.tsx` (managers lista ↔ form).
+  `ui/CoverLettersCard.tsx` / `ui/StableLinksCard.tsx` / `ui/GeneralNotesCard.tsx`
+  (managers lista ↔ form).
 
 ## Contenido Markdown
 - Render con `react-markdown` + `remark-gfm`, estilado con Tailwind Typography
@@ -102,10 +103,10 @@ reusable en **`ui/PanelCard.tsx`**:
   las 3 cards se vean idénticas. `h-full` para que estiren al mismo alto en fila. Usá `cta`
   (un botón) para una card con acción explícita (Generar CV) o `onOpen` para hacer toda la
   card clickeable (Notas, Links estables).
-- Lo usan: **Nueva aplicación** (wizard en el drawer), **Notas generales** (editor), **Links
-  estables**, **Cover letters** y **Preguntas** (managers lista ↔ form — ver la sección
-  de drawers). **Para una card nueva**: reusá `PanelCard` + `PanelCardFace`; el contenido
-  pesado va en el cuerpo del drawer.
+- Lo usan: **Nueva aplicación** (wizard en el drawer) y los managers lista ↔ form —
+  **Notas generales**, **Links estables**, **Cover letters**, **Preguntas** (ver la
+  sección de drawers). **Para una card nueva**: reusá `PanelCard` + `PanelCardFace`; el
+  contenido pesado va en el cuerpo del drawer.
 
 **Layout responsive de las cards** (`aside` en `app/page.tsx`): grid **`auto-fit` con
 `minmax`** que responde al **ancho del contenedor**, no de la pantalla → 1 columna en la
