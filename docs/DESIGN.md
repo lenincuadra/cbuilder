@@ -129,6 +129,13 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
 - **Dentro del drawer**: `IconSelect` acepta `container` (el nodo del drawer) y se porta
   ahí (`DropdownMenuContent` con `container`, `modal={false}`, `z-[60]`, `pointer-events-auto`)
   — misma solución que se usaba para el `Select`, ahora resuelta de una vez en el DS.
+- **`Tooltip` anidado dentro de otro popout** (ej. un item de `DropdownMenu` con texto
+  truncado): pasarle `container` (mismo nodo del drawer) **y** subir su z-index por
+  encima del contenedor que lo aloja (ej. `className="z-[70]"` si vive dentro de un
+  `DropdownMenuContent`, que es `z-[60]`) — `TooltipContent` reenvía ambos al
+  `Positioner` real (no solo al `Popup`), así que el override alcanza. Sin esto, el
+  tooltip porta a `<body>` por default y renderiza **detrás** del popout que lo contiene.
+  Referencia: `ui/detail/ScreeningSection.tsx` → tooltip de "Vincular del banco".
 
 ## Inputs
 - Usar `InputGroup` (`components/ui/input-group.tsx`) para inputs con addon (íconos,

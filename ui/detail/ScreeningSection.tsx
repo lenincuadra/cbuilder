@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ScreeningQuestion } from "@/core/screening/types";
 import { CopyButton } from "@/ui/CopyButton";
 import type { UseScreening } from "@/ui/useScreening";
@@ -140,7 +141,18 @@ export function ScreeningSection({
             <DropdownMenuContent container={container} className="max-w-72">
               {linkable.map((entry) => (
                 <DropdownMenuItem key={entry.id} onClick={() => link(entry)}>
-                  <span className="truncate">{entry.question}</span>
+                  <Tooltip>
+                    <TooltipTrigger render={<span className="truncate" />}>
+                      {entry.question}
+                    </TooltipTrigger>
+                    {/* container + z-[70]: the trigger lives inside the open
+                        DropdownMenuContent (z-[60], portaled into the drawer
+                        node) — without matching that scope and outranking its
+                        z-index, this renders behind the menu. */}
+                    <TooltipContent container={container} className="z-[70]">
+                      {entry.question}
+                    </TooltipContent>
+                  </Tooltip>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
