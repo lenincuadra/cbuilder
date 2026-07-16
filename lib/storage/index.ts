@@ -28,12 +28,7 @@ export function getRegistryStore(): RegistryStore {
   return store;
 }
 
-/**
- * Single entry point to the general-notes store. Same shape as
- * getRegistryStore: for now always the local file/API path. A Supabase-backed
- * notes store would slot in here later (mirroring SupabaseRegistryStore) once
- * there's a table for it — the UI/core don't change.
- */
+/** Single entry point to the general-notes store (API path; durable backend server-side). */
 export function getGeneralNotesStore(): GeneralNotesStore {
   if (notesStore) return notesStore;
   notesStore = new ApiGeneralNotesStore();
