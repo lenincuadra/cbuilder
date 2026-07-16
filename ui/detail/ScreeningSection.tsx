@@ -145,7 +145,13 @@ export function ScreeningSection({
                     <TooltipTrigger render={<span className="truncate" />}>
                       {entry.question}
                     </TooltipTrigger>
-                    <TooltipContent>{entry.question}</TooltipContent>
+                    {/* container + z-[70]: the trigger lives inside the open
+                        DropdownMenuContent (z-[60], portaled into the drawer
+                        node) — without matching that scope and outranking its
+                        z-index, this renders behind the menu. */}
+                    <TooltipContent container={container} className="z-[70]">
+                      {entry.question}
+                    </TooltipContent>
                   </Tooltip>
                 </DropdownMenuItem>
               ))}

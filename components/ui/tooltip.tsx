@@ -31,21 +31,32 @@ function TooltipContent({
   sideOffset = 4,
   align = "center",
   alignOffset = 0,
+  container,
   children,
   ...props
 }: TooltipPrimitive.Popup.Props &
   Pick<
     TooltipPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
-  >) {
+  > & {
+    // Portal target — pass the drawer node when the trigger lives inside one,
+    // same trick as DropdownMenuContent: otherwise this defaults to <body>,
+    // landing outside the drawer's stacking scope (can render behind popouts
+    // that DO portal into the drawer, like an open DropdownMenuContent).
+    container?: TooltipPrimitive.Portal.Props["container"]
+  }) {
   return (
-    <TooltipPrimitive.Portal>
+    <TooltipPrimitive.Portal container={container}>
       <TooltipPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}
         side={side}
         sideOffset={sideOffset}
-        className="isolate z-50"
+        // `isolate` opens a fresh stacking context here — the Popup's own
+        // z-index below is scoped INSIDE it and can't outrank a sibling on
+        // its own, so a z-index override has to land on this element too
+        // (e.g. to outrank an open DropdownMenuContent's z-[60] positioner).
+        className={cn("isolate z-50", className)}
       >
         <TooltipPrimitive.Popup
           data-slot="tooltip-content"
