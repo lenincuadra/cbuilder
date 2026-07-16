@@ -47,9 +47,7 @@ export function StepOptional({ data, set, container }: StepProps) {
 
       {data.channel === "Email" && (
         <div className="space-y-2">
-          <Label htmlFor="email">
-            Email al que aplicaste <span className="text-destructive">*</span>
-          </Label>
+          <Label htmlFor="email">Email al que aplicaste</Label>
           <Input
             id="email"
             type="email"
@@ -58,7 +56,7 @@ export function StepOptional({ data, set, container }: StepProps) {
             onChange={(event) => set({ email: event.target.value })}
           />
           <p className="text-xs text-muted-foreground">
-            Requerido porque elegiste el canal Email.
+            Si no lo tenés a mano, registrá igual y completalo después desde Editar.
           </p>
         </div>
       )}

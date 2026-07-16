@@ -113,23 +113,48 @@ export default function Home() {
   }
 
   /**
-   * Register a process without generating a CV (wizard's "Guardar sin CV"):
-   * the code is reserved now, the CV can be generated later from the row's
-   * detail panel. Throws on error so the wizard stays open with the message.
+   * Register a process without generating a CV (wizard's "Registrar sin CV",
+   * available on every step): the code is reserved now, the CV can be
+   * generated later from the row's detail panel. With `activeRow` (a Borrador
+   * this session already created silently for an AI draft) the fields are
+   * applied to that row instead of adding a duplicate. Returns the registered
+   * row; throws on error so the wizard stays open with the message.
    */
-  async function handleSavePending(input: PendingRowInput) {
+  async function handleSavePending(
+    input: PendingRowInput,
+    activeRow?: RegistryRow,
+  ): Promise<RegistryRow> {
     if (!spec) {
       toast.error("No se pudo leer el link-spec del portfolio. Revisá la conexión.");
       throw new Error("link-spec unavailable");
     }
     try {
-      const row = buildPendingRow(input, { spec, existingCodes });
-      await add(row);
+      let row: RegistryRow;
+      if (activeRow) {
+        // Reuse buildPendingRow's field cleaning, keep the row's identity.
+        const built = buildPendingRow(input, { spec, existingCodes });
+        const fields: EditableFields = {
+          company: built.company,
+          role: built.role,
+          channel: built.channel,
+          email: built.email,
+          who: built.who,
+          jobUrl: built.jobUrl,
+          jobContext: built.jobContext,
+          coverLetterDraft: input.coverLetterDraft ?? activeRow.coverLetterDraft,
+        };
+        await update(activeRow.code, fields);
+        row = { ...activeRow, ...fields };
+      } else {
+        row = buildPendingRow(input, { spec, existingCodes });
+        await add(row);
+      }
       toast.success(`Proceso registrado · código ${row.code}`, {
         duration: 10000,
         description: "Generá el CV cuando haga falta desde el detalle de la fila.",
         action: { label: "Detalles", onClick: () => openGeneratedRow(row.code) },
       });
+      return row;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo registrar el proceso.");
       throw error;
@@ -137,40 +162,48 @@ export default function Home() {
   }
 
   /**
+   * Row this wizard session is bound to, creating the silent Borrador row
+   * (reserved code, cvPending) on first use. Shared mechanism behind anything
+   * mid-wizard that must persist immediately (AI cover-letter drafts, AI
+   * screening answers): a paid call always has a row to land on.
+   */
+  async function ensureDraftRow(
+    data: WizardData,
+    activeRow: RegistryRow | null,
+  ): Promise<RegistryRow> {
+    if (activeRow) return activeRow;
+    if (!spec) throw new Error("No se pudo leer el link-spec del portfolio.");
+    const row = buildPendingRow(
+      {
+        company: data.company,
+        date: data.date,
+        role: data.role,
+        who: data.who,
+        channel: data.channel === "" ? undefined : data.channel,
+        email: data.email,
+        jobUrl: data.jobUrl,
+        jobContext: data.jobContext,
+      },
+      { spec, existingCodes },
+    );
+    await add(row);
+    return row;
+  }
+
+  /**
    * Persist a cover letter AI draft (wizard step 4) immediately — a paid
    * generation call is never lost to a closed wizard. First call this wizard
-   * session creates a Borrador row (same shape as "Guardar sin CV", reserved
-   * code, cvPending); later calls just patch the existing one. Returns the
-   * row so the wizard can track it for the rest of the session.
+   * session creates the Borrador row via ensureDraftRow; later calls just
+   * patch it. Returns the row so the wizard tracks it for the session.
    */
   async function handleSaveCoverLetterDraft(
     data: WizardData,
     activeRow: RegistryRow | null,
     draft: { templateId: string; templateName?: string; bodies: CoverLetterBodies },
   ): Promise<RegistryRow> {
-    if (activeRow) {
-      await update(activeRow.code, { coverLetterDraft: draft });
-      return { ...activeRow, coverLetterDraft: draft };
-    }
-    if (!spec) throw new Error("No se pudo leer el link-spec del portfolio.");
-    const row: RegistryRow = {
-      ...buildPendingRow(
-        {
-          company: data.company,
-          date: data.date,
-          role: data.role,
-          who: data.who,
-          channel: data.channel === "" ? undefined : data.channel,
-          email: data.email,
-          jobUrl: data.jobUrl,
-          jobContext: data.jobContext,
-        },
-        { spec, existingCodes },
-      ),
-      coverLetterDraft: draft,
-    };
-    await add(row);
-    return row;
+    const row = await ensureDraftRow(data, activeRow);
+    await update(row.code, { coverLetterDraft: draft });
+    return { ...row, coverLetterDraft: draft };
   }
 
   /**
@@ -352,6 +385,8 @@ export default function Home() {
             onGenerate={handleGenerate}
             onSavePending={handleSavePending}
             onSaveDraft={handleSaveCoverLetterDraft}
+            screening={screening}
+            onEnsureRow={ensureDraftRow}
           />
           <GeneralNotesCard />
           <StableLinksCard />
@@ -370,6 +405,8 @@ export default function Home() {
         generating={generating}
         onGenerate={(input) => handleGenerate(input, pendingTarget ?? undefined)}
         onSaveDraft={handleSaveCoverLetterDraft}
+        screening={screening}
+        onEnsureRow={ensureDraftRow}
       />
     </main>
   );

@@ -10,6 +10,39 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Registro nunca bloqueante: Empresa es el único mínimo (2026-07-16)
+**Decisión**: registrar una aplicación no puede quedar bloqueado por ningún campo salvo
+Empresa. Cuatro cambios en el wizard:
+1. **"Registrar sin CV"** (antes "Guardar sin CV", solo en el paso 2) queda visible en
+   **todos los pasos previos a Confirmar**, habilitado apenas Empresa es válida. Registrar
+   = escribir la empresa y un click. Guarda todo lo completado hasta ese momento; una
+   carta escrita a medias viaja como `coverLetterDraft` (nada se pierde — mismo concepto
+   que el draft IA; `PendingRowInput.coverLetterDraft`, pass-through en `buildPendingRow`).
+2. **El email deja de bloquear** cuando el canal es Email: un email con texto inválido se
+   omite del registro (nunca se guarda roto) con un toast avisando; vacío se omite en
+   silencio. `RowEditForm` conserva su validación (el pedido es sobre *empezar* el
+   registro, no sobre editar).
+3. **Preguntas entra al wizard** como paso 5 propio (el wizard pasa a 6 pasos): captura
+   repetible de pregunta + respuesta opcional, creadas en el banco pre-vinculadas al
+   código al finalizar (Generar CV o Registrar). Incluye "Sugerir con IA" con la regla de
+   dos pasos; **"Generar y guardar" persiste al instante** — para eso reusa el mecanismo
+   de la carta IA: `ensureDraftRow` (extraído de `handleSaveCoverLetterDraft` en
+   `app/page.tsx`) crea la fila Borrador silenciosa con código reservado en la primera
+   llamada paga de la sesión. `useScreening.add` ahora devuelve el id creado (`savedId`
+   en el wizard evita duplicar al finalizar; ediciones posteriores hacen `update`).
+4. **Registrar con `activeRow`** (la sesión ya creó una fila Borrador por un draft IA):
+   actualiza esa fila en vez de crear una segunda — `onSavePending(input, activeRow?)`
+   devuelve la fila registrada (el wizard vincula las preguntas capturadas a su código).
+   Antes esto era un edge alcanzable volviendo del paso 4 al 2; con Registrar visible en
+   todos los pasos se volvía mainstream.
+De paso: `requestAiAnswer`/`AiAnswerContext` se mueven de `ui/detail/screeningAi.ts` a
+`core/screening/ai.ts` (mismo criterio core/ui que `core/coverLetter/ai.ts`; el hook
+`useScreeningAiContext` queda en ui/).
+**Contexto/razón**: el post-hoc cover letter cerró la mitad de la simetría (todo se puede
+completar después); esto cierra la otra mitad (nada es obligatorio al empezar). El uso
+real lo pedía: a veces no sabés si te van a pedir carta o preguntas hasta más adelante, y
+el registro no debería esperar a eso.
+
 ## Cover letter post-hoc: inline en la sección, sin footer nuevo, sin Drive (2026-07-16)
 **Decisión**: se agrega un camino para generar la cover letter de una aplicación cuyo CV
 **ya se entregó** (hoy solo era posible durante el paso 4 del wizard). El CTA vive **en la

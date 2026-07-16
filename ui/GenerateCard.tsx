@@ -3,7 +3,7 @@
 import { FilePlus2 } from "lucide-react";
 
 import type { CoverLetterTemplate } from "@/core/coverLetter/types";
-import type { GenerateCvInput, PendingRowInput } from "@/core/generateCv";
+import type { GenerateCvInput } from "@/core/generateCv";
 import type { RegistryRow } from "@/core/registry/types";
 import type { LinkSpec } from "@/core/spec/types";
 import { PanelCard, PanelCardFace } from "@/ui/PanelCard";
@@ -24,19 +24,22 @@ export interface GenerateCardProps {
    * Borrador row earlier in this session — update it instead of adding new.
    */
   onGenerate: (input: GenerateCvInput, activeRow?: RegistryRow) => Promise<void>;
-  /** Registers a process without CV (wizard's "Guardar sin CV" exit). */
-  onSavePending: (input: PendingRowInput) => Promise<void>;
+  /** Registers a process without CV (wizard's "Registrar sin CV" exit, any step). */
+  onSavePending: WizardProps["onSavePending"];
   /** Persists the cover letter step's AI draft as soon as it's generated. */
   onSaveDraft?: WizardProps["onSaveDraft"];
+  /** Shared screening bank + row-ensuring callback for the Preguntas step. */
+  screening?: WizardProps["screening"];
+  onEnsureRow?: WizardProps["onEnsureRow"];
 }
 
 /**
  * Right-column entry point of the main flow: start a new application process
  * (the tracked CV is generated here too, but a process can be registered
- * without one — "Guardar sin CV"). Compact card, clickable anywhere (same as
- * the other right-column cards); opens the full wizard in a drawer (shared
- * PanelCard pattern). The drawer node is threaded to the wizard so its
- * dropdowns portal inside it.
+ * without one — "Registrar sin CV", any step). Compact card, clickable
+ * anywhere (same as the other right-column cards); opens the full wizard in a
+ * drawer (shared PanelCard pattern). The drawer node is threaded to the
+ * wizard so its dropdowns portal inside it.
  */
 export function GenerateCard({
   spec,
@@ -46,6 +49,8 @@ export function GenerateCard({
   onGenerate,
   onSavePending,
   onSaveDraft,
+  screening,
+  onEnsureRow,
 }: GenerateCardProps) {
   return (
     <PanelCard
@@ -72,10 +77,17 @@ export function GenerateCard({
             await onGenerate(input, activeRow);
             close(); // success → close the drawer, ready for the next one.
           }}
-          onSavePending={async (input) => {
-            await onSavePending(input);
-            close();
-          }}
+          onSavePending={
+            onSavePending
+              ? async (input, activeRow) => {
+                  const row = await onSavePending(input, activeRow);
+                  close();
+                  return row;
+                }
+              : undefined
+          }
+          screening={screening}
+          onEnsureRow={onEnsureRow}
           onCancel={close}
           container={container}
         />

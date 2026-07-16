@@ -147,11 +147,16 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
 - Mostrar el idioma con `languageLabel()` — "Ambos" se muestra como "EN · ES", no la palabra.
 
 ## Wizard
+- **6 pasos**: Empresa y fecha · Opcionales · Idioma y foco · Cover letter · Preguntas ·
+  Confirmar. **"Registrar sin CV"** vive en el footer de todos los pasos previos a
+  Confirmar (outline, junto a Siguiente/Generar CV).
+- **Nada bloquea salvo Empresa** (ver `decisions.md` → "Registro nunca bloqueante"): los
+  requeridos condicionales avisan pero no frenan — un email inválido se omite con un
+  toast, nunca se guarda roto. Todo lo opcional lleva un hint de que también puede
+  completarse después desde el detalle.
 - **Todo campo que se rellena en el wizard se muestra en el review final** (`StepConfirm`).
   Al agregar un input al wizard, agregarlo también al resumen del último paso (los opcionales
-  vacíos se omiten).
-- Requeridos condicionales: si un canal/opción exige un dato (ej. canal Email → email),
-  el paso no avanza hasta completarlo.
+  vacíos se omiten; las preguntas capturadas se resumen como conteo).
 
 ## Tabla del registro
 - Tabla plana, 7 columnas. Orden: `Código · Empresa · Rol · Canal · Fecha · Estado · Seguimiento`

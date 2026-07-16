@@ -223,6 +223,19 @@ describe("buildPendingRow", () => {
     );
     expect(otherRow.email).toBeUndefined();
   });
+
+  it("carries a mid-wizard cover letter draft onto the row", () => {
+    const draft = {
+      templateId: "__ai__",
+      templateName: "Generado con IA",
+      bodies: { EN: "Dear team…" },
+    };
+    const row = buildPendingRow(
+      { company: "Acme", date: new Date(2026, 5, 28), coverLetterDraft: draft },
+      { spec: TEST_SPEC, existingCodes: [], rng: fixedRng, now: fixedNow },
+    );
+    expect(row.coverLetterDraft).toEqual(draft);
+  });
 });
 
 describe("deferredGenerationFields", () => {

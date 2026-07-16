@@ -38,6 +38,9 @@ export function StepConfirm({ data, previewCode, spec, coverLetterName }: StepCo
       (data.coverLetterBodies[language]?.trim() ?? "") !== "",
   }));
   const anyLetter = folders.some((folder) => folder.withLetter);
+  const capturedQuestions = data.screeningQuestions.filter(
+    (entry) => entry.question.trim() !== "",
+  ).length;
 
   return (
     <div className="space-y-4">
@@ -57,6 +60,9 @@ export function StepConfirm({ data, previewCode, spec, coverLetterName }: StepCo
         {data.jobUrl.trim() !== "" && <SummaryRow label="Link del puesto" value={data.jobUrl} />}
         {anyLetter && coverLetterName && (
           <SummaryRow label="Cover letter" value={coverLetterName} />
+        )}
+        {capturedQuestions > 0 && (
+          <SummaryRow label="Preguntas" value={String(capturedQuestions)} />
         )}
       </div>
 
