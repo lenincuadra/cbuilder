@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ScreeningQuestion } from "@/core/screening/types";
 import { CopyButton } from "@/ui/CopyButton";
 import type { UseScreening } from "@/ui/useScreening";
@@ -140,7 +141,12 @@ export function ScreeningSection({
             <DropdownMenuContent container={container} className="max-w-72">
               {linkable.map((entry) => (
                 <DropdownMenuItem key={entry.id} onClick={() => link(entry)}>
-                  <span className="truncate">{entry.question}</span>
+                  <Tooltip>
+                    <TooltipTrigger render={<span className="truncate" />}>
+                      {entry.question}
+                    </TooltipTrigger>
+                    <TooltipContent>{entry.question}</TooltipContent>
+                  </Tooltip>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
