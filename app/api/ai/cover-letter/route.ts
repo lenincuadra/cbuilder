@@ -36,7 +36,11 @@ function sanitizeLanguages(input: unknown): Language[] {
 export async function POST(request: Request) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "AI pipeline not configured." }, { status: 501 });
+    // Error strings here surface directly in UI toasts → Spanish (product content).
+    return NextResponse.json(
+      { error: "IA no configurada: falta ANTHROPIC_API_KEY en el servidor." },
+      { status: 501 },
+    );
   }
 
   const body = (await request.json()) as RequestBody;
@@ -48,13 +52,13 @@ export async function POST(request: Request) {
   const model = isAiModel(body.model) ? body.model : DEFAULT_AI_MODEL;
   const languages = sanitizeLanguages(body.languages);
   if (company === "" || role === "" || languages.length === 0) {
-    return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
+    return NextResponse.json({ error: "Datos inválidos." }, { status: 400 });
   }
 
   const background = await readProfileBackground();
   if (!background) {
     return NextResponse.json(
-      { error: "No AI context pack found (data/profile/background.md)." },
+      { error: "Falta el context pack de IA (data/profile/background.md)." },
       { status: 501 },
     );
   }
@@ -82,7 +86,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ bodies, model });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "AI generation failed." },
+      { error: error instanceof Error ? error.message : "Falló la generación con IA." },
       { status: 502 },
     );
   }
