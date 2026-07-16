@@ -1,4 +1,4 @@
-import type { Language } from "../types";
+import { languagesFor, type Language, type LanguageChoice } from "../types";
 
 /** Markdown body per language; a template may define one or both. */
 export type CoverLetterBodies = Partial<Record<Language, string>>;
@@ -32,6 +32,20 @@ export interface CoverLetterRecord {
   bodies: CoverLetterBodies;
 }
 
+/** Sentinel select value meaning "sin cover letter". */
+export const COVER_LETTER_NONE = "__none__";
+
+/**
+ * Sentinel select value meaning "generate the letter with AI, no template" —
+ * skips picking a real template and goes straight to sharing context +
+ * "Generar con IA". `templateId`/`templateName` on the resulting
+ * `CoverLetterRecord` are this sentinel and a friendly display name.
+ */
+export const COVER_LETTER_AI = "__ai__";
+
+/** Friendly display name for a letter generated without a template. */
+export const AI_TEMPLATE_NAME = "Generado con IA";
+
 /** Variables a template body may reference, filled from the wizard fields. */
 export const TEMPLATE_VARS = ["company", "role", "who"] as const;
 export type TemplateVarName = (typeof TEMPLATE_VARS)[number];
@@ -46,6 +60,31 @@ export function resolveTemplateVars(body: string, vars: TemplateVars): string {
   return body.replace(/\{(company|role|who)\}/g, (_match, name: TemplateVarName) => {
     return vars[name]?.trim() ?? "";
   });
+}
+
+/**
+ * Resolve a template's bodies for the languages a given choice covers, using
+ * the application's own fields as variables. Pure — used both entering the
+ * wizard's cover-letter step (to keep an unedited preview fresh after field
+ * changes) and by the post-hoc "generate a letter for an already-shipped
+ * application" flow.
+ */
+export function resolveBodiesFor(
+  template: CoverLetterTemplate,
+  application: { language: LanguageChoice; company: string; role: string; who?: string },
+): CoverLetterBodies {
+  const bodies: CoverLetterBodies = {};
+  for (const language of languagesFor(application.language)) {
+    const body = template.bodies[language];
+    if (body) {
+      bodies[language] = resolveTemplateVars(body, {
+        company: application.company,
+        role: application.role,
+        who: application.who,
+      });
+    }
+  }
+  return bodies;
 }
 
 /** Fields editable after creation — everything except identity/timestamps. */

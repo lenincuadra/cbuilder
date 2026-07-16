@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/drawer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateLong } from "@/core/dates";
+import type { CoverLetterTemplate } from "@/core/coverLetter/types";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { languageLabel } from "@/core/types";
 import type { ScreeningQuestion } from "@/core/screening/types";
@@ -33,7 +34,8 @@ import { ConfirmDelete, keepDrawerOnDialogInteraction } from "@/ui/ConfirmDelete
 import { StatusToggle } from "@/ui/StatusToggle";
 import { useIsMobile } from "@/ui/useIsMobile";
 import type { UseScreening } from "@/ui/useScreening";
-import { CoverLetterInfo } from "./CoverLetterInfo";
+import { CoverLetterGenerateForm } from "./CoverLetterGenerateForm";
+import { CoverLetterSection } from "./CoverLetterSection";
 import { DeliveryInfo } from "./DeliveryInfo";
 import { NotesTab } from "./NotesTab";
 import { RowEditForm } from "./RowEditForm";
@@ -55,7 +57,8 @@ type DetailMode =
   | { kind: "view" }
   | { kind: "edit" }
   | { kind: "screening-new" }
-  | { kind: "screening-suggest"; entry: ScreeningQuestion };
+  | { kind: "screening-suggest"; entry: ScreeningQuestion }
+  | { kind: "cover-letter-generate" };
 
 export interface RowDetailDrawerProps {
   /** The open row (resolved fresh from the table's rows). */
@@ -68,6 +71,8 @@ export interface RowDetailDrawerProps {
   onGenerateCv?: (row: RegistryRow) => void;
   /** Shared screening-questions bank (the Preguntas section reads/writes it). */
   screening: UseScreening;
+  /** Cover letter templates, for the post-hoc "Generar cover letter" takeover. */
+  templates: CoverLetterTemplate[];
   /** Tab to show when the panel opens. */
   initialTab?: DetailTab;
   // --- navigation between table rows ---
@@ -103,6 +108,7 @@ export function RowDetailDrawer({
   onDelete,
   onGenerateCv,
   screening,
+  templates,
   initialTab = "detalles",
   position,
   total,
@@ -310,6 +316,15 @@ export function RowDetailDrawer({
                 container={drawerNode}
                 onDone={() => setMode({ kind: "view" })}
               />
+            ) : mode.kind === "cover-letter-generate" ? (
+              // Same takeover slot: generate + deliver a letter for an application whose CV already shipped.
+              <CoverLetterGenerateForm
+                row={row}
+                templates={templates}
+                onUpdate={onUpdate}
+                container={drawerNode}
+                onDone={() => setMode({ kind: "view" })}
+              />
             ) : (
               <DrawerBody>
                 <TabsContent value="detalles" className="space-y-2">
@@ -352,7 +367,10 @@ export function RowDetailDrawer({
                   {!row.cvPending && (
                     <TrackedLinks code={row.code} focus={row.focus} links={row.links} />
                   )}
-                  <CoverLetterInfo row={row} />
+                  <CoverLetterSection
+                    row={row}
+                    onStartGenerate={() => setMode({ kind: "cover-letter-generate" })}
+                  />
                   <DeliveryInfo row={row} onGenerateCv={() => onGenerateCv?.(row)} />
                   <ScreeningSection
                     code={row.code}

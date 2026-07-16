@@ -27,7 +27,7 @@ export interface DeliveryFile {
   bytes: Uint8Array;
 }
 
-const DOCX_MIME =
+export const DOCX_MIME =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 /**

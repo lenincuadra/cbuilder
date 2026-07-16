@@ -23,6 +23,7 @@ cambiar un flow visible al usuario, actualizá su tabla acá.
 | [Ver cartas enviadas](#8-ver-cartas-enviadas) | Cover letter |
 | [Generar gratis en Claude.ai](#9-generar-gratis-en-claudeai) | Fallback sin costo |
 | [Administrar un manager (Preguntas / Cover letters / Links estables)](#10-administrar-un-manager-preguntas--cover-letters--links-estables) | Managers |
+| [Generar cover letter después del CV](#11-generar-cover-letter-después-del-cv) | Cover letter |
 
 ## Nueva aplicación (generar un CV)
 
@@ -142,3 +143,17 @@ Mismo patrón lista ↔ form en los tres managers de la columna derecha (ver
 | 3 | **Click en la card de un item** → vista de edición | Takeover del drawer con los campos precargados; en Links estables, editar el ref no toca los links ya pegados afuera (`PUT /api/stable-links/[ref]`) |
 | 4 | **"+ Nueva pregunta" / "+ Crear template" / "+ Agregar link"** en el footer pinneado | Misma vista form, vacía; en Links estables incluye los chips de sugerencias |
 | 5 | **Guardar** persiste y vuelve a la lista; **Cancelar** vuelve descartando | Siempre se regresa al punto de inicio; en Cover letters las cartas enviadas son registro fiel (click abre su aplicación, no un form) |
+
+## 11. Generar cover letter después del CV
+
+Para una aplicación cuyo CV ya se entregó y no llevó carta. Mismo picker de
+template/IA que el paso 4 del wizard (comparten `CoverLetterFields`), pero
+operando sobre una fila que ya existe — sin re-generar el CV.
+
+| # | Acción Hecha | Dónde/Qué sucede por detrás |
+|---|---|---|
+| 1 | Drawer de la aplicación → tab Detalles → sección Cover letter (sin carta) → **"Generar cover letter"** | Takeover del drawer (`CoverLetterGenerateForm`, mismo slot que Editar/Preguntas) |
+| 2 | Elegir un template real (variables resueltas) o **"Compartir contexto"** + "Generar con IA" | Mismo componente `CoverLetterFields` del wizard — nada nuevo que aprender |
+| 3 | **"Generar y entregar"** | `buildCoverLetterDocx` por idioma, reusando la(s) misma(s) carpeta(s) del CV (`folderName` con `company`/`code`/`language` de la fila) |
+| 4 | Se descarga el `.docx` (o un `.zip` si el idioma es "Ambos") y queda archivado junto al CV | `archiveDeliveryFiles` — se **agrega** a `row.deliveryFiles`, nunca reemplaza los archivos del CV ya entregado |
+| 5 | La sección pasa a mostrar la carta (como si hubiera salido del wizard) y "Entrega" suma "Carta · EN/ES" descargable | `row.coverLetter` queda seteado; sin subida a Google Docs (fuera de alcance, ver `TODO.md` → "Cover letters en el sink de Drive") |

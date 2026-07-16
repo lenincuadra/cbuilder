@@ -7,14 +7,19 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DrawerBody, DrawerFooter } from "@/components/ui/drawer";
 import { Progress } from "@/components/ui/progress";
-import type { CoverLetterBodies, CoverLetterTemplate } from "@/core/coverLetter/types";
+import {
+  AI_TEMPLATE_NAME,
+  resolveBodiesFor,
+  type CoverLetterBodies,
+  type CoverLetterTemplate,
+} from "@/core/coverLetter/types";
 import type { GenerateCvInput, PendingRowInput } from "@/core/generateCv";
 import { DEFAULT_ROLE, type RegistryRow } from "@/core/registry/types";
 import { generateCode } from "@/core/spec/code";
 import type { LinkSpec } from "@/core/spec/types";
 import { StepCompany } from "./StepCompany";
 import { StepConfirm } from "./StepConfirm";
-import { AI_TEMPLATE_NAME, StepCoverLetter, resolveBodiesFor } from "./StepCoverLetter";
+import { StepCoverLetter } from "./StepCoverLetter";
 import { StepLanguage } from "./StepLanguage";
 import { StepOptional } from "./StepOptional";
 import { COVER_LETTER_AI, emailRequirementMet, languagesFor, type WizardData } from "./types";

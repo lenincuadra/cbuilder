@@ -1,23 +1,14 @@
-import type { CoverLetterBodies } from "@/core/coverLetter/types";
+import { COVER_LETTER_AI, COVER_LETTER_NONE, type CoverLetterBodies } from "@/core/coverLetter/types";
 import type { Channel } from "@/core/registry/types";
-import type { LanguageChoice } from "@/core/types";
+import { languagesFor, type LanguageChoice } from "@/core/types";
+
+export { languagesFor, COVER_LETTER_AI, COVER_LETTER_NONE };
 
 /** Sentinel select value meaning "omitir" (no channel). */
 export const CHANNEL_OMIT = "__omit__";
 
 /** Sentinel select value meaning "sin foco" (default portfolio order). */
 export const FOCUS_NONE = "__none__";
-
-/** Sentinel select value meaning "sin cover letter". */
-export const COVER_LETTER_NONE = "__none__";
-
-/**
- * Sentinel select value meaning "generate the letter with AI, no template" —
- * skips picking a real template and goes straight to sharing context +
- * "Generar con IA". `templateId`/`templateName` on the resulting
- * `CoverLetterRecord` are this sentinel and a friendly display name.
- */
-export const COVER_LETTER_AI = "__ai__";
 
 /** Mutable wizard state. Notes and status are not set here — they live in the table. */
 export interface WizardData {
@@ -51,9 +42,4 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Whether the email requirement is satisfied (only enforced for the Email channel). */
 export function emailRequirementMet(data: Pick<WizardData, "channel" | "email">): boolean {
   return data.channel !== "Email" || EMAIL_RE.test(data.email.trim());
-}
-
-/** Concrete folders a given language choice will produce, ["EN"] | ["ES"] | ["EN","ES"]. */
-export function languagesFor(choice: LanguageChoice): Array<"EN" | "ES"> {
-  return choice === "Ambos" ? ["EN", "ES"] : [choice];
 }

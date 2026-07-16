@@ -9,3 +9,8 @@ export function languageLabel(language?: LanguageChoice): string {
   if (!language) return "—";
   return language === "Ambos" ? "EN · ES" : language;
 }
+
+/** Expand a language choice into the concrete language(s) it covers. */
+export function languagesFor(choice: LanguageChoice): Language[] {
+  return choice === "Ambos" ? ["EN", "ES"] : [choice];
+}

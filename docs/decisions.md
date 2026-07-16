@@ -10,6 +10,38 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Cover letter post-hoc: inline en la sección, sin footer nuevo, sin Drive (2026-07-16)
+**Decisión**: se agrega un camino para generar la cover letter de una aplicación cuyo CV
+**ya se entregó** (hoy solo era posible durante el paso 4 del wizard). El CTA vive **en la
+misma posición** donde se muestra la carta ya generada (sección Cover letter del tab
+Detalles) — no en un footer nuevo del drawer. Al confirmarlo, entrega el `.docx` real
+(no solo texto): descarga + archivo durable (`archiveDeliveryFiles`, agregado a
+`row.deliveryFiles` con lectura-modificación-escritura, nunca reemplazo), reusando la(s)
+misma(s) carpeta(s) del CV (`folderName` depende solo de `language`/`company`/`code`, ya
+en la fila). **Sin Google Docs**: el Apps Script nombra todo `Lenin_Cuadra_CV` — mandar
+la carta ahí requeriría cambiar su contrato + redeploy, ya diferido como v2
+(`TODO.md`). Tampoco retoma `row.coverLetterDraft` (borradores del wizard abandonado a
+medias) — es un concepto del flujo en vivo/diferido, no de este.
+
+De paso, separación `core`/`ui`: `resolveBodiesFor` y `requestAiDraft` (antes en
+`ui/wizard/StepCoverLetter.tsx`, tipadas sobre `WizardData`) se mueven a
+`core/coverLetter/types.ts`/`core/coverLetter/ai.ts` con firmas primitivas
+(`{company, role, who?, focus?, jobContext?}`), igual que `COVER_LETTER_NONE`/
+`COVER_LETTER_AI`/`AI_TEMPLATE_NAME` y `languagesFor` (este último, duplicado entre
+`ui/wizard/types.ts` y una copia local en `core/generateCv.ts`, ahora vive una sola vez
+en `core/types.ts`). El JSX del picker (dropdown Sin cover letter/Compartir contexto/
+templates + `AiContextPanel` + textareas por idioma) se extrae a `ui/CoverLetterFields.tsx`
+— componente puro sobre props primitivas, sin acoplar a `WizardData` ni a `RegistryRow`.
+`ui/wizard/StepCoverLetter.tsx` y el nuevo `ui/detail/CoverLetterGenerateForm.tsx` son
+los dos adaptadores finos sobre ese mismo componente.
+
+**Contexto/razón**: la convención de drawers-manager ya escrita esta sesión (acciones de
+sección van inline; el footer del drawer solo existe durante un takeover activo) resuelve
+la pregunta de ubicación sin ambigüedad — mismo patrón que "Generar CV" de `DeliveryInfo`
+para filas pendientes. Entregar el `.docx` real (no solo el texto) fue elección explícita
+del usuario: quería el mismo artefacto que si hubiera salido del wizard, no un texto para
+copiar a mano como las respuestas de Preguntas.
+
 ## Notas generales: de documento único a lista de notas (título + contenido) (2026-07-15)
 **Decisión**: "Notas generales" deja de ser un documento markdown único (preview-first,
 click-to-edit vía `NotesTab`) y pasa a ser un **manager lista ↔ form** — mismo patrón que
