@@ -113,8 +113,8 @@ Sin IA — un template es sustitución mecánica de variables.
 
 | # | Acción Hecha | Dónde/Qué sucede por detrás |
 |---|---|---|
-| 1 | Card "Cover letters" → tab **"Enviadas"** | `SentLettersList` — toda fila con `coverLetter` seteado (template o IA), más reciente primero; lee `rows`, no duplica data |
-| 2 | Click en una carta → se abre el drawer de esa aplicación | Cierra el drawer de Cover Letters primero; ahí está el texto completo enviado |
+| 1 | Card "Cover letters" → lista única; las enviadas llevan badge **"Enviada"** (después de los templates, más reciente primero) | Toda fila con `coverLetter` seteado (template o IA); lee `rows`, no duplica data. "Template"/"Enviada" es metadata de cada card, no un filtro |
+| 2 | Click en una carta enviada → se abre el drawer de esa aplicación | Cierra el drawer de Cover Letters primero; ahí está el texto completo enviado (registro fiel, no editable) |
 
 ## 9. Generar gratis en Claude.ai
 
@@ -137,8 +137,8 @@ Mismo patrón lista ↔ form en los tres managers de la columna derecha (ver
 
 | # | Acción Hecha | Dónde/Qué sucede por detrás |
 |---|---|---|
-| 1 | Click en la card compacta → se abre el drawer en la **vista lista** | Solo los items guardados (o el empty state); en Cover letters, tabs Templates/Enviadas pinneados arriba |
+| 1 | Click en la card compacta → se abre el drawer en la **vista lista** | Solo los items guardados (o el empty state); en Cover letters es una lista única — templates y enviadas se distinguen por badge, no por tabs |
 | 2 | Leer/copiar/usar un item desde su card | Íconos de copiar/borrar por item; borrar confirma (`ConfirmDelete`) y no cierra el drawer |
 | 3 | **Click en la card de un item** → vista de edición | Takeover del drawer con los campos precargados; en Links estables, editar el ref no toca los links ya pegados afuera (`PUT /api/stable-links/[ref]`) |
 | 4 | **"+ Nueva pregunta" / "+ Crear template" / "+ Agregar link"** en el footer pinneado | Misma vista form, vacía; en Links estables incluye los chips de sugerencias |
-| 5 | **Guardar** persiste y vuelve a la lista; **Cancelar** vuelve descartando | Siempre se regresa al punto de inicio (misma vista/tab); en Cover letters el footer de crear existe solo en Templates (Enviadas es read-only) |
+| 5 | **Guardar** persiste y vuelve a la lista; **Cancelar** vuelve descartando | Siempre se regresa al punto de inicio; en Cover letters las cartas enviadas son registro fiel (click abre su aplicación, no un form) |

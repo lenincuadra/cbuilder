@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Plus, Send, Trash2 } from "lucide-react";
+import { Mail, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { sanitizeBodies, type CoverLetterTemplate } from "@/core/coverLetter/types";
 import type { RegistryRow } from "@/core/registry/types";
@@ -28,7 +27,18 @@ import type { UseCoverLetterTemplates } from "@/ui/useCoverLetterTemplates";
 /** List ↔ form takeover views of the manager (docs/DESIGN.md → manager drawers). */
 type ManagerView = { mode: "list" } | { mode: "form"; item: CoverLetterTemplate | null };
 
-type PanelTab = "templates" | "enviadas";
+function LanguageBadges({ bodies }: { bodies: Partial<Record<"EN" | "ES", string>> }) {
+  const languages = (["EN", "ES"] as const).filter((language) => bodies[language]);
+  return (
+    <>
+      {languages.map((language) => (
+        <Badge key={language} variant="secondary" className="shrink-0 font-mono text-[10px]">
+          {language}
+        </Badge>
+      ))}
+    </>
+  );
+}
 
 function TemplateRow({
   template,
@@ -39,7 +49,6 @@ function TemplateRow({
   onEdit: (template: CoverLetterTemplate) => void;
   onRemove: (template: CoverLetterTemplate) => void;
 }) {
-  const languages = (["EN", "ES"] as const).filter((language) => template.bodies[language]);
   return (
     <div
       role="button"
@@ -56,27 +65,59 @@ function TemplateRow({
       }}
       className="flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-3 py-2 transition-colors hover:bg-accent/40"
     >
-      <div className="flex min-w-0 items-center gap-2">
-        <span className="truncate text-sm font-medium">{template.name}</span>
-        {languages.map((language) => (
-          <Badge key={language} variant="secondary" className="shrink-0 font-mono text-[10px]">
-            {language}
-          </Badge>
-        ))}
-      </div>
-      <div className="flex shrink-0 items-center" onClick={(event) => event.stopPropagation()}>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-6 text-muted-foreground hover:text-destructive"
-          title="Borrar template"
-          aria-label={`Borrar ${template.name}`}
-          onClick={() => onRemove(template)}
-        >
-          <Trash2 className="size-3.5" />
-        </Button>
+      <span className="truncate text-sm font-medium">{template.name}</span>
+      <div className="flex shrink-0 items-center gap-1">
+        <Badge variant="outline" className="text-[10px]">
+          Template
+        </Badge>
+        <LanguageBadges bodies={template.bodies} />
+        <div onClick={(event) => event.stopPropagation()}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 text-muted-foreground hover:text-destructive"
+            title="Borrar template"
+            aria-label={`Borrar ${template.name}`}
+            onClick={() => onRemove(template)}
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * One row per application whose letter actually shipped — template-based or
+ * "Generado con IA" alike. A faithful record, not editable here: click opens
+ * that application's drawer (closes this one first).
+ */
+function SentLetterRow({ row, onOpen }: { row: RegistryRow; onOpen: () => void }) {
+  const letter = row.coverLetter;
+  if (!letter) return null;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition-colors hover:bg-accent/40"
+    >
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm font-medium">{row.company}</span>
+          <span className="shrink-0 font-mono text-xs text-muted-foreground">{row.code}</span>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {letter.templateName ?? "Sin nombre"}
+        </span>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        <Badge variant="outline" className="text-[10px]">
+          Enviada
+        </Badge>
+        <LanguageBadges bodies={letter.bodies} />
+      </div>
+    </button>
   );
 }
 
@@ -191,125 +232,12 @@ function TemplateForm({
   );
 }
 
-/** Templates tab body: the saved templates (click one to edit) or the empty state. */
-function TemplatesList({
-  templates,
-  onEdit,
-  onRemove,
-}: {
-  templates: CoverLetterTemplate[];
-  onEdit: (template: CoverLetterTemplate) => void;
-  onRemove: (template: CoverLetterTemplate) => void;
-}) {
-  if (templates.length === 0) {
-    return (
-      <Empty className="py-4">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <Mail />
-          </EmptyMedia>
-          <EmptyTitle>Sin templates</EmptyTitle>
-          <EmptyDescription>
-            Creá un template por tipo de aplicación (fintech, AI, conversion…) y usalo desde el
-            wizard al generar un CV.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      {templates.map((template) => (
-        <TemplateRow
-          key={template.id}
-          template={template}
-          onEdit={onEdit}
-          onRemove={onRemove}
-        />
-      ))}
-    </div>
-  );
-}
-
 /**
- * One row per application whose letter actually shipped — template-based or
- * "Generado con IA" alike, oldest→newest doesn't matter here, most recent
- * first. Click opens that application's drawer (closes this one first).
- */
-function SentLetterRow({ row, onOpen }: { row: RegistryRow; onOpen: () => void }) {
-  const letter = row.coverLetter;
-  if (!letter) return null;
-  const languages = (["EN", "ES"] as const).filter((language) => letter.bodies[language]);
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition-colors hover:bg-accent/40"
-    >
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-medium">{row.company}</span>
-          <span className="shrink-0 font-mono text-xs text-muted-foreground">{row.code}</span>
-        </div>
-        <span className="text-xs text-muted-foreground">
-          {letter.templateName ?? "Sin nombre"}
-        </span>
-      </div>
-      <div className="flex shrink-0 items-center gap-1">
-        {languages.map((language) => (
-          <Badge key={language} variant="secondary" className="font-mono text-[10px]">
-            {language}
-          </Badge>
-        ))}
-      </div>
-    </button>
-  );
-}
-
-/** Drawer body: every application whose letter actually shipped, most recent first. */
-function SentLettersList({
-  rows,
-  onOpenRow,
-}: {
-  rows: RegistryRow[];
-  onOpenRow: (code: string) => void;
-}) {
-  const sent = rows
-    .filter((row) => row.coverLetter)
-    .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
-
-  if (sent.length === 0) {
-    return (
-      <Empty className="py-4">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <Send />
-          </EmptyMedia>
-          <EmptyTitle>Sin cartas enviadas</EmptyTitle>
-          <EmptyDescription>
-            Las cartas que generes — con template o con IA — van a aparecer acá, con acceso directo
-            a la aplicación.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      {sent.map((row) => (
-        <SentLetterRow key={row.code} row={row} onOpen={() => onOpenRow(row.code)} />
-      ))}
-    </div>
-  );
-}
-
-/**
- * Everything below the drawer header: Templates/Enviadas tabs pinned on top
- * (only the body scrolls), the create action pinned in the footer on the
- * Templates tab (Enviadas is read-only), and the template form as a takeover
- * view that returns here on save/cancel.
+ * Everything below the drawer header: ONE list of every cover letter — the
+ * reusable templates first (click to edit, manager pattern) and then each
+ * shipped letter, most recent first (faithful record; click opens its
+ * application). "Template"/"Enviada" is metadata on each card, not a filter.
+ * The create action stays pinned in the footer.
  */
 function CoverLettersPanel({
   store,
@@ -322,8 +250,11 @@ function CoverLettersPanel({
 }) {
   const { templates, remove } = store;
   const [view, setView] = useState<ManagerView>({ mode: "list" });
-  const [tab, setTab] = useState<PanelTab>("templates");
   const [toDelete, setToDelete] = useState<CoverLetterTemplate | null>(null);
+
+  const sent = rows
+    .filter((row) => row.coverLetter)
+    .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
 
   if (view.mode === "form") {
     return (
@@ -333,46 +264,43 @@ function CoverLettersPanel({
 
   return (
     <>
-      <Tabs
-        value={tab}
-        onValueChange={(value) => setTab(value as PanelTab)}
-        className="min-h-0 flex-1 gap-0"
-      >
-        {/* Pinned under the header; only the body below scrolls. */}
-        <div className="shrink-0 px-4 pb-3">
-          <TabsList className="w-full">
-            <TabsTrigger value="templates">
-              <Mail />
-              Templates
-            </TabsTrigger>
-            <TabsTrigger value="enviadas">
-              <Send />
-              Enviadas
-            </TabsTrigger>
-          </TabsList>
-        </div>
-        <DrawerBody>
-          <TabsContent value="templates">
-            <TemplatesList
-              templates={templates}
-              onEdit={(item) => setView({ mode: "form", item })}
-              onRemove={setToDelete}
-            />
-          </TabsContent>
-          <TabsContent value="enviadas">
-            <SentLettersList rows={rows} onOpenRow={onOpenRow} />
-          </TabsContent>
-        </DrawerBody>
-      </Tabs>
+      <DrawerBody>
+        {templates.length === 0 && sent.length === 0 ? (
+          <Empty className="py-4">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Mail />
+              </EmptyMedia>
+              <EmptyTitle>Sin cover letters</EmptyTitle>
+              <EmptyDescription>
+                Creá un template por tipo de aplicación (fintech, AI, conversion…) y usalo desde
+                el wizard. Las cartas que envíes también van a aparecer acá.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <div className="space-y-2">
+            {templates.map((template) => (
+              <TemplateRow
+                key={template.id}
+                template={template}
+                onEdit={(item) => setView({ mode: "form", item })}
+                onRemove={setToDelete}
+              />
+            ))}
+            {sent.map((row) => (
+              <SentLetterRow key={row.code} row={row} onOpen={() => onOpenRow(row.code)} />
+            ))}
+          </div>
+        )}
+      </DrawerBody>
 
-      {tab === "templates" && (
-        <DrawerFooter className="flex-row justify-end">
-          <Button size="sm" onClick={() => setView({ mode: "form", item: null })}>
-            <Plus className="size-4" />
-            Crear template
-          </Button>
-        </DrawerFooter>
-      )}
+      <DrawerFooter className="flex-row justify-end">
+        <Button size="sm" onClick={() => setView({ mode: "form", item: null })}>
+          <Plus className="size-4" />
+          Crear template
+        </Button>
+      </DrawerFooter>
 
       <ConfirmDelete
         open={toDelete !== null}
@@ -398,11 +326,12 @@ function CoverLettersPanel({
 }
 
 /**
- * Cover letter templates per application type, plus every letter that
- * actually shipped (template-based or AI). Compact card that opens the
- * manager in a drawer — the shared PanelCard pattern. The store hook comes
- * from the page so the wizard sees the same instance; `rows` + `onOpenRow`
- * come from the page's registry so "Enviadas" always reflects it live.
+ * Every cover letter in one place: reusable templates per application type
+ * plus each letter that actually shipped (template-based or AI). Compact card
+ * that opens the manager in a drawer — the shared PanelCard pattern. The
+ * store hook comes from the page so the wizard sees the same instance;
+ * `rows` + `onOpenRow` come from the page's registry so the shipped letters
+ * always reflect it live.
  */
 export interface CoverLettersCardProps {
   store: UseCoverLetterTemplates;
@@ -415,12 +344,12 @@ export function CoverLettersCard({ store, rows, onOpenRow }: CoverLettersCardPro
   return (
     <PanelCard
       title="Cover letters"
-      description="Templates por tipo de aplicación, con variables por empresa."
+      description="Templates por tipo de aplicación y el registro de cartas enviadas."
       card={(open) => (
         <PanelCardFace
           icon={Mail}
           title="Cover letters"
-          description="Templates reutilizables por tipo de aplicación."
+          description="Templates reutilizables + cartas enviadas."
           onOpen={open}
         />
       )}
