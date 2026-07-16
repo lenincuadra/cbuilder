@@ -11,7 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { AiContextPanel } from "@/ui/AiContextPanel";
 import { DrawerFormFooter } from "@/ui/DrawerFormFooter";
 import type { UseScreening } from "@/ui/useScreening";
-import { requestAiAnswer, useScreeningAiContext, type ScreeningAiRow } from "./screeningAi";
+import { requestAiAnswer } from "@/core/screening/ai";
+import { useScreeningAiContext, type ScreeningAiRow } from "./screeningAi";
 
 export interface ScreeningNewFormProps extends ScreeningAiRow {
   /** Tracking code of the open application — the new question is created pre-linked. */

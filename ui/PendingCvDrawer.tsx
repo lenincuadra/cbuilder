@@ -30,6 +30,9 @@ export interface PendingCvDrawerProps {
   onGenerate: (input: GenerateCvInput) => Promise<void>;
   /** Persists the cover letter step's AI draft as soon as it's regenerated. */
   onSaveDraft?: WizardProps["onSaveDraft"];
+  /** Shared screening bank + row-ensuring callback for the Preguntas step. */
+  screening?: WizardProps["screening"];
+  onEnsureRow?: WizardProps["onEnsureRow"];
 }
 
 /**
@@ -47,6 +50,8 @@ export function PendingCvDrawer({
   generating,
   onGenerate,
   onSaveDraft,
+  screening,
+  onEnsureRow,
 }: PendingCvDrawerProps) {
   const isMobile = useIsMobile();
   // The drawer node — the wizard's dropdowns portal here (same as PanelCard).
@@ -84,6 +89,8 @@ export function PendingCvDrawer({
             generating={generating}
             pendingRow={row}
             onSaveDraft={onSaveDraft}
+            screening={screening}
+            onEnsureRow={onEnsureRow}
             onGenerate={async (input) => {
               // Throws on error → the wizard stays on the confirm step.
               await onGenerate(input);

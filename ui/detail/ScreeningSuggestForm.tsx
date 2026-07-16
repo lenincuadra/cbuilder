@@ -8,7 +8,8 @@ import type { ScreeningQuestion } from "@/core/screening/types";
 import { AiContextPanel } from "@/ui/AiContextPanel";
 import { DrawerFormFooter } from "@/ui/DrawerFormFooter";
 import type { UseScreening } from "@/ui/useScreening";
-import { requestAiAnswer, useScreeningAiContext, type ScreeningAiRow } from "./screeningAi";
+import { requestAiAnswer } from "@/core/screening/ai";
+import { useScreeningAiContext, type ScreeningAiRow } from "./screeningAi";
 
 export interface ScreeningSuggestFormProps extends ScreeningAiRow {
   /** The linked entry with no answer yet — the suggestion writes onto it. */

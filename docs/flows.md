@@ -29,14 +29,22 @@ cambiar un flow visible al usuario, actualizá su tabla acá.
 
 El flow principal — la card "Nueva aplicación" registra el inicio de un
 proceso y (opcionalmente ahí mismo) genera el CV trackeado; el CTA final del
-wizard es "Generar CV". Del wizard a los tres destinos del entregable: tabla
-completa (a altura de sistema) en [`architecture.md` → "Pipeline de
+wizard es "Generar CV". Wizard de **6 pasos** (Empresa y fecha · Opcionales ·
+Idioma y foco · Cover letter · Preguntas · Confirmar) donde **nada bloquea
+salvo Empresa**: el email inválido avisa y se omite (nunca se guarda roto), la
+carta y las preguntas son opcionales y también pueden agregarse después desde
+el detalle. Del wizard a los tres destinos del entregable: tabla completa (a
+altura de sistema) en [`architecture.md` → "Pipeline de
 generación"](architecture.md#pipeline-de-generación).
 
 ## Registrar sin CV (generación diferida)
 
-Un proceso que arranca sin entregable (ej. un recruiter escribe primero).
-Tabla completa en [`architecture.md` → "Registrar sin
+Un proceso que arranca sin entregable (ej. un recruiter escribe primero, o
+todavía no sabés qué te van a pedir). **"Registrar sin CV" está en el footer
+de todos los pasos previos a Confirmar** — con Empresa alcanza; guarda todo lo
+completado hasta ahí (una carta a medias queda como borrador; las preguntas
+capturadas van al banco vinculadas al código reservado). Tabla completa en
+[`architecture.md` → "Registrar sin
 CV"](architecture.md#registrar-sin-cv-generación-diferida).
 
 ---
@@ -85,6 +93,13 @@ Sin IA — un template es sustitución mecánica de variables.
 | 3 | **"Generar y guardar"** | Paso 2 — la única llamada: `POST /api/ai/screening-answer` con empresa/rol/foco/jobContext |
 | 4 | La entrada se crea en el banco al instante, con badge **"IA · sin revisar"**, y se vuelve al detalle | `draft: true`; también persiste el jobUrl/jobContext editado en el panel |
 | 5 | Revisar/editar desde la card Preguntas (click en el item) | Guardar una edición manual limpia `draft` |
+
+**Variante en el wizard (paso 5 · Preguntas)**: las preguntas también se
+capturan al registrar/generar — lista repetible de pregunta + respuesta
+opcional (`StepScreening`), creadas en el banco pre-vinculadas al código al
+finalizar. Mismo "Sugerir con IA" en dos pasos; su "Generar y guardar"
+persiste al instante (si la sesión todavía no tiene fila, se crea la Borrador
+silenciosa con código reservado — mismo mecanismo que el borrador de carta).
 
 ## 5. Sugerir respuesta — vinculada sin respuesta
 

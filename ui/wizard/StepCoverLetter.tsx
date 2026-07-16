@@ -71,28 +71,33 @@ export function StepCoverLetter({ data, set, container, templates, onSaveDraft }
   }
 
   return (
-    <CoverLetterFields
-      templates={templates}
-      templateId={data.coverLetterTemplateId}
-      onTemplateIdChange={(templateId, bodies) =>
-        set({ coverLetterTemplateId: templateId, coverLetterBodies: bodies, coverLetterEdited: false })
-      }
-      bodies={data.coverLetterBodies}
-      onBodiesChange={(bodies) => set({ coverLetterBodies: bodies, coverLetterEdited: true })}
-      language={data.language}
-      company={data.company}
-      role={data.role}
-      who={data.who}
-      jobUrl={data.jobUrl}
-      onJobUrlChange={(jobUrl) => set({ jobUrl })}
-      jobContext={data.jobContext}
-      onJobContextChange={(jobContext) => set({ jobContext })}
-      model={model}
-      onModelChange={setModel}
-      generating={generating}
-      onGenerateWithAi={generateWithAi}
-      container={container}
-      idPrefix="cl"
-    />
+    <div className="space-y-4">
+      <CoverLetterFields
+        templates={templates}
+        templateId={data.coverLetterTemplateId}
+        onTemplateIdChange={(templateId, bodies) =>
+          set({ coverLetterTemplateId: templateId, coverLetterBodies: bodies, coverLetterEdited: false })
+        }
+        bodies={data.coverLetterBodies}
+        onBodiesChange={(bodies) => set({ coverLetterBodies: bodies, coverLetterEdited: true })}
+        language={data.language}
+        company={data.company}
+        role={data.role}
+        who={data.who}
+        jobUrl={data.jobUrl}
+        onJobUrlChange={(jobUrl) => set({ jobUrl })}
+        jobContext={data.jobContext}
+        onJobContextChange={(jobContext) => set({ jobContext })}
+        model={model}
+        onModelChange={setModel}
+        generating={generating}
+        onGenerateWithAi={generateWithAi}
+        container={container}
+        idPrefix="cl"
+      />
+      <p className="text-xs text-muted-foreground">
+        Opcional — la carta también se puede generar después desde el detalle de la fila.
+      </p>
+    </div>
   );
 }

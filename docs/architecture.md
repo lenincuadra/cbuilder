@@ -107,11 +107,17 @@ fuera hasta cambiar ese contrato (`TODO.md` → "Cover letters en el sink de Dri
 ## Registrar sin CV (generación diferida)
 
 Un proceso puede arrancar sin entregable (ej. un recruiter escribe y la charla
-empieza antes de mandar nada). El paso 2 del wizard ofrece **"Guardar sin CV"**:
+empieza antes de mandar nada, o todavía no sabés qué te van a pedir). Todos los
+pasos previos a Confirmar ofrecen **"Registrar sin CV"** (con Empresa alcanza):
 `buildPendingRow()` (`core/generateCv.ts`) crea la fila con un **código reservado**
 (mismo `generateCode`, chequeado contra colisiones) y `cvPending: true` — sin
-idioma, foco, links ni carta. En la tabla, la celda Seguimiento muestra un
-`FileClock` muted; puede quedar así para siempre (procesos que mueren temprano).
+idioma, foco, links ni delivery. Una carta escrita a medias viaja como
+`coverLetterDraft` (`PendingRowInput.coverLetterDraft`) y las preguntas
+capturadas van al banco vinculadas al código reservado — nada de lo tipeado se
+pierde. Si la sesión ya creó una fila Borrador silenciosa (draft IA),
+Registrar la **actualiza** en vez de duplicar. En la tabla, la celda
+Seguimiento muestra un `FileClock` muted; puede quedar así para siempre
+(procesos que mueren temprano).
 
 Cuando el CV hace falta, la card Entrega del drawer abre el wizard en **modo
 diferido** (`PendingCvDrawer` + prop `pendingRow`): arranca en "Idioma y foco"

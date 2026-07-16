@@ -10,6 +10,17 @@ export const CHANNEL_OMIT = "__omit__";
 /** Sentinel select value meaning "sin foco" (default portfolio order). */
 export const FOCUS_NONE = "__none__";
 
+/**
+ * A pre-screening question captured in the wizard. `savedId` is set once the
+ * entry got persisted to the bank mid-wizard (the AI path saves immediately),
+ * so finishing the wizard updates it instead of creating a duplicate.
+ */
+export interface WizardScreeningQuestion {
+  question: string;
+  answer: string;
+  savedId?: string;
+}
+
 /** Mutable wizard state. Notes and status are not set here — they live in the table. */
 export interface WizardData {
   company: string;
@@ -35,6 +46,8 @@ export interface WizardData {
   coverLetterBodies: CoverLetterBodies;
   /** True once the user touched a body — stops re-resolving over their edits. */
   coverLetterEdited: boolean;
+  /** Pre-screening questions captured in the wizard's Preguntas step. */
+  screeningQuestions: WizardScreeningQuestion[];
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

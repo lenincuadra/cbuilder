@@ -7,7 +7,8 @@ import { getScreeningStore } from "@/lib/storage";
 export interface UseScreening {
   entries: ScreeningQuestion[];
   loading: boolean;
-  add: (entry: Pick<ScreeningQuestion, "question" | "answer" | "codes" | "draft">) => Promise<void>;
+  /** Creates the entry and returns its generated id. */
+  add: (entry: Pick<ScreeningQuestion, "question" | "answer" | "codes" | "draft">) => Promise<string>;
   update: (id: string, fields: EditableScreeningFields) => Promise<void>;
   remove: (id: string) => Promise<void>;
 }
@@ -39,8 +40,10 @@ export function useScreening(): UseScreening {
 
   const add = useCallback(
     async (entry: Pick<ScreeningQuestion, "question" | "answer" | "codes">) => {
-      await getScreeningStore().add({ id: crypto.randomUUID(), ...entry });
+      const id = crypto.randomUUID();
+      await getScreeningStore().add({ id, ...entry });
       await reload();
+      return id;
     },
     [reload],
   );
