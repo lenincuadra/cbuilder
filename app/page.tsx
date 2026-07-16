@@ -321,6 +321,7 @@ export default function Home() {
             onDelete={handleDelete}
             onGenerateCv={setPendingTarget}
             screening={screening}
+            templates={coverLetters.templates}
             openRequest={openRequest}
             emptyMessage={
               statusFilter !== "todos"

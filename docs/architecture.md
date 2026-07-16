@@ -92,6 +92,18 @@ Detalles de cada destino:
 muestra dónde quedó la entrega para siempre (no solo recién generado) — card
 `DeliveryInfo`.
 
+**Segunda vía: cover letter post-hoc.** Para una aplicación cuyo CV ya se entregó y no
+llevó carta, el detalle de la fila ofrece "Generar cover letter" (sección Cover letter
+del tab Detalles, `CoverLetterSection`/`CoverLetterGenerateForm`) — reusa el mismo picker
+de template/IA del wizard (`ui/CoverLetterFields.tsx`, compartido) pero **sin** tocar
+`generateCv()`: `core/coverLetter/deliver.ts` construye el/los `.docx` con
+`buildCoverLetterDocx()` y reconstruye la(s) misma(s) carpeta(s) del CV con `folderName()`
+(depende solo de `language`/`company`/`code`, ya en la fila). Solo dos de los tres
+destinos: descarga + archivo durable (`archiveDeliveryFiles`, **agregado** a
+`deliveryFiles`, nunca reemplazo — lectura-modificación-escritura). Sin Google Docs: el
+Apps Script nombra todo `Lenin_Cuadra_CV`, así que un sink de Drive para la carta queda
+fuera hasta cambiar ese contrato (`TODO.md` → "Cover letters en el sink de Drive").
+
 ## Registrar sin CV (generación diferida)
 
 Un proceso puede arrancar sin entregable (ej. un recruiter escribe y la charla

@@ -6,7 +6,7 @@ import { folderName, slugifyCompany } from "./folderName";
 import { generateCode } from "./spec/code";
 import { buildTrackedLinks } from "./spec/links";
 import type { LinkSpec } from "./spec/types";
-import type { Language, LanguageChoice } from "./types";
+import { languagesFor, type Language, type LanguageChoice } from "./types";
 import { packageCvs, type CvEntry } from "./zip";
 import {
   DEFAULT_ROLE,
@@ -72,10 +72,6 @@ export interface GenerateCvResult {
   zip: Uint8Array;
   /** Registry row to persist (caller decides when to store it). */
   row: RegistryRow;
-}
-
-function languagesFor(choice: LanguageChoice): Language[] {
-  return choice === "Ambos" ? ["EN", "ES"] : [choice];
 }
 
 function cleaned(value: string | undefined): string | undefined {

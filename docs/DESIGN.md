@@ -44,9 +44,10 @@ Antes de crear cualquier componente o comportamiento de UI:
 - Implementación: shadcn `Drawer` (vaul) con `direction` responsive:
   `direction={isMobile ? "bottom" : "right"}`, usando el hook `useIsMobile()`
   (`ui/useIsMobile.ts`, breakpoint 768px).
-- Referencia: `ui/detail/RowDetailDrawer.tsx` (takeovers `edit`/`screening-new`),
-  `ui/wizard/Wizard.tsx` (body + nav en footer) y `ui/ScreeningCard.tsx` /
-  `ui/CoverLettersCard.tsx` / `ui/StableLinksCard.tsx` / `ui/GeneralNotesCard.tsx`
+- Referencia: `ui/detail/RowDetailDrawer.tsx` (takeovers `edit`/`screening-new`/
+  `screening-suggest`/`cover-letter-generate`), `ui/wizard/Wizard.tsx` (body + nav en
+  footer) y `ui/ScreeningCard.tsx` / `ui/CoverLettersCard.tsx` / `ui/StableLinksCard.tsx` /
+  `ui/GeneralNotesCard.tsx`
   (managers lista ↔ form).
 
 ## Contenido Markdown

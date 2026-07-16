@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { CoverLetterTemplate } from "@/core/coverLetter/types";
 import { formatDateShort } from "@/core/dates";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { profileLabel } from "@/core/spec/profiles";
@@ -76,6 +77,8 @@ export interface RegistryTableProps {
   onGenerateCv?: (row: RegistryRow) => void;
   /** Shared screening-questions bank (drawer's Preguntas section). */
   screening: UseScreening;
+  /** Cover letter templates, for the drawer's post-hoc "Generar cover letter" takeover. */
+  templates: CoverLetterTemplate[];
   emptyMessage?: string;
   /**
    * External request to open a row's detail panel (e.g. from the generation
@@ -96,6 +99,7 @@ export function RegistryTable({
   onDelete,
   onGenerateCv,
   screening,
+  templates,
   emptyMessage,
   openRequest,
 }: RegistryTableProps) {
@@ -257,6 +261,7 @@ export function RegistryTable({
           onGenerateCv?.(row);
         }}
         screening={screening}
+        templates={templates}
         initialTab={detailTab}
         position={detailIndex + 1}
         total={rows.length}
