@@ -10,6 +10,18 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Cover letters: lista única — Template/Enviada es metadata, no tabs (2026-07-15)
+**Decisión**: el drawer de Cover letters deja los tabs Templates/Enviadas y pasa a una
+**lista única**: primero los templates (editables — click abre el form, patrón manager)
+y después las cartas enviadas (registro fiel — badge "Enviada", click abre su
+aplicación), más reciente primero. Cada card lleva su metadata como badges: "Template" /
+"Enviada" + idiomas. Footer: "+ Crear template" siempre (lo único creable acá). Un solo
+empty state cuando no hay nada de nada.
+**Contexto/razón**: Templates y Enviadas no son filtros ni vistas distintas — son
+propiedades de cada carta. Partirlas en tabs escondía la mitad del contenido detrás de
+un click y duplicaba la navegación para una colección chica; con badges la lista dice
+todo de una. Alinea Cover letters con el comportamiento del manager de Preguntas.
+
 ## La card principal se llama "Nueva aplicación" (antes "Generar un CV") (2026-07-15)
 **Decisión**: la card y el drawer del wizard pasan de "Generar un CV" a **"Nueva
 aplicación"**; el botón final del wizard pasa de "Generar" a **"Generar CV"** (más

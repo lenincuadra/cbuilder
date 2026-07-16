@@ -267,12 +267,12 @@ draft-vs-record-final de `coverLetter`: el banco entero siempre fue mutable
 puramente informativo — no bloquea reuso ni vinculación.
 
 **Dónde queda una carta ya enviada**: `row.coverLetter` (por aplicación,
-visible en su drawer) — no en la card "Cover Letters", que es específicamente
-la biblioteca de **templates reutilizables**, no un historial. La card sí
-suma un tab **"Enviadas"** (`ui/CoverLettersCard.tsx` → `SentLettersList`)
-que lista, en un solo lugar, cada fila con `coverLetter` seteado (template o
-IA), más reciente primero, con acceso directo a su drawer — sin duplicar el
-dato, solo lee `rows` (las mismas que la tabla) filtradas.
+visible en su drawer). La card "Cover Letters" (`ui/CoverLettersCard.tsx`)
+muestra una **lista única**: los templates reutilizables (editables, patrón
+manager) y después cada fila con `coverLetter` seteado (template o IA, más
+reciente primero, badge "Enviada", click abre su drawer) — la distinción
+Template/Enviada es metadata de cada card, no tabs ni filtros. Sin duplicar
+el dato: solo lee `rows` (las mismas que la tabla) filtradas.
 
 ## Variables de entorno
 
