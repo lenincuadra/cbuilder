@@ -24,6 +24,8 @@ cambiar un flow visible al usuario, actualizá su tabla acá.
 | [Generar gratis en Claude.ai](#9-generar-gratis-en-claudeai) | Fallback sin costo |
 | [Administrar un manager (Preguntas / Cover letters / Links estables)](#10-administrar-un-manager-preguntas--cover-letters--links-estables) | Managers |
 | [Generar cover letter después del CV](#11-generar-cover-letter-después-del-cv) | Cover letter |
+| [Marcar hitos del proceso](#12-marcar-hitos-del-proceso) | Seguimiento |
+| [Embudo AARRR](#13-embudo-aarrr) | Analítica |
 
 ## Nueva aplicación (generar un CV)
 
@@ -172,3 +174,27 @@ operando sobre una fila que ya existe — sin re-generar el CV.
 | 3 | **"Generar y entregar"** | `buildCoverLetterDocx` por idioma, reusando la(s) misma(s) carpeta(s) del CV (`folderName` con `company`/`code`/`language` de la fila) |
 | 4 | Se descarga el `.docx` (o un `.zip` si el idioma es "Ambos") y queda archivado junto al CV | `archiveDeliveryFiles` — se **agrega** a `row.deliveryFiles`, nunca reemplaza los archivos del CV ya entregado |
 | 5 | La sección pasa a mostrar la carta (como si hubiera salido del wizard) y "Entrega" suma "Carta · EN/ES" descargable | `row.coverLetter` queda seteado; sin subida a Google Docs (fuera de alcance, ver `TODO.md` → "Cover letters en el sink de Drive") |
+
+## 12. Marcar hitos del proceso
+
+Los hitos estructurados (respuesta / entrevista / oferta / referido) que alimentan
+el embudo AARRR. Independientes del timeline de texto libre, que sigue igual.
+
+| # | Acción Hecha | Dónde/Qué sucede por detrás |
+|---|---|---|
+| 1 | Click en la fila → tab **Actualizaciones** | El bloque "Hitos del proceso" (`MilestonesSection`) aparece arriba del timeline |
+| 2 | Prender el switch de un hito (ej. "Entrevista") | Se guarda al instante con la fecha de hoy (`row.milestones.interview = "YYYY-MM-DD"`) — sin botón Guardar, como el toggle de estado |
+| 3 | (Opcional) Ajustar la fecha con el date picker inline | Mismo `DatePicker` del wizard; persiste en el acto |
+| 4 | Apagar un switch | Borra ese hito; si era el último, `milestones` desaparece de la fila |
+
+## 13. Embudo AARRR
+
+La búsqueda leída como funnel de conversión de growth marketing (pirate funnel),
+con el copy educativo de cada etapa. Todo el histórico: archivadas y Borrador
+incluidas.
+
+| # | Acción Hecha | Dónde/Qué sucede por detrás |
+|---|---|---|
+| 1 | Card **"Embudo AARRR"** (columna derecha; su descripción ya muestra la conversión CVs → respuestas) | `computeFunnel(rows)` (`core/funnel.ts`) sobre todas las filas |
+| 2 | Click → drawer con el gráfico de barras horizontales decrecientes (A/A/A/R/R/R) | `FunnelChart` (recharts vía `components/ui/chart.tsx`), cargado lazy al abrir |
+| 3 | Leer cada etapa: label, conteo, % del total, definición de marketing y su traducción al job hunt, y entre etapas el % de conversión | Anotaciones HTML desde `FUNNEL_STAGES`; Awareness = todas las filas, Acquisition = `status !== "Borrador"`, el resto = hitos (conteo acumulativo, ver [`architecture.md`](architecture.md)) |

@@ -1,6 +1,6 @@
 {
   "name": "cv-builder",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -25,6 +25,7 @@
     "react-day-picker": "^10.0.1",
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
+    "recharts": "^3.8.0",
     "remark-gfm": "^4.0.1",
     "shadcn": "^4.12.0",
     "sonner": "^2.0.7",

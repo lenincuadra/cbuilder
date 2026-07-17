@@ -36,6 +36,18 @@ export interface StatusUpdate {
   flag?: boolean;
 }
 
+/** Funnel milestones, in AARRR order (Activation → Referral). */
+export const MILESTONE_KEYS = ["responded", "interview", "offer", "referral"] as const;
+
+export type MilestoneKey = (typeof MILESTONE_KEYS)[number];
+
+/**
+ * Date each milestone was reached, "YYYY-MM-DD" (same convention as `date`).
+ * Absent key = not reached. Set manually from the detail drawer
+ * (Seguimiento › Actualizaciones); feeds the AARRR funnel (core/funnel.ts).
+ */
+export type Milestones = Partial<Record<MilestoneKey, string>>;
+
 /**
  * One registry row per application.
  * The table shows 7 columns (code, company, role, channel, date, notes, status);
@@ -97,6 +109,8 @@ export interface RegistryRow {
   createdAt?: string;
   /** Follow-up timeline (Seguimiento › Actualizaciones), oldest first. */
   updates?: StatusUpdate[];
+  /** Funnel milestones reached (dates). Absent = none. */
+  milestones?: Milestones;
   /** Archived = moved out of the active searches view. Independent of status. */
   archived?: boolean;
   /**

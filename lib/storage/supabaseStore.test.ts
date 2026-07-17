@@ -15,6 +15,7 @@ const fullRow: RegistryRow = {
   language: "Ambos",
   createdAt: "2026-06-28T12:00:00.000Z",
   updates: [{ at: "2026-06-28T13:00:00.000Z", message: "2da entrevista agendada" }],
+  milestones: { responded: "2026-06-30", interview: "2026-07-05" },
   archived: false,
 };
 
@@ -53,6 +54,10 @@ describe("supabase row mapping", () => {
     expect(editableToDb({ archived: true })).toEqual({ archived: true });
     const updates = [{ at: "2026-06-28T13:00:00.000Z", message: "ok" }];
     expect(editableToDb({ updates })).toEqual({ updates });
+    const milestones = { responded: "2026-06-30" };
+    expect(editableToDb({ milestones })).toEqual({ milestones });
+    // Clearing the last milestone drops the value entirely (null in the db).
+    expect(editableToDb({ milestones: undefined })).toEqual({ milestones: null });
   });
 
   it("round-trips a pending row and its deferred-generation clear", () => {

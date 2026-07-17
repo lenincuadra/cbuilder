@@ -3,6 +3,7 @@ import type {
   ApplicationStatus,
   Channel,
   EditableFields,
+  Milestones,
   RegistryRow,
   RegistryStore,
   StatusUpdate,
@@ -36,6 +37,7 @@ interface RegistryRowDb {
   drive_folder: string | null;
   created_at: string | null;
   updates: StatusUpdate[] | null;
+  milestones: Milestones | null;
   archived: boolean | null;
   cv_pending: boolean | null;
   delivery_files: string[] | null;
@@ -64,6 +66,7 @@ export function dbToRow(db: RegistryRowDb): RegistryRow {
     driveFolder: db.drive_folder ?? undefined,
     createdAt: db.created_at ?? undefined,
     updates: db.updates ?? undefined,
+    milestones: db.milestones ?? undefined,
     archived: db.archived ?? undefined,
     // false (the column default, also every pre-existing row) maps back to
     // "absent", so rows with a CV keep their original shape.
@@ -98,6 +101,7 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
     // the schema default value instead of null (a fresh row leaves them unset).
     created_at: row.createdAt ?? new Date().toISOString(),
     updates: row.updates ?? [],
+    milestones: row.milestones ?? null,
     archived: row.archived ?? false,
     cv_pending: row.cvPending ?? false,
     delivery_files: row.deliveryFiles ?? null,
@@ -125,6 +129,7 @@ export function editableToDb(fields: EditableFields): Partial<RegistryRowDb> {
   if ("notes" in fields) out.notes = fields.notes ?? null;
   if ("status" in fields) out.status = fields.status as string;
   if ("updates" in fields) out.updates = fields.updates ?? [];
+  if ("milestones" in fields) out.milestones = fields.milestones ?? null;
   if ("archived" in fields) out.archived = fields.archived ?? false;
   if ("cvPending" in fields) out.cv_pending = fields.cvPending ?? false;
   if ("deliveryFiles" in fields) out.delivery_files = fields.deliveryFiles ?? null;

@@ -22,6 +22,7 @@ import { toastDeleted } from "@/ui/ConfirmDelete";
 import { AppVersion } from "@/ui/AppVersion";
 import { CoverLettersCard } from "@/ui/CoverLettersCard";
 import { ExportButton } from "@/ui/ExportButton";
+import { FunnelCard } from "@/ui/FunnelCard";
 import { GenerateCard } from "@/ui/GenerateCard";
 import { GeneralNotesCard } from "@/ui/GeneralNotesCard";
 import { PendingCvDrawer } from "@/ui/PendingCvDrawer";
@@ -392,6 +393,7 @@ export default function Home() {
           <StableLinksCard />
           <CoverLettersCard store={coverLetters} rows={rows} onOpenRow={openGeneratedRow} />
           <ScreeningCard store={screening} rows={rows} />
+          <FunnelCard rows={rows} />
         </aside>
       </div>
 
