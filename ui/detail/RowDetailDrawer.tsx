@@ -56,6 +56,7 @@ type DetailMode =
   | { kind: "view" }
   | { kind: "edit" }
   | { kind: "screening-new" }
+  | { kind: "screening-edit"; entry: ScreeningQuestion }
   | { kind: "screening-suggest"; entry: ScreeningQuestion }
   | { kind: "cover-letter-generate" };
 
@@ -287,10 +288,12 @@ export function RowDetailDrawer({
                   setMode({ kind: "view" });
                 }}
               />
-            ) : mode.kind === "screening-new" ? (
-              // Same takeover slot: a new screening question, pre-linked to this row.
+            ) : mode.kind === "screening-new" || mode.kind === "screening-edit" ? (
+              // Same takeover slot: a new screening question pre-linked to this
+              // row, or editing an existing linked one (click on its card).
               <ScreeningNewForm
                 code={row.code}
+                entry={mode.kind === "screening-edit" ? mode.entry : undefined}
                 company={row.company}
                 role={row.role}
                 focus={row.focus}
@@ -395,6 +398,7 @@ export function RowDetailDrawer({
                     code={row.code}
                     screening={screening}
                     onStartNew={() => setMode({ kind: "screening-new" })}
+                    onEdit={(entry) => setMode({ kind: "screening-edit", entry })}
                     onSuggest={(entry) => setMode({ kind: "screening-suggest", entry })}
                     container={drawerNode}
                   />

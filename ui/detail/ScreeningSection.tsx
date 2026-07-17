@@ -22,6 +22,8 @@ export interface ScreeningSectionProps {
   screening: UseScreening;
   /** Opens the "Nueva pregunta" takeover view (ScreeningNewForm, owned by the drawer). */
   onStartNew: () => void;
+  /** Opens the "Editar pregunta" takeover for a linked entry (click on its card). */
+  onEdit: (entry: ScreeningQuestion) => void;
   /** Opens the "Sugerir respuesta" takeover for a linked entry with no answer yet. */
   onSuggest: (entry: ScreeningQuestion) => void;
   /** Portal target for the dropdown (the drawer node). */
@@ -44,6 +46,7 @@ export function ScreeningSection({
   code,
   screening,
   onStartNew,
+  onEdit,
   onSuggest,
   container,
 }: ScreeningSectionProps) {
@@ -78,7 +81,23 @@ export function ScreeningSection({
       ) : (
         <div className="space-y-2">
           {asked.map((entry) => (
-            <div key={entry.id} className="space-y-1 rounded-lg border px-3 py-2">
+            <div
+              key={entry.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`Editar ${entry.question}`}
+              title="Click para editar"
+              onClick={() => onEdit(entry)}
+              onKeyDown={(event) => {
+                // Only when the card itself is focused — inner buttons handle their own keys.
+                if (event.target !== event.currentTarget) return;
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onEdit(entry);
+                }
+              }}
+              className="cursor-pointer space-y-1 rounded-lg border px-3 py-2 transition-colors hover:bg-accent/40"
+            >
               <div className="flex items-start justify-between gap-2">
                 <span className="min-w-0 text-sm font-medium break-words">
                   {entry.question}
@@ -88,7 +107,10 @@ export function ScreeningSection({
                     </span>
                   )}
                 </span>
-                <div className="flex shrink-0 items-center">
+                <div
+                  className="flex shrink-0 items-center"
+                  onClick={(event) => event.stopPropagation()}
+                >
                   {entry.answer !== "" && (
                     <CopyButton text={entry.answer} title="Copiar respuesta" />
                   )}
@@ -111,7 +133,10 @@ export function ScreeningSection({
                     variant="ghost"
                     size="sm"
                     className="h-6 px-2 text-xs"
-                    onClick={() => onSuggest(entry)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onSuggest(entry);
+                    }}
                   >
                     <Sparkles className="size-3.5" />
                     Sugerir con IA

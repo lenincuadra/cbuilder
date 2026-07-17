@@ -10,6 +10,41 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Cartas en Drive: contrato del script parametrizado + links directos por doc (2026-07-16)
+**Decisión**: la cover letter también se sube a Google Drive como Doc nativo, en ambos
+flujos (generación del wizard y post-hoc). Tres piezas:
+1. **Contrato del Apps Script parametrizado**: el payload gana `docName` (validado,
+   default `Lenin_Cuadra_CV` por compatibilidad) — el script deja de hardcodear el
+   nombre, así un tipo de documento futuro no requiere tocarlo de nuevo. Los nombres
+   viajan desde constantes derivadas de los filenames de core (`lib/gdocs.ts` →
+   `CV_DOC_NAME`/`COVER_LETTER_DOC_NAME`, sin drift). **Requiere redeploy manual del
+   script ANTES de usar la app nueva** (el script viejo nombraría la carta como el CV).
+2. **Links directos por documento** (elección explícita del usuario sobre "solo la
+   carpeta"): campo nuevo `driveLetterDocs` (mirror de `driveDocs`), columna
+   `drive_letter_docs` jsonb — `schema_version` 6→7.
+3. **Entrega rediseñada**: cada archivo enviado es una fila `EN · CV` / `EN · Carta`
+   (idioma primero) con dos íconos — abrir su Google Doc en Drive + re-descargar del
+   archivo. La fila "Carpeta en Google Drive" desaparece (reemplazada por los íconos
+   por documento) y queda solo como fallback para filas legacy sin `deliveryFiles`.
+**Contexto/razón**: la redescarga por archivo ya existía (Supabase Storage); lo que
+faltaba era el formato Google Doc (editable/exportable a PDF) para la carta — el gap
+diferido en "Cover letters en el sink de Drive (v2)". El usuario pidió que funcione "de
+forma escalable": la escalabilidad real está en el contrato por-request del script, no
+en sumar más constantes hardcodeadas.
+
+## Click-to-edit generalizado: las cards editables del detalle no llevan botón (2026-07-16)
+**Decisión**: en el drawer de detalle, toda card de data **editable** se edita
+clickeando la card completa (hover + `role="button"`, sin botón "Editar"), abriendo un
+takeover con vuelta atrás — la misma affordance de los items de los managers. Aplica a
+**Datos** (→ `RowEditForm`) y a las **entradas de Preguntas** (→ `ScreeningNewForm` en
+modo edición: prefill, heading "Editar pregunta", `update` con `draft: false`; sin
+"Sugerir con IA" en edición — regenerar sobre una respuesta existente se eliminó a
+propósito). Los **registros fieles** (Links de tracking, Carta enviada, Entrega) siguen
+read-only por diseño: la regla es de comportamiento para lo editable, no convierte en
+editable lo que no debe serlo.
+**Contexto/razón**: pedido explícito — una sola regla de comportamiento en todo el
+producto en vez de botones de edición dispersos.
+
 ## Registro nunca bloqueante: Empresa es el único mínimo (2026-07-16)
 **Decisión**: registrar una aplicación no puede quedar bloqueado por ningún campo salvo
 Empresa. Cuatro cambios en el wizard:

@@ -190,10 +190,17 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
   mismo chrome de card (label + border): el pre-screening de esa aplicación — entradas
   del banco global vinculadas por código, copiar respuesta, crear pre-vinculada,
   vincular/desvincular, sugerir con IA; el banco se administra en la card "Preguntas" de
-  la columna derecha. **Modo edición**: la card Datos es **clickeable completa** (sin
-  botón "Editar" — misma affordance que los items de los managers); el formulario toma
-  el área bajo los tabs; los triggers **inactivos se deshabilitan** hasta
-  guardar/cancelar y el activo queda marcado — se ve dónde estás parado.
+  la columna derecha. **Entrega**: una fila por archivo enviado (`EN · CV`, `EN ·
+  Carta` — idioma primero) con dos íconos: abrir su Google Doc en Drive (si el sink
+  corrió) + re-descargar del archivo; el link a la carpeta de Drive queda solo como
+  fallback de filas legacy sin archivos por-archivo. **Modo edición** (regla de
+  comportamiento): toda card de data **editable** es clickeable completa — sin botón
+  "Editar", misma affordance que los items de los managers — y abre un takeover con
+  vuelta atrás; aplica a Datos (`RowEditForm`) y a las entradas de Preguntas
+  (`ScreeningNewForm` en modo edición); los registros fieles (Links, Carta enviada,
+  Entrega) siguen read-only. El formulario toma el área bajo los tabs; los triggers
+  **inactivos se deshabilitan** hasta guardar/cancelar y el activo queda marcado — se
+  ve dónde estás parado.
 - Seguimiento: tabs **Notas** (markdown) y **Actualizaciones** (timeline, tope 12, más
   reciente abajo). Cada actualización es un item
   **editable** (texto, fecha/hora, flag). El **flag 🚩** marca algo por hacer/importante:

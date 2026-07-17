@@ -4,7 +4,7 @@ import packageJson from "../package.json";
 export const APP_VERSION = packageJson.version;
 
 /** Bump when supabase/schema.sql changes — see docs/versioning.md §3. */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 /** Highest CV master vNN in assets/ — see docs/versioning.md §2. */
 export const MASTER_VERSION = 15;
