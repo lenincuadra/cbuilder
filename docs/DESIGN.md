@@ -185,12 +185,14 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
 - **Panel de detalle: tabs Detalles / Notas / Actualizaciones.** El `TabsList` es
   full-width y va **fijo debajo de la barra de acción** (Status/Archivar/Borrar) — no
   scrollea con el body. **Detalles** concentra todos los datos de la aplicación: card
-  Datos (con "Editar"), Links de tracking, Carta (si aplica), Entrega, y **Preguntas**
-  como sección al final con el mismo chrome de card (label + border): el pre-screening de
-  esa aplicación — entradas del banco global vinculadas por código, copiar respuesta,
-  crear pre-vinculada, vincular/desvincular, sugerir con IA; el banco se administra en la
-  card "Preguntas" de la columna derecha. **Modo edición** ("Editar" en Datos): el
-  formulario toma el área bajo los tabs; los triggers **inactivos se deshabilitan** hasta
+  Datos (muestra **todo campo completado**, incluido el contexto del puesto), Links de
+  tracking, Carta (si aplica), Entrega, y **Preguntas** como sección al final con el
+  mismo chrome de card (label + border): el pre-screening de esa aplicación — entradas
+  del banco global vinculadas por código, copiar respuesta, crear pre-vinculada,
+  vincular/desvincular, sugerir con IA; el banco se administra en la card "Preguntas" de
+  la columna derecha. **Modo edición**: la card Datos es **clickeable completa** (sin
+  botón "Editar" — misma affordance que los items de los managers); el formulario toma
+  el área bajo los tabs; los triggers **inactivos se deshabilitan** hasta
   guardar/cancelar y el activo queda marcado — se ve dónde estás parado.
 - Seguimiento: tabs **Notas** (markdown) y **Actualizaciones** (timeline, tope 12, más
   reciente abajo). Cada actualización es un item
