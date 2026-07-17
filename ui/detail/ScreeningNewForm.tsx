@@ -12,11 +12,18 @@ import { AiContextPanel } from "@/ui/AiContextPanel";
 import { DrawerFormFooter } from "@/ui/DrawerFormFooter";
 import type { UseScreening } from "@/ui/useScreening";
 import { requestAiAnswer } from "@/core/screening/ai";
+import type { ScreeningQuestion } from "@/core/screening/types";
 import { useScreeningAiContext, type ScreeningAiRow } from "./screeningAi";
 
 export interface ScreeningNewFormProps extends ScreeningAiRow {
   /** Tracking code of the open application — the new question is created pre-linked. */
   code: string;
+  /**
+   * Existing bank entry to edit (click-to-edit on the section's cards).
+   * Absent = create. Editing is manual-only: no AI over an existing answer
+   * (see decisions.md → "IA: default barato + sin regenerar").
+   */
+  entry?: ScreeningQuestion;
   /** Persists jobUrl/jobContext edits made from the context panel onto the row. */
   onUpdateJobFields: (fields: { jobUrl?: string; jobContext?: string }) => void | Promise<void>;
   /** Shared bank instance (same one the Preguntas card manages). */
@@ -28,17 +35,20 @@ export interface ScreeningNewFormProps extends ScreeningAiRow {
 }
 
 /**
- * "Nueva pregunta" takeover of the row detail drawer (same slot as
- * RowEditForm): fields in the scrollable body, Cancelar/Guardar pinned in the
- * footer. The question is created pre-linked to this application's code.
+ * "Nueva pregunta" / "Editar pregunta" takeover of the row detail drawer
+ * (same slot as RowEditForm): fields in the scrollable body, Cancelar/Guardar
+ * pinned in the footer. A new question is created pre-linked to this
+ * application's code; editing updates the bank entry and clears its AI draft
+ * flag (a human just reviewed it).
  *
- * AI follows the two-step rule (docs/DESIGN.md → "Generación con IA"):
- * "Sugerir con IA" only reveals the optional context block; the paid call
- * fires on "Generar y guardar", which persists the draft the moment it's
- * generated (a generation call can't be undone).
+ * AI (create only) follows the two-step rule (docs/DESIGN.md → "Generación
+ * con IA"): "Sugerir con IA" only reveals the optional context block; the
+ * paid call fires on "Generar y guardar", which persists the draft the
+ * moment it's generated (a generation call can't be undone).
  */
 export function ScreeningNewForm({
   code,
+  entry,
   company,
   role,
   focus,
@@ -49,11 +59,11 @@ export function ScreeningNewForm({
   container,
   onDone,
 }: ScreeningNewFormProps) {
-  const { add } = screening;
+  const { add, update } = screening;
   const ctx = useScreeningAiContext({ company, role, focus, jobUrl, jobContext });
 
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
+  const [question, setQuestion] = useState(entry?.question ?? "");
+  const [answer, setAnswer] = useState(entry?.answer ?? "");
   const [saving, setSaving] = useState(false);
   // Step 1 of the two-step AI rule: the context block stays hidden until asked for.
   const [suggestOpen, setSuggestOpen] = useState(false);
@@ -80,7 +90,12 @@ export function ScreeningNewForm({
     if (question.trim() === "") return;
     setSaving(true);
     try {
-      await add({ question: question.trim(), answer: answer.trim(), codes: [code] });
+      if (entry) {
+        // A human is confirming/editing this now — clears any "IA · sin revisar" flag.
+        await update(entry.id, { question: question.trim(), answer: answer.trim(), draft: false });
+      } else {
+        await add({ question: question.trim(), answer: answer.trim(), codes: [code] });
+      }
       onDone();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo guardar la pregunta.");
@@ -92,7 +107,9 @@ export function ScreeningNewForm({
   return (
     <>
       <DrawerBody className="gap-3">
-        <span className="text-xs font-medium text-muted-foreground">Nueva pregunta</span>
+        <span className="text-xs font-medium text-muted-foreground">
+          {entry ? "Editar pregunta" : "Nueva pregunta"}
+        </span>
 
         <div className="flex flex-col gap-3 rounded-lg border p-3">
           <div className="space-y-1.5">
@@ -108,16 +125,18 @@ export function ScreeningNewForm({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="stn-answer">Tu respuesta</Label>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={() => setSuggestOpen((open) => !open)}
-                disabled={generating || saving}
-              >
-                <Sparkles className="size-3.5" />
-                Sugerir con IA
-              </Button>
+              {!entry && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setSuggestOpen((open) => !open)}
+                  disabled={generating || saving}
+                >
+                  <Sparkles className="size-3.5" />
+                  Sugerir con IA
+                </Button>
+              )}
             </div>
             <Textarea
               id="stn-answer"
@@ -130,7 +149,7 @@ export function ScreeningNewForm({
           </div>
         </div>
 
-        {suggestOpen && (
+        {suggestOpen && !entry && (
           <div className="space-y-2">
             <span className="text-xs font-medium text-muted-foreground">
               Contexto (opcional)

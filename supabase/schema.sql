@@ -1,8 +1,9 @@
 -- cv-builder — run this in the Supabase SQL editor (prod after merges that touch schema).
--- schema_version: 6  (registry + notes + stable_links + cover_letter_templates
+-- schema_version: 7  (registry + notes + stable_links + cover_letter_templates
 --                     + screening_questions + cvs bucket + cv_pending/delivery_files
 --                     + Borrador status + cover_letter_draft/job_context
---                     + screening_questions.draft + general_notes_entries)
+--                     + screening_questions.draft + general_notes_entries
+--                     + drive_letter_docs)
 -- Bump schema_version when this file changes; see docs/versioning.md §3.
 -- Columns map to RegistryRow (camelCase) via snake_case; the app converts them.
 
@@ -21,7 +22,8 @@ create table if not exists public.registry (
   language    text,
   focus       text,                          -- portfolio focus profile baked into the CV links
   zip_name    text,                          -- archived delivery zip file name (data/cvs/)
-  drive_docs  jsonb,                         -- Google Doc URL per language {"EN": url, "ES": url}
+  drive_docs  jsonb,                         -- CV's Google Doc URL per language {"EN": url, "ES": url}
+  drive_letter_docs jsonb,                   -- cover letter's Google Doc URL per language (mirror of drive_docs)
   drive_folder text,                         -- Drive folder holding this application's Doc(s)
   links       jsonb,                         -- the 3 tracked links baked into the CV {portfolio, linkedin, github}
   cover_letter jsonb,                        -- cover letter sent {templateId, templateName, bodies: {EN?, ES?}}
@@ -127,6 +129,7 @@ insert into storage.buckets (id, name, public)
 --   alter table public.registry add constraint registry_status_check
 --     check (status in ('Borrador', 'Activo', 'Rechazado'));
 --   alter table public.screening_questions add column if not exists draft boolean not null default false;
+--   alter table public.registry add column if not exists drive_letter_docs jsonb;
 
 -- One-time move from the old single-document general_notes to
 -- general_notes_entries (run once, then drop the old table):
