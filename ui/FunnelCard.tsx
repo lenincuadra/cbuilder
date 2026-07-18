@@ -36,9 +36,10 @@ const STATUS_LEGEND: Array<{ status: ApplicationStatus; hint: string }> = [
   { status: "Borrador", hint: "sin CV" },
 ];
 
+/** Vertical (stacked) on mobile, horizontal (single row) on desktop. */
 function StatusLegend() {
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-lg border p-3">
+    <div className="flex flex-col gap-y-2 rounded-lg border p-3 md:flex-row md:flex-wrap md:items-center md:gap-x-5">
       {STATUS_LEGEND.map(({ status, hint }) => (
         <span key={status} className="flex items-center gap-1.5 text-xs">
           <span className={`size-2.5 shrink-0 rounded-full ${statusDotClass(status)}`} />
@@ -107,7 +108,7 @@ export function FunnelCard({ rows }: FunnelCardProps) {
     <PanelCard
       title="Embudo AARRR"
       description="Tu búsqueda como funnel de conversión, etapa por etapa."
-      contentClassName="data-[vaul-drawer-direction=right]:w-[calc(100%-32px)] data-[vaul-drawer-direction=right]:sm:max-w-none"
+      contentClassName="data-[vaul-drawer-direction=right]:sm:max-w-5xl"
       card={(open) => (
         <PanelCardFace
           icon={ChartBarDecreasing}
@@ -139,19 +140,17 @@ export function FunnelCard({ rows }: FunnelCardProps) {
                 desde la etapa anterior. El color de cada barra es el estado de la aplicación.
               </p>
 
-              <div className="flex flex-col gap-4 md:grid md:grid-cols-[2fr_1fr] md:grid-rows-[auto_1fr] md:gap-x-6 md:gap-y-4">
-                {/* Color legend: above the chart on mobile, top of the right column on desktop. */}
-                <div className="md:col-start-2 md:row-start-1">
-                  <StatusLegend />
-                </div>
+              {/* Color legend: vertical on mobile, horizontal full-width on desktop. */}
+              <StatusLegend />
 
-                {/* Chart: wider left column (2fr), sticky; spans both rows on desktop. */}
-                <div className="md:col-start-1 md:row-start-1 md:row-span-2 md:self-start md:sticky md:top-0">
+              <div className="flex flex-col gap-4 md:grid md:grid-cols-[3fr_1fr] md:gap-x-6">
+                {/* Chart: wider left column (3fr), sticky. */}
+                <div className="md:sticky md:top-0 md:self-start">
                   <FunnelChart stages={stages} />
                 </div>
 
-                {/* Stage list ("leyendas"): right column (1fr), below the color legend. */}
-                <div className="flex flex-col gap-3 md:col-start-2 md:row-start-2">
+                {/* Stage list ("leyendas"): right column (1fr). */}
+                <div className="flex flex-col gap-3">
                   {stages.map((stage, index) => (
                     <div key={stage.id} className="flex flex-col">
                       {index > 0 && <Connector value={stage.pctOfPrev} />}

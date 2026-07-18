@@ -125,6 +125,11 @@ export function MilestoneTimeline({
   /** Furthest reached milestone index ("la punta"), -1 when none is marked. */
   const tipIndex = MILESTONE_KEYS.reduce((tip, key, i) => (current[key] ? i : tip), -1);
   const closed = status === "Aceptado" || status === "Rechazado";
+  // Earliest set milestone date — the fallback shown for stages reached only by
+  // cumulative inference (e.g. legacy rows with "Respuesta" but no "CV enviado").
+  const earliestDate = MILESTONE_KEYS.map((key) => current[key])
+    .filter((date): date is string => Boolean(date))
+    .sort()[0];
 
   async function persist(nextMilestones: Milestones, nextUpdates: StatusUpdate[]) {
     setSaving(true);
@@ -346,10 +351,12 @@ export function MilestoneTimeline({
 
       <ol className="flex flex-col">
         {MILESTONE_KEYS.map((key, idx) => {
-          const reached = Boolean(current[key]);
-          const isTip = reached && idx === tipIndex;
-          const nextReached =
-            idx < MILESTONE_KEYS.length - 1 && Boolean(current[MILESTONE_KEYS[idx + 1]]);
+          // Reached is cumulative: a later milestone implies every earlier one,
+          // even if it was never marked explicitly (legacy rows, or the funnel's
+          // monotonic rule) — so the stepper never shows a gap.
+          const reached = idx <= tipIndex;
+          const isTip = idx === tipIndex;
+          const nextReached = idx < tipIndex;
           const items = itemsFor(key);
           const last = idx === MILESTONE_KEYS.length - 1;
           const adding = draft?.index === null && draft.milestone === key;
@@ -385,7 +392,7 @@ export function MilestoneTimeline({
                     <div className="flex items-center gap-1">
                       <div className="w-32">
                         <DatePicker
-                          value={new Date(`${current[key]}T00:00:00`)}
+                          value={new Date(`${current[key] ?? earliestDate}T00:00:00`)}
                           onChange={(date) => setMilestoneDate(key, date)}
                         />
                       </div>

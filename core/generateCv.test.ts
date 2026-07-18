@@ -263,8 +263,10 @@ describe("deferredGenerationFields", () => {
     expect(fields.links).toEqual(result.row.links);
     expect(fields.zipName).toBe(result.zipName);
     expect(fields.updates).toEqual([
-      { at: "2026-07-15T10:00:00.000Z", message: "CV generado" },
+      { at: "2026-07-15T10:00:00.000Z", message: "CV generado", milestone: "sent" },
     ]);
+    // "CV enviado" is auto-marked when the deferred CV ships.
+    expect(fields.milestones).toEqual({ sent: "2026-07-15" });
     // The process-start date is not among the updated fields.
     expect("date" in fields).toBe(false);
   });

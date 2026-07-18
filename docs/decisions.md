@@ -10,6 +10,20 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## "CV enviado" como hito auto-marcado (2026-07-18)
+**Decisión**: sumar `sent` ("CV enviado") como primer hito de `MILESTONE_KEYS`
+(Acquisition). Se **auto-marca al generar el CV** (directo y diferido, en
+`generateCv.ts`) y se puede **desmarcar** si el CV no salió de verdad.
+
+**Contexto/razón**:
+- **Anotaciones desde el arranque**: antes la primera anotación posible era en
+  "Respuesta recibida", y muchas veces no hay respuesta (ghosting). Con "CV
+  enviado" como hito, el envío queda anotable y la data es consistente.
+- **Sin campo aparte**: es un hito más en `row.milestones.sent` (jsonb, sin
+  migración). El funnel mantiene el fallback por `status` para filas históricas
+  sin el hito; el stepper muestra "alcanzado" de forma **acumulativa** (una etapa
+  posterior implica las anteriores) para no dejar huecos en data vieja.
+
 ## Estado Aceptado + cierre de proceso y colores del embudo (2026-07-18)
 **Decisión**: el embudo (stepper por aplicación y card agregada) pasa a colorearse por el
 **Estado** de la aplicación, con un modelo único Estado→color: **Aceptado** (verde, terminó

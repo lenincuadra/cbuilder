@@ -183,7 +183,7 @@ cuelga de un hito (`MilestoneTimeline`, reemplaza `MilestonesSection` + `Updates
 
 | # | Acción Hecha | Dónde/Qué sucede por detrás |
 |---|---|---|
-| 1 | Click en la fila → tab **Actualizaciones** | Stepper de los 4 hitos; los alcanzados (con fecha) van con check, el resto con botón **Marcar** |
+| 1 | Click en la fila → tab **Actualizaciones** | Stepper de los 5 hitos (**CV enviado** → Respuesta → Entrevista → Oferta → Referido); los alcanzados (con fecha) van con check, el resto con botón **Marcar**. "CV enviado" se auto-marca al generar el CV y se puede desmarcar |
 | 2 | **Marcar** un hito (ej. "Oferta") | Se marca alcanzado y **auto-marca los anteriores** con la fecha de hoy (`row.milestones`, conteo acumulativo) — se abre el form de anotación del hito clickeado |
 | 3 | Escribir la anotación → **Guardar** | Se agrega a `row.updates` con `milestone` = ese hito; cada hito alcanzado pide ≥1 anotación (hint ámbar si falta) |
 | 4 | (Opcional) Ajustar la fecha del hito con el `DatePicker` inline | Persiste en el acto; independiente del timestamp de las anotaciones |

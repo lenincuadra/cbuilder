@@ -48,8 +48,13 @@ export interface StatusUpdate {
   milestone?: MilestoneKey;
 }
 
-/** Funnel milestones, in AARRR order (Activation → Referral). */
-export const MILESTONE_KEYS = ["responded", "interview", "offer", "referral"] as const;
+/**
+ * Funnel milestones, in AARRR order (Acquisition → Referral). "sent" (CV
+ * enviado) is auto-marked when a CV is generated but can be unmarked (e.g. the
+ * CV never actually went out), so the first process step can carry annotations
+ * too — not just "Respuesta recibida", which often never comes (ghosting).
+ */
+export const MILESTONE_KEYS = ["sent", "responded", "interview", "offer", "referral"] as const;
 
 export type MilestoneKey = (typeof MILESTONE_KEYS)[number];
 

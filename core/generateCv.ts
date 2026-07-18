@@ -150,6 +150,10 @@ export async function generateCv(
     coverLetter,
     zipName,
     createdAt: now().toISOString(),
+    // The CV shipped now: auto-mark the "sent" milestone (unmarkable later) and
+    // log it, so the first funnel step ("CV enviado") can hold annotations.
+    milestones: { sent: toISODate(now()) },
+    updates: [{ at: now().toISOString(), message: "CV generado", milestone: "sent" }],
   };
 
   return { code, folderNames: entries.map((entry) => entry.folder), entries, zipName, zip, row };
@@ -233,7 +237,7 @@ export function deferredGenerationFields(
   const generated = result.row;
   const updates = [
     ...(row.updates ?? []),
-    { at: now().toISOString(), message: "CV generado" },
+    { at: now().toISOString(), message: "CV generado", milestone: "sent" as const },
   ].slice(-MAX_UPDATES);
   return {
     cvPending: false,
@@ -245,5 +249,7 @@ export function deferredGenerationFields(
     coverLetter: generated.coverLetter,
     zipName: generated.zipName,
     updates,
+    // Auto-mark "CV enviado" now that the CV shipped (keeps the earlier date).
+    milestones: { ...(row.milestones ?? {}), sent: toISODate(now()) },
   };
 }
