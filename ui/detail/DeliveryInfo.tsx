@@ -10,15 +10,25 @@ import { CV_FILENAME } from "@/core/zip";
 import { deliveryFileUrl, revealDelivery } from "@/lib/archive";
 
 /**
- * Human label for an archived delivered file: "CV · EN", "Carta · ES".
- * The folder is `[LANG]_[company]_[code]`; the file name is one of the two
- * generic delivery names.
+ * Metadata of an archived delivered file: language (from the folder,
+ * `[LANG]_[company]_[code]`), kind (from the generic delivery file name) and
+ * the display label — language first: "EN · CV", "ES · Carta".
  */
-function deliveryFileLabel(path: string): string {
+function deliveryFileMeta(path: string): { language: string; kind: string; label: string } {
   const [folder = "", file = ""] = path.split("/");
   const language = folder.split("_")[0];
   const kind = file === CV_FILENAME ? "CV" : file === COVER_LETTER_FILENAME ? "Carta" : file;
-  return language ? `${kind} · ${language}` : kind;
+  return { language, kind, label: language ? `${language} · ${kind}` : kind };
+}
+
+/** Direct Google Doc URL for a delivered file, from the row's per-doc links. */
+function driveDocUrl(
+  row: RegistryRow,
+  meta: { language: string; kind: string },
+): string | undefined {
+  const docs =
+    meta.kind === "CV" ? row.driveDocs : meta.kind === "Carta" ? row.driveLetterDocs : undefined;
+  return docs?.[meta.language as "EN" | "ES"];
 }
 
 export interface DeliveryInfoProps {
@@ -28,12 +38,12 @@ export interface DeliveryInfoProps {
 }
 
 /**
- * Where this application's deliverables live: the archived files (data/cvs/
- * locally, Supabase Storage on a deploy — each directly downloadable), the
- * legacy archived .zip (pre per-file rows, revealable in Finder) and the
- * Google Docs folder in Drive. Older rows predate some fields — the card hides
- * what it doesn't know. A pending row (no CV yet) shows the "Generar CV" CTA
- * instead.
+ * Where this application's deliverables live. Each archived file is one row
+ * ("EN · CV", "EN · Carta") with two actions: open its Google Doc in Drive
+ * (when the sink ran — replaces the old folder link) and re-download the
+ * archived copy (data/cvs/ locally, Supabase Storage on a deploy). Legacy
+ * rows without per-file archives keep the old zip/folder/doc-links fallback.
+ * A pending row (no CV yet) shows the "Generar CV" CTA instead.
  */
 export function DeliveryInfo({ row, onGenerateCv }: DeliveryInfoProps) {
   const files = row.deliveryFiles ?? [];
@@ -73,22 +83,44 @@ export function DeliveryInfo({ row, onGenerateCv }: DeliveryInfoProps) {
       {files.length > 0 && (
         <div className="space-y-0.5">
           <span className="text-xs text-muted-foreground">Archivos enviados</span>
-          {files.map((path) => (
-            <div key={path} className="flex items-center gap-2">
-              <span className="min-w-0 flex-1 truncate font-mono text-xs" title={path}>
-                {deliveryFileLabel(path)}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-6 shrink-0"
-                title={`Descargar ${deliveryFileLabel(path)}`}
-                render={<a href={deliveryFileUrl(path)} download aria-label={`Descargar ${path}`} />}
-              >
-                <Download className="size-3.5" />
-              </Button>
-            </div>
-          ))}
+          {files.map((path) => {
+            const meta = deliveryFileMeta(path);
+            const docUrl = driveDocUrl(row, meta);
+            return (
+              <div key={path} className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate font-mono text-xs" title={path}>
+                  {meta.label}
+                </span>
+                {docUrl && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6 shrink-0"
+                    title={`Abrir ${meta.label} en Google Drive`}
+                    render={
+                      <a
+                        href={docUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={`Abrir ${meta.label} en Google Drive`}
+                      />
+                    }
+                  >
+                    <ExternalLink className="size-3.5" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-6 shrink-0"
+                  title={`Descargar ${meta.label}`}
+                  render={<a href={deliveryFileUrl(path)} download aria-label={`Descargar ${path}`} />}
+                >
+                  <Download className="size-3.5" />
+                </Button>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -114,42 +146,45 @@ export function DeliveryInfo({ row, onGenerateCv }: DeliveryInfoProps) {
         </div>
       )}
 
-      {row.driveFolder ? (
-        <div className="space-y-0.5">
-          <span className="text-xs text-muted-foreground">Carpeta en Google Drive</span>
-          <div className="flex items-start gap-2">
-            {/* Drive URLs are safe to click (no tracker), unlike the tracked links above. */}
-            <a
-              href={row.driveFolder}
-              target="_blank"
-              rel="noreferrer"
-              className="min-w-0 flex-1 truncate font-mono text-xs underline underline-offset-2 hover:text-foreground"
-              title={row.driveFolder}
-            >
-              {row.driveFolder}
-            </a>
-            <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
-          </div>
-        </div>
-      ) : (
-        docs.map(([language, url]) => (
-          <div key={language} className="space-y-0.5">
-            <span className="text-xs text-muted-foreground">Google Docs · {language}</span>
+      {/* Legacy fallback: rows without per-file archives have no rows to hang
+          the Drive icons on — keep the old folder / per-language doc links. */}
+      {files.length === 0 &&
+        (row.driveFolder ? (
+          <div className="space-y-0.5">
+            <span className="text-xs text-muted-foreground">Carpeta en Google Drive</span>
             <div className="flex items-start gap-2">
+              {/* Drive URLs are safe to click (no tracker), unlike the tracked links above. */}
               <a
-                href={url}
+                href={row.driveFolder}
                 target="_blank"
                 rel="noreferrer"
                 className="min-w-0 flex-1 truncate font-mono text-xs underline underline-offset-2 hover:text-foreground"
-                title={url}
+                title={row.driveFolder}
               >
-                {url}
+                {row.driveFolder}
               </a>
               <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
             </div>
           </div>
-        ))
-      )}
+        ) : (
+          docs.map(([language, url]) => (
+            <div key={language} className="space-y-0.5">
+              <span className="text-xs text-muted-foreground">Google Docs · {language}</span>
+              <div className="flex items-start gap-2">
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="min-w-0 flex-1 truncate font-mono text-xs underline underline-offset-2 hover:text-foreground"
+                  title={url}
+                >
+                  {url}
+                </a>
+                <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
+              </div>
+            </div>
+          ))
+        ))}
     </div>
   );
 }

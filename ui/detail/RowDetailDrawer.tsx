@@ -8,7 +8,6 @@ import {
   ChevronRight,
   FileChartLine,
   Info,
-  Pencil,
   StickyNote,
   Trash2,
   TriangleAlert,
@@ -58,6 +57,7 @@ type DetailMode =
   | { kind: "view" }
   | { kind: "edit" }
   | { kind: "screening-new" }
+  | { kind: "screening-edit"; entry: ScreeningQuestion }
   | { kind: "screening-suggest"; entry: ScreeningQuestion }
   | { kind: "cover-letter-generate" };
 
@@ -289,10 +289,12 @@ export function RowDetailDrawer({
                   setMode({ kind: "view" });
                 }}
               />
-            ) : mode.kind === "screening-new" ? (
-              // Same takeover slot: a new screening question, pre-linked to this row.
+            ) : mode.kind === "screening-new" || mode.kind === "screening-edit" ? (
+              // Same takeover slot: a new screening question pre-linked to this
+              // row, or editing an existing linked one (click on its card).
               <ScreeningNewForm
                 code={row.code}
+                entry={mode.kind === "screening-edit" ? mode.entry : undefined}
                 company={row.company}
                 role={row.role}
                 focus={row.focus}
@@ -329,14 +331,25 @@ export function RowDetailDrawer({
             ) : (
               <DrawerBody>
                 <TabsContent value="detalles" className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-muted-foreground">Datos</span>
-                    <Button variant="ghost" size="sm" onClick={() => setMode({ kind: "edit" })}>
-                      <Pencil className="size-4" />
-                      Editar
-                    </Button>
-                  </div>
-                  <div className="rounded-lg border px-3 py-1">
+                  <span className="block text-xs font-medium text-muted-foreground">Datos</span>
+                  {/* Fully-clickable card → edit takeover, same affordance as the
+                      manager drawers' items (no separate Editar button). */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Editar datos"
+                    title="Click para editar"
+                    onClick={() => setMode({ kind: "edit" })}
+                    onKeyDown={(event) => {
+                      // Only when the card itself is focused — the job link handles its own keys.
+                      if (event.target !== event.currentTarget) return;
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setMode({ kind: "edit" });
+                      }
+                    }}
+                    className="cursor-pointer rounded-lg border px-3 py-1 transition-colors hover:bg-accent/40"
+                  >
                     {/* Only fields with a value are shown. */}
                     <Field label="Rol">{row.role}</Field>
                     <Field label="Fecha">
@@ -357,11 +370,20 @@ export function RowDetailDrawer({
                           target="_blank"
                           rel="noopener noreferrer"
                           title={row.jobUrl}
+                          onClick={(event) => event.stopPropagation()}
                           className="block max-w-full truncate text-primary underline underline-offset-2"
                         >
                           {row.jobUrl}
                         </a>
                       </Field>
+                    )}
+                    {row.jobContext && (
+                      <div className="space-y-0.5 py-1.5 text-sm">
+                        <span className="text-muted-foreground">Contexto del puesto</span>
+                        <p className="line-clamp-4 text-xs whitespace-pre-wrap text-muted-foreground">
+                          {row.jobContext}
+                        </p>
+                      </div>
                     )}
                   </div>
                   {/* A pending row has no baked links yet — nothing was sent. */}
@@ -377,6 +399,7 @@ export function RowDetailDrawer({
                     code={row.code}
                     screening={screening}
                     onStartNew={() => setMode({ kind: "screening-new" })}
+                    onEdit={(entry) => setMode({ kind: "screening-edit", entry })}
                     onSuggest={(entry) => setMode({ kind: "screening-suggest", entry })}
                     container={drawerNode}
                   />

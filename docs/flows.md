@@ -94,7 +94,7 @@ Sin IA — un template es sustitución mecánica de variables.
 | 2 | Escribir la pregunta → **"Sugerir con IA"** | Paso 1 de la regla de dos pasos (ver `DESIGN.md` → "Generación con IA"): solo **revela** el bloque "Contexto (opcional)" — link + Detectar, contexto extra, modelo (precargados de la fila). No llama a nada |
 | 3 | **"Generar y guardar"** | Paso 2 — la única llamada: `POST /api/ai/screening-answer` con empresa/rol/foco/jobContext |
 | 4 | La entrada se crea en el banco al instante, con badge **"IA · sin revisar"**, y se vuelve al detalle | `draft: true`; también persiste el jobUrl/jobContext editado en el panel |
-| 5 | Revisar/editar desde la card Preguntas (click en el item) | Guardar una edición manual limpia `draft` |
+| 5 | Revisar/editar clickeando la entrada (en la sección Preguntas del detalle o en la card Preguntas del banco) | Takeover "Editar pregunta" / form del manager; guardar una edición manual limpia `draft` |
 
 **Variante en el wizard (paso 5 · Preguntas)**: las preguntas también se
 capturan al registrar/generar — lista repetible de pregunta + respuesta
@@ -172,8 +172,8 @@ operando sobre una fila que ya existe — sin re-generar el CV.
 | 1 | Drawer de la aplicación → tab Detalles → sección Cover letter (sin carta) → **"Generar cover letter"** | Takeover del drawer (`CoverLetterGenerateForm`, mismo slot que Editar/Preguntas) |
 | 2 | Elegir un template real (variables resueltas) o **"Compartir contexto"** + "Generar con IA" | Mismo componente `CoverLetterFields` del wizard — nada nuevo que aprender |
 | 3 | **"Generar y entregar"** | `buildCoverLetterDocx` por idioma, reusando la(s) misma(s) carpeta(s) del CV (`folderName` con `company`/`code`/`language` de la fila) |
-| 4 | Se descarga el `.docx` (o un `.zip` si el idioma es "Ambos") y queda archivado junto al CV | `archiveDeliveryFiles` — se **agrega** a `row.deliveryFiles`, nunca reemplaza los archivos del CV ya entregado |
-| 5 | La sección pasa a mostrar la carta (como si hubiera salido del wizard) y "Entrega" suma "Carta · EN/ES" descargable | `row.coverLetter` queda seteado; sin subida a Google Docs (fuera de alcance, ver `TODO.md` → "Cover letters en el sink de Drive") |
+| 4 | Se descarga el `.docx` (o un `.zip` si el idioma es "Ambos"), queda archivado junto al CV y se sube a Drive como Google Doc | `archiveDeliveryFiles` + `createGoogleDoc(…, COVER_LETTER_DOC_NAME)` — siempre **agregando** a `row.deliveryFiles`/`driveLetterDocs`, nunca reemplaza lo del CV ya entregado. Drive apagado (501) es silencioso |
+| 5 | La sección pasa a mostrar la carta (como si hubiera salido del wizard) y "Entrega" suma la fila `EN · Carta` con abrir-en-Drive + descargar | `row.coverLetter` + `row.driveLetterDocs` quedan seteados |
 
 ## 12. Marcar hitos del proceso
 

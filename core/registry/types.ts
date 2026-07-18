@@ -103,6 +103,8 @@ export interface RegistryRow {
   zipName?: string;
   /** Google Doc URL per generated language (Docs sink), filled after the upload. */
   driveDocs?: Partial<Record<Language, string>>;
+  /** Cover letter's Google Doc URL per language — mirror of driveDocs. */
+  driveLetterDocs?: Partial<Record<Language, string>>;
   /** Drive folder that holds this application's Doc(s) — one per application. */
   driveFolder?: string;
   /** Creation timestamp (ISO). */

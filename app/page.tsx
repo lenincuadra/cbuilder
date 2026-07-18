@@ -16,7 +16,7 @@ import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { CV_FILENAME } from "@/core/zip";
 import { archiveDeliveryFiles, revealDelivery, type DeliveryFile } from "@/lib/archive";
 import { downloadBytes } from "@/lib/download";
-import { createGoogleDoc } from "@/lib/gdocs";
+import { COVER_LETTER_DOC_NAME, CV_DOC_NAME, createGoogleDoc } from "@/lib/gdocs";
 import { loadMaster } from "@/lib/masters";
 import { toastDeleted } from "@/ui/ConfirmDelete";
 import { AppVersion } from "@/ui/AppVersion";
@@ -252,11 +252,13 @@ export default function Home() {
         });
       }
 
-      // Extra sink: create each CV in the user's Google Drive as a native Google
-      // Doc (via Apps Script), all under one per-application folder. Feature-off
-      // (501) is silent; a real failure only warns. Collected URLs are persisted
-      // so the panel can always show them. No per-language toasts — one alert.
+      // Extra sink: create each CV (and its cover letter, when the entry has
+      // one) in the user's Google Drive as native Google Docs (via Apps
+      // Script), all under one per-application folder. Feature-off (501) is
+      // silent; a real failure only warns. Collected URLs are persisted so the
+      // panel can always show them. No per-language toasts — one alert.
       const driveDocs: NonNullable<RegistryRow["driveDocs"]> = {};
+      const driveLetterDocs: NonNullable<RegistryRow["driveLetterDocs"]> = {};
       let driveFolder: string | undefined;
       let gdocsFailed = false;
       for (const entry of result.entries) {
@@ -264,17 +266,26 @@ export default function Home() {
         // across languages ("EN_acme_0628a2" -> "acme_0628a2").
         const appFolder = entry.folder.slice(entry.language.length + 1);
         try {
-          const doc = await createGoogleDoc(appFolder, entry.language, entry.docx);
+          const doc = await createGoogleDoc(appFolder, entry.language, entry.docx, CV_DOC_NAME);
           if (doc) {
             driveDocs[entry.language] = doc.docUrl;
             driveFolder = doc.folderUrl ?? driveFolder;
+          }
+          if (entry.coverLetter) {
+            const letterDoc = await createGoogleDoc(
+              appFolder,
+              entry.language,
+              entry.coverLetter,
+              COVER_LETTER_DOC_NAME,
+            );
+            if (letterDoc) driveLetterDocs[entry.language] = letterDoc.docUrl;
           }
         } catch {
           gdocsFailed = true;
         }
       }
-      if (Object.keys(driveDocs).length > 0) {
-        await update(result.code, { driveDocs, driveFolder }).catch(() => {
+      if (Object.keys(driveDocs).length > 0 || Object.keys(driveLetterDocs).length > 0) {
+        await update(result.code, { driveDocs, driveLetterDocs, driveFolder }).catch(() => {
           // The docs exist in Drive; only the registry link failed — not fatal.
         });
       }

@@ -31,6 +31,7 @@ interface RegistryRowDb {
   focus: string | null;
   zip_name: string | null;
   drive_docs: Partial<Record<Language, string>> | null;
+  drive_letter_docs: Partial<Record<Language, string>> | null;
   links: TrackedLinks | null;
   cover_letter: CoverLetterRecord | null;
   cover_letter_draft: { templateId: string; templateName?: string; bodies: CoverLetterBodies } | null;
@@ -60,6 +61,7 @@ export function dbToRow(db: RegistryRowDb): RegistryRow {
     focus: db.focus ?? undefined,
     zipName: db.zip_name ?? undefined,
     driveDocs: db.drive_docs ?? undefined,
+    driveLetterDocs: db.drive_letter_docs ?? undefined,
     links: db.links ?? undefined,
     coverLetter: db.cover_letter ?? undefined,
     coverLetterDraft: db.cover_letter_draft ?? undefined,
@@ -92,6 +94,7 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
     focus: row.focus ?? null,
     zip_name: row.zipName ?? null,
     drive_docs: row.driveDocs ?? null,
+    drive_letter_docs: row.driveLetterDocs ?? null,
     links: row.links ?? null,
     cover_letter: row.coverLetter ?? null,
     cover_letter_draft: row.coverLetterDraft ?? null,
@@ -122,6 +125,7 @@ export function editableToDb(fields: EditableFields): Partial<RegistryRowDb> {
   if ("focus" in fields) out.focus = fields.focus ?? null;
   if ("zipName" in fields) out.zip_name = fields.zipName ?? null;
   if ("driveDocs" in fields) out.drive_docs = fields.driveDocs ?? null;
+  if ("driveLetterDocs" in fields) out.drive_letter_docs = fields.driveLetterDocs ?? null;
   if ("links" in fields) out.links = fields.links ?? null;
   if ("coverLetter" in fields) out.cover_letter = fields.coverLetter ?? null;
   if ("coverLetterDraft" in fields) out.cover_letter_draft = fields.coverLetterDraft ?? null;

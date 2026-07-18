@@ -90,13 +90,16 @@ Detalles de cada destino:
    re-descargar un CV después** (card `DeliveryInfo` → `GET /api/cvs/<path>`, un
    tap incluso desde el teléfono). Ver [`decisions.md`](decisions.md) → "Archivo
    por archivo, re-descargable".
-3. **Google Docs sink** (opcional) — cada CV se crea en el Drive del usuario como
-   Google Doc nativo, listo para bajar como PDF. Apagado si faltan las env vars.
-   Setup: [`gdocs-setup.md`](gdocs-setup.md).
+3. **Google Docs sink** (opcional) — cada CV **y su cover letter** se crean en el
+   Drive del usuario como Google Docs nativos, listos para bajar como PDF. El nombre
+   del doc viaja por request (`docName`, validado — contrato escalable del Apps
+   Script; constantes `CV_DOC_NAME`/`COVER_LETTER_DOC_NAME` en `lib/gdocs.ts`).
+   Apagado si faltan las env vars. Setup: [`gdocs-setup.md`](gdocs-setup.md).
 
-`zipName`, `deliveryFiles` y `driveDocs` se **persisten en la fila**, así el drawer
-muestra dónde quedó la entrega para siempre (no solo recién generado) — card
-`DeliveryInfo`.
+`zipName`, `deliveryFiles`, `driveDocs` y `driveLetterDocs` se **persisten en la
+fila**, así el drawer muestra dónde quedó la entrega para siempre (no solo recién
+generado) — card `DeliveryInfo`: una fila por archivo (`EN · CV`, `EN · Carta`) con
+abrir-en-Drive + re-descargar.
 
 **Segunda vía: cover letter post-hoc.** Para una aplicación cuyo CV ya se entregó y no
 llevó carta, el detalle de la fila ofrece "Generar cover letter" (sección Cover letter
@@ -104,11 +107,10 @@ del tab Detalles, `CoverLetterSection`/`CoverLetterGenerateForm`) — reusa el m
 de template/IA del wizard (`ui/CoverLetterFields.tsx`, compartido) pero **sin** tocar
 `generateCv()`: `core/coverLetter/deliver.ts` construye el/los `.docx` con
 `buildCoverLetterDocx()` y reconstruye la(s) misma(s) carpeta(s) del CV con `folderName()`
-(depende solo de `language`/`company`/`code`, ya en la fila). Solo dos de los tres
-destinos: descarga + archivo durable (`archiveDeliveryFiles`, **agregado** a
-`deliveryFiles`, nunca reemplazo — lectura-modificación-escritura). Sin Google Docs: el
-Apps Script nombra todo `Lenin_Cuadra_CV`, así que un sink de Drive para la carta queda
-fuera hasta cambiar ese contrato (`TODO.md` → "Cover letters en el sink de Drive").
+(depende solo de `language`/`company`/`code`, ya en la fila). Mismos tres destinos que
+una generación del wizard: descarga + archivo durable + Drive (`archiveDeliveryFiles` /
+`createGoogleDoc`, siempre **agregando/mergeando** sobre `deliveryFiles`/
+`driveLetterDocs`, nunca reemplazo — lectura-modificación-escritura).
 
 ## Registrar sin CV (generación diferida)
 

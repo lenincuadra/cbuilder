@@ -18,16 +18,34 @@ export interface StepConfirmProps {
   coverLetterName?: string;
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
+function SummaryRow({
+  label,
+  value,
+  truncate = false,
+}: {
+  label: string;
+  value: string;
+  /** Single-line ellipsis for long free-text values (full text in the title tooltip). */
+  truncate?: boolean;
+}) {
   return (
     <div className="flex items-baseline justify-between gap-3 text-sm">
       <span className="shrink-0 text-muted-foreground">{label}</span>
-      <span className="min-w-0 text-right font-medium break-words">{value}</span>
+      <span
+        title={truncate ? value : undefined}
+        className={
+          truncate
+            ? "min-w-0 truncate text-right font-medium"
+            : "min-w-0 text-right font-medium break-words"
+        }
+      >
+        {value}
+      </span>
     </div>
   );
 }
 
-/** Step 5 — Confirm. Shows a summary and a preview of the folder name(s) to be created. */
+/** Step 6 — Confirm. Shows a summary and a preview of the folder name(s) to be created. */
 export function StepConfirm({ data, previewCode, spec, coverLetterName }: StepConfirmProps) {
   const folders = languagesFor(data.language).map((language) => ({
     language,
@@ -58,6 +76,9 @@ export function StepConfirm({ data, previewCode, spec, coverLetterName }: StepCo
         )}
         {data.who.trim() !== "" && <SummaryRow label="Quién" value={data.who} />}
         {data.jobUrl.trim() !== "" && <SummaryRow label="Link del puesto" value={data.jobUrl} />}
+        {data.jobContext.trim() !== "" && (
+          <SummaryRow label="Contexto del puesto" value={data.jobContext} truncate />
+        )}
         {anyLetter && coverLetterName && (
           <SummaryRow label="Cover letter" value={coverLetterName} />
         )}
