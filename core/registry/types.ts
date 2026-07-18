@@ -16,9 +16,15 @@ export type Channel = (typeof CHANNELS)[number];
  * "Borrador" is system-derived (mirrors `cvPending`), never manually set —
  * it's what a row is while registered but not yet sent (via "Guardar sin CV"
  * or an AI cover-letter draft started mid-wizard). It flips to "Activo" the
- * moment the CV actually generates. Not user-toggleable like Activo/Rechazado.
+ * moment the CV actually generates. Not user-toggleable like the others.
+ *
+ * The three user-settable states double as the funnel's outcome/color:
+ * "Activo" (en curso, ámbar), "Rechazado" (terminó mal, rojo) and "Aceptado"
+ * (terminó bien, verde). Marking a process finished = moving it to Rechazado
+ * or Aceptado; the stage where it ended is the deepest funnel stage reached
+ * (see core/funnel.ts). Only one outcome per row.
  */
-export type ApplicationStatus = "Borrador" | "Activo" | "Rechazado";
+export type ApplicationStatus = "Borrador" | "Activo" | "Rechazado" | "Aceptado";
 
 export const DEFAULT_ROLE = "UX/UI Designer";
 export const DEFAULT_STATUS: ApplicationStatus = "Activo";
@@ -42,8 +48,13 @@ export interface StatusUpdate {
   milestone?: MilestoneKey;
 }
 
-/** Funnel milestones, in AARRR order (Activation → Referral). */
-export const MILESTONE_KEYS = ["responded", "interview", "offer", "referral"] as const;
+/**
+ * Funnel milestones, in AARRR order (Acquisition → Referral). "sent" (CV
+ * enviado) is auto-marked when a CV is generated but can be unmarked (e.g. the
+ * CV never actually went out), so the first process step can carry annotations
+ * too — not just "Respuesta recibida", which often never comes (ghosting).
+ */
+export const MILESTONE_KEYS = ["sent", "responded", "interview", "offer", "referral"] as const;
 
 export type MilestoneKey = (typeof MILESTONE_KEYS)[number];
 

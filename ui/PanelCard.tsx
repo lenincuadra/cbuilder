@@ -48,9 +48,14 @@ export interface PanelCardProps {
    * `DrawerFooter`. `container` is the drawer node — pass it to popouts inside.
    */
   children: (close: () => void, container: HTMLElement | null) => ReactNode;
+  /**
+   * Extra classes for the drawer panel (e.g. a wider desktop width). Use the
+   * `data-[vaul-drawer-direction=right]:` prefix to override the default width.
+   */
+  contentClassName?: string;
 }
 
-export function PanelCard({ title, description, card, children }: PanelCardProps) {
+export function PanelCard({ title, description, card, children, contentClassName }: PanelCardProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   // The drawer node — popouts (dropdowns) inside the body portal here so they
@@ -63,6 +68,7 @@ export function PanelCard({ title, description, card, children }: PanelCardProps
       <Drawer direction={isMobile ? "bottom" : "right"} open={open} onOpenChange={setOpen}>
         <DrawerContent
           ref={setNode}
+          className={contentClassName}
           // A nested confirm dialog (ConfirmDelete) portals to <body>; keep the
           // drawer open when the interaction is inside it.
           onPointerDownOutside={keepDrawerOnDialogInteraction}

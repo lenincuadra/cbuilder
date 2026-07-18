@@ -1,4 +1,4 @@
-import type { MilestoneKey, RegistryRow } from "./registry/types";
+import type { ApplicationStatus, MilestoneKey, RegistryRow } from "./registry/types";
 import { MILESTONE_KEYS } from "./registry/types";
 
 /**
@@ -38,6 +38,7 @@ export const FUNNEL_STAGES: readonly FunnelStageSpec[] = [
     label: "CV enviado",
     marketing: "¿Cuántos visitan tu sitio? El primer contacto real con tu producto.",
     jobHunt: "Aplicaciones donde el CV efectivamente salió: la empresa ya te tiene en la mano.",
+    milestone: "sent",
   },
   {
     id: "activation",
@@ -77,9 +78,40 @@ export const FUNNEL_STAGES: readonly FunnelStageSpec[] = [
   },
 ];
 
+/**
+ * Rows that reached a stage, split by their outcome (= `status`), so each stage
+ * bar can be colored/stacked by state. Order matches the funnel stack:
+ * accepted (verde) → active (ámbar) → rejected (rojo) → draft (gris).
+ */
+export interface StatusBreakdown {
+  /** Aceptado — terminó bien. */
+  accepted: number;
+  /** Activo — en curso. */
+  active: number;
+  /** Rechazado — terminó mal. */
+  rejected: number;
+  /** Borrador — registrada sin CV. */
+  draft: number;
+}
+
+/** Bucket order for stacking/legends (green → amber → red → gray). */
+export const STATUS_BUCKETS = ["accepted", "active", "rejected", "draft"] as const;
+
+export type StatusBucket = (typeof STATUS_BUCKETS)[number];
+
+/** Which breakdown bucket a row's status falls into. */
+const STATUS_BUCKET: Record<ApplicationStatus, StatusBucket> = {
+  Aceptado: "accepted",
+  Activo: "active",
+  Rechazado: "rejected",
+  Borrador: "draft",
+};
+
 /** A funnel stage with its computed counts for a given set of rows. */
 export interface FunnelStage extends FunnelStageSpec {
   count: number;
+  /** The `count` split by outcome/status of the rows that reached this stage. */
+  byStatus: StatusBreakdown;
   /** % of Awareness (rounded), null when there are no rows. */
   pctOfTotal: number | null;
   /** % of the previous stage (rounded), null for Awareness or when it counted 0. */
@@ -99,26 +131,38 @@ function milestoneRank(row: RegistryRow): number {
   return -1;
 }
 
-/** Whether the row reached the funnel stage at `index` (0 = Awareness). */
+/**
+ * Whether the row reached the funnel stage at `index` (0 = Awareness).
+ * Milestones map to stages 1..5 (`sent`→Acquisition … `referral`→Referral), so
+ * stage `i` is reached when `milestoneRank >= i - 1`.
+ */
 function reachedStage(row: RegistryRow, index: number): boolean {
   if (index === 0) return true;
-  // A Borrador row with a milestone (e.g. a recruiter reached out before any CV
-  // went out) still counts as acquired — monotonicity guard.
-  if (index === 1) return row.status !== "Borrador" || milestoneRank(row) >= 0;
-  return milestoneRank(row) >= index - 2;
+  // Aceptado = terminó bien = llegó hasta el final: cuenta en todas las etapas,
+  // haya o no hitos marcados. Es el único estado que llega al fondo del embudo.
+  if (row.status === "Aceptado") return true;
+  // Acquisition ("CV enviado"): the `sent` milestone (auto-set on generation).
+  // Fallback to status for legacy generated rows without the milestone, and a
+  // Borrador with a later milestone (recruiter reached out) — monotonicity guard.
+  if (index === 1) return milestoneRank(row) >= 0 || row.status !== "Borrador";
+  return milestoneRank(row) >= index - 1;
 }
 
 /** Compute the funnel over all given rows (all-time; archived rows included). */
 export function computeFunnel(rows: RegistryRow[]): FunnelStage[] {
-  const counts = FUNNEL_STAGES.map(
-    (_, index) => rows.filter((row) => reachedStage(row, index)).length,
+  const reachedByStage = FUNNEL_STAGES.map((_, index) =>
+    rows.filter((row) => reachedStage(row, index)),
   );
+  const counts = reachedByStage.map((reached) => reached.length);
   const total = counts[0];
   return FUNNEL_STAGES.map((spec, index) => {
     const prev = index > 0 ? counts[index - 1] : null;
+    const byStatus: StatusBreakdown = { accepted: 0, active: 0, rejected: 0, draft: 0 };
+    for (const row of reachedByStage[index]) byStatus[STATUS_BUCKET[row.status]] += 1;
     return {
       ...spec,
       count: counts[index],
+      byStatus,
       pctOfTotal: total > 0 ? Math.round((counts[index] / total) * 100) : null,
       pctOfPrev: prev ? Math.round((counts[index] / prev) * 100) : null,
     };

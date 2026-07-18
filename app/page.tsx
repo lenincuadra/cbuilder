@@ -373,9 +373,11 @@ export default function Home() {
                 ? `No hay ${
                     statusFilter === "Activo"
                       ? "activas"
-                      : statusFilter === "Rechazado"
-                        ? "rechazadas"
-                        : "borradores"
+                      : statusFilter === "Aceptado"
+                        ? "aceptadas"
+                        : statusFilter === "Rechazado"
+                          ? "rechazadas"
+                          : "borradores"
                   } en ${view === "archivado" ? "Archivado" : "Vigentes"}.`
                 : view === "archivado"
                   ? "No hay búsquedas archivadas."

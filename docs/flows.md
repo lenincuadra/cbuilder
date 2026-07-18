@@ -183,13 +183,17 @@ cuelga de un hito (`MilestoneTimeline`, reemplaza `MilestonesSection` + `Updates
 
 | # | Acción Hecha | Dónde/Qué sucede por detrás |
 |---|---|---|
-| 1 | Click en la fila → tab **Actualizaciones** | Stepper de los 4 hitos; los alcanzados (con fecha) van con check, el resto con botón **Marcar** |
+| 1 | Click en la fila → tab **Actualizaciones** | Stepper de los 5 hitos (**CV enviado** → Respuesta → Entrevista → Oferta → Referido); los alcanzados (con fecha) van con check, el resto con botón **Marcar**. "CV enviado" se auto-marca al generar el CV y se puede desmarcar |
 | 2 | **Marcar** un hito (ej. "Oferta") | Se marca alcanzado y **auto-marca los anteriores** con la fecha de hoy (`row.milestones`, conteo acumulativo) — se abre el form de anotación del hito clickeado |
 | 3 | Escribir la anotación → **Guardar** | Se agrega a `row.updates` con `milestone` = ese hito; cada hito alcanzado pide ≥1 anotación (hint ámbar si falta) |
 | 4 | (Opcional) Ajustar la fecha del hito con el `DatePicker` inline | Persiste en el acto; independiente del timestamp de las anotaciones |
 | 5 | **Agregar anotación** en un hito ya alcanzado | Cuantas quieras hasta `MAX_UPDATES`; se editan/borran en su tarjeta |
 | 6 | Desmarcar un hito (✕) | Borra ese hito y los posteriores; sus anotaciones caen al grupo **"Sin hito"** (no se pierden) |
 | 7 | Items **"Sin hito"** (legacy / marcador "CV generado") | Grupo aparte con dropdown **Asignar hito** para reubicarlos |
+| 8 | **Fin del proceso**: **Terminó bien** / **Terminó mal** | Setea `status` = Aceptado (verde) / Rechazado (rojo); colorea las etapas alcanzadas y el embudo. La etapa donde terminó es la punta (hito más profundo). **Reabrir** vuelve a Activo (ámbar) |
+
+Colores del stepper: no alcanzada = gris; activo = neutro con la **punta** en ámbar;
+cerrado = todas las alcanzadas en verde (Aceptado) o rojo (Rechazado).
 
 ## 13. Embudo AARRR
 
@@ -200,5 +204,6 @@ incluidas.
 | # | Acción Hecha | Dónde/Qué sucede por detrás |
 |---|---|---|
 | 1 | Card **"Embudo AARRR"** (columna derecha; su descripción ya muestra la conversión CVs → respuestas) | `computeFunnel(rows)` (`core/funnel.ts`) sobre todas las filas |
-| 2 | Click → drawer con el gráfico de barras horizontales decrecientes (A/A/A/R/R/R) | `FunnelChart` (recharts vía `components/ui/chart.tsx`), cargado lazy al abrir |
-| 3 | Leer cada etapa: label, conteo, % del total, definición de marketing y su traducción al job hunt, y entre etapas el % de conversión | Anotaciones HTML desde `FUNNEL_STAGES`; Awareness = todas las filas, Acquisition = `status !== "Borrador"`, el resto = hitos (conteo acumulativo, ver [`architecture.md`](architecture.md)) |
+| 2 | Click → drawer con el gráfico de barras horizontales decrecientes (A/A/A/R/R/R), **apiladas por Estado** (verde/ámbar/rojo/gris) | `FunnelChart` (recharts vía `components/ui/chart.tsx`), cargado lazy al abrir; en desktop el drawer se ensancha a 2 columnas (**leyenda a la izquierda, gráfico a la derecha**), apilado en mobile |
+| 3 | Leer cada etapa: label, conteo, % del total, definición de marketing y su traducción al job hunt, y entre etapas el % de conversión | Anotaciones HTML desde `FUNNEL_STAGES`; Awareness = todas las filas, Acquisition = `status !== "Borrador"`, el resto = hitos (conteo acumulativo, ver [`architecture.md`](architecture.md)); **Aceptado cuenta en todas las etapas** (llega al final) |
+| 4 | Leyenda de colores: Aceptado (verde) · Activo (ámbar) · Rechazado (rojo) · Borrador (gris) | Cada barra se apila por el Estado de las filas que alcanzaron esa etapa (`FunnelStage.byStatus`); el gris sólo aparece en Awareness |

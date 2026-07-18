@@ -1,6 +1,15 @@
 "use client";
 
-import { CircleCheck, CircleX, FileClock, Funnel, List, X, type LucideIcon } from "lucide-react";
+import {
+  CircleCheck,
+  CircleCheckBig,
+  CircleX,
+  FileClock,
+  Funnel,
+  List,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +29,7 @@ const OPTIONS: Array<{ value: StatusFilter; label: string; icon: LucideIcon }> =
   { value: "todos", label: "Todos", icon: List },
   { value: "Borrador", label: "Borrador", icon: FileClock },
   { value: "Activo", label: "Activo", icon: CircleCheck },
+  { value: "Aceptado", label: "Aceptado", icon: CircleCheckBig },
   { value: "Rechazado", label: "Rechazado", icon: CircleX },
 ];
 

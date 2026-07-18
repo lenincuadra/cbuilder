@@ -232,11 +232,7 @@ export function RegistryTable({
                   <TableCell>
                     <StatusToggle
                       status={row.status}
-                      onToggle={() =>
-                        onUpdate(row.code, {
-                          status: row.status === "Activo" ? "Rechazado" : "Activo",
-                        })
-                      }
+                      onSetStatus={(status) => onUpdate(row.code, { status })}
                     />
                   </TableCell>
                   <TableCell>

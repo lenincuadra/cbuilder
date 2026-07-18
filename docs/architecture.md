@@ -15,7 +15,10 @@ de a dónde y cómo se aplicó a cada puesto. El output es un `.docx` editable
 (nunca PDF renderizado): se rellena un master por reemplazo de un placeholder.
 Además lee la búsqueda como un **embudo AARRR** (card Embudo AARRR): las dos
 primeras etapas salen de las filas y su estado; las profundas, de los hitos
-manuales por aplicación (`milestones`).
+manuales por aplicación (`milestones`). Cada nivel se colorea/apila por el
+**Estado** de las aplicaciones que lo alcanzaron (Aceptado=verde, Activo=ámbar,
+Rechazado=rojo, Borrador=gris) — mismo modelo de color en el stepper por
+aplicación (ver decisions.md → "Estado Aceptado + cierre de proceso").
 
 Dos sistemas separados, en repos distintos:
 
@@ -43,7 +46,9 @@ La regla de oro: **cv-builder ESCRIBE los links, el portfolio los RECIBE.** El
   - `staleness.ts`, `dates.ts` — alerta de inactividad, formato de fechas.
   - `funnel.ts` — embudo AARRR: `FUNNEL_STAGES` (6 etapas con su copy educativo) y
     `computeFunnel(rows)` (conteo acumulativo "llegó al menos a la etapa N" sobre
-    `status` + `milestones`; ver decisions.md → "Embudo AARRR").
+    `status` + `milestones`; ver decisions.md → "Embudo AARRR"). Cada etapa trae
+    además `byStatus` (desglose por Estado: accepted/active/rejected/draft) para
+    apilar/colorear las barras.
   - `registry/types.ts`, `notes/types.ts` — modelos + interfaces de storage.
 - **`ui/`** — componentes React (la tabla, el wizard, el drawer, los cards).
 - **`lib/`** — pegamento con el navegador/servidor: storage, descarga, sinks
