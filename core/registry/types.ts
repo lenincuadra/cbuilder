@@ -34,6 +34,12 @@ export interface StatusUpdate {
   message: string;
   /** Marked important / to-do (shown with 🚩). */
   flag?: boolean;
+  /**
+   * Funnel milestone this entry annotates. Every user-added item hangs off a
+   * milestone; absent = unclassified (legacy items, or the system "CV generado"
+   * marker) — shown under "Sin hito" so it can be reassigned.
+   */
+  milestone?: MilestoneKey;
 }
 
 /** Funnel milestones, in AARRR order (Activation → Referral). */

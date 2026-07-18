@@ -175,17 +175,21 @@ operando sobre una fila que ya existe — sin re-generar el CV.
 | 4 | Se descarga el `.docx` (o un `.zip` si el idioma es "Ambos"), queda archivado junto al CV y se sube a Drive como Google Doc | `archiveDeliveryFiles` + `createGoogleDoc(…, COVER_LETTER_DOC_NAME)` — siempre **agregando** a `row.deliveryFiles`/`driveLetterDocs`, nunca reemplaza lo del CV ya entregado. Drive apagado (501) es silencioso |
 | 5 | La sección pasa a mostrar la carta (como si hubiera salido del wizard) y "Entrega" suma la fila `EN · Carta` con abrir-en-Drive + descargar | `row.coverLetter` + `row.driveLetterDocs` quedan seteados |
 
-## 12. Marcar hitos del proceso
+## 12. Seguimiento del proceso (hitos + anotaciones)
 
 Los hitos estructurados (respuesta / entrevista / oferta / referido) que alimentan
-el embudo AARRR. Independientes del timeline de texto libre, que sigue igual.
+el embudo AARRR, unificados con el timeline en un stepper vertical: cada anotación
+cuelga de un hito (`MilestoneTimeline`, reemplaza `MilestonesSection` + `UpdatesTab`).
 
 | # | Acción Hecha | Dónde/Qué sucede por detrás |
 |---|---|---|
-| 1 | Click en la fila → tab **Actualizaciones** | El bloque "Hitos del proceso" (`MilestonesSection`) aparece arriba del timeline |
-| 2 | Prender el switch de un hito (ej. "Entrevista") | Se guarda al instante con la fecha de hoy (`row.milestones.interview = "YYYY-MM-DD"`) — sin botón Guardar, como el toggle de estado |
-| 3 | (Opcional) Ajustar la fecha con el date picker inline | Mismo `DatePicker` del wizard; persiste en el acto |
-| 4 | Apagar un switch | Borra ese hito; si era el último, `milestones` desaparece de la fila |
+| 1 | Click en la fila → tab **Actualizaciones** | Stepper de los 4 hitos; los alcanzados (con fecha) van con check, el resto con botón **Marcar** |
+| 2 | **Marcar** un hito (ej. "Oferta") | Se marca alcanzado y **auto-marca los anteriores** con la fecha de hoy (`row.milestones`, conteo acumulativo) — se abre el form de anotación del hito clickeado |
+| 3 | Escribir la anotación → **Guardar** | Se agrega a `row.updates` con `milestone` = ese hito; cada hito alcanzado pide ≥1 anotación (hint ámbar si falta) |
+| 4 | (Opcional) Ajustar la fecha del hito con el `DatePicker` inline | Persiste en el acto; independiente del timestamp de las anotaciones |
+| 5 | **Agregar anotación** en un hito ya alcanzado | Cuantas quieras hasta `MAX_UPDATES`; se editan/borran en su tarjeta |
+| 6 | Desmarcar un hito (✕) | Borra ese hito y los posteriores; sus anotaciones caen al grupo **"Sin hito"** (no se pierden) |
+| 7 | Items **"Sin hito"** (legacy / marcador "CV generado") | Grupo aparte con dropdown **Asignar hito** para reubicarlos |
 
 ## 13. Embudo AARRR
 

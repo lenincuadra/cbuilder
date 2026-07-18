@@ -1,0 +1,469 @@
+"use client";
+
+import { useState } from "react";
+import { Calendar, Check, Plus, Trash2, X } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Item, ItemContent } from "@/components/ui/item";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { toISODate } from "@/core/dates";
+import { FUNNEL_STAGES } from "@/core/funnel";
+import {
+  MAX_UPDATES,
+  MILESTONE_KEYS,
+  type MilestoneKey,
+  type Milestones,
+  type StatusUpdate,
+} from "@/core/registry/types";
+import { IconSelect } from "@/ui/IconSelect";
+import { DatePicker } from "@/ui/wizard/DatePicker";
+
+/** ES label per milestone, from the funnel stage list (single source of truth). */
+const MILESTONE_LABELS = Object.fromEntries(
+  FUNNEL_STAGES.flatMap((stage) => (stage.milestone ? [[stage.milestone, stage.label]] : [])),
+) as Record<MilestoneKey, string>;
+
+/** Fields this section owns, patched together so one save covers both. */
+export interface MilestoneTimelinePatch {
+  milestones?: Milestones;
+  updates?: StatusUpdate[];
+}
+
+export interface MilestoneTimelineProps {
+  milestones: Milestones | undefined;
+  updates: StatusUpdate[];
+  /** Persist milestones + updates. Empty milestones drop the field from the row. */
+  onSave: (patch: MilestoneTimelinePatch) => void | Promise<void>;
+  /** Drawer node the assign-milestone dropdown portals into (focus/pe scope). */
+  container?: HTMLElement | null;
+}
+
+/** Draft backing the add/edit item form. `index` null = adding a new item. */
+interface ItemDraft {
+  index: number | null;
+  milestone: MilestoneKey;
+  message: string;
+  /** ISO timestamp. */
+  at: string;
+  flag: boolean;
+}
+
+function formatWhen(at: string): string {
+  return new Date(at).toLocaleString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** ISO -> "YYYY-MM-DDTHH:mm" in local time, for <input type="datetime-local">. */
+function toLocalInput(iso: string): string {
+  const date = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** Same entry without its milestone tag (used when unmarking a stage). */
+function untagged(update: StatusUpdate): StatusUpdate {
+  const rest = { ...update };
+  delete rest.milestone;
+  return rest;
+}
+
+/**
+ * Unified process timeline (Seguimiento › Actualizaciones): the AARRR funnel
+ * milestones as a vertical stepper, each with its own date and its own list of
+ * annotations. Marking a milestone marks every earlier one too (the funnel is
+ * cumulative) — a shortcut for processes caught up after the fact; each reached
+ * stage still wants at least one annotation. Every item hangs off a milestone;
+ * legacy/system items with none land under "Sin hito", reassignable inline.
+ */
+export function MilestoneTimeline({
+  milestones,
+  updates,
+  onSave,
+  container,
+}: MilestoneTimelineProps) {
+  const [saving, setSaving] = useState(false);
+  const [draft, setDraft] = useState<ItemDraft | null>(null);
+  const current = milestones ?? {};
+
+  async function persist(nextMilestones: Milestones, nextUpdates: StatusUpdate[]) {
+    setSaving(true);
+    try {
+      await onSave({
+        milestones: Object.keys(nextMilestones).length > 0 ? nextMilestones : undefined,
+        updates: nextUpdates,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /** Items tagged to `key`, with their index in the stored array, oldest first. */
+  function itemsFor(key: MilestoneKey): Array<{ update: StatusUpdate; index: number }> {
+    return updates
+      .map((update, index) => ({ update, index }))
+      .filter(({ update }) => update.milestone === key)
+      .sort((a, b) => a.update.at.localeCompare(b.update.at));
+  }
+
+  const orphans = updates
+    .map((update, index) => ({ update, index }))
+    .filter(({ update }) => !update.milestone || !MILESTONE_KEYS.includes(update.milestone))
+    .sort((a, b) => a.update.at.localeCompare(b.update.at));
+
+  const atCap = updates.length >= MAX_UPDATES;
+
+  /** Mark `key` reached (plus every earlier stage) and prompt for its first item. */
+  function reach(key: MilestoneKey) {
+    const target = MILESTONE_KEYS.indexOf(key);
+    const today = toISODate(new Date());
+    const next = { ...current };
+    for (let i = 0; i <= target; i++) {
+      if (!next[MILESTONE_KEYS[i]]) next[MILESTONE_KEYS[i]] = today;
+    }
+    void persist(next, updates);
+    if (!atCap) startAdd(key);
+  }
+
+  /** Unmark `key` and every later stage; their items fall back to "Sin hito". */
+  function unreach(key: MilestoneKey) {
+    const target = MILESTONE_KEYS.indexOf(key);
+    const affected = new Set<MilestoneKey>();
+    const next = { ...current };
+    for (let i = target; i < MILESTONE_KEYS.length; i++) {
+      if (next[MILESTONE_KEYS[i]]) {
+        affected.add(MILESTONE_KEYS[i]);
+        delete next[MILESTONE_KEYS[i]];
+      }
+    }
+    const nextUpdates = updates.map((update) =>
+      update.milestone && affected.has(update.milestone) ? untagged(update) : update,
+    );
+    setDraft(null);
+    void persist(next, nextUpdates);
+  }
+
+  function setMilestoneDate(key: MilestoneKey, date: Date) {
+    void persist({ ...current, [key]: toISODate(date) }, updates);
+  }
+
+  /** Move an unclassified item onto a milestone (which it also marks reached). */
+  function assign(index: number, key: MilestoneKey) {
+    const nextUpdates = updates.map((update, i) =>
+      i === index ? { ...update, milestone: key } : update,
+    );
+    const next = { ...current };
+    if (!next[key]) next[key] = toISODate(new Date());
+    void persist(next, nextUpdates);
+  }
+
+  function startAdd(key: MilestoneKey) {
+    setDraft({ index: null, milestone: key, message: "", at: new Date().toISOString(), flag: false });
+  }
+
+  function startEdit(index: number) {
+    const update = updates[index];
+    if (!update.milestone) return; // orphans are edited via reassignment only
+    setDraft({
+      index,
+      milestone: update.milestone,
+      message: update.message,
+      at: update.at,
+      flag: Boolean(update.flag),
+    });
+  }
+
+  async function saveItem() {
+    if (!draft) return;
+    const message = draft.message.trim();
+    if (!message) return;
+    const entry: StatusUpdate = {
+      at: draft.at,
+      message,
+      milestone: draft.milestone,
+      ...(draft.flag ? { flag: true } : {}),
+    };
+    if (draft.index === null && atCap) return;
+    const nextUpdates =
+      draft.index === null
+        ? [...updates, entry]
+        : updates.map((update, i) => (i === draft.index ? entry : update));
+    const next = { ...current };
+    if (!next[draft.milestone]) next[draft.milestone] = toISODate(new Date());
+    setDraft(null);
+    await persist(next, nextUpdates);
+  }
+
+  function deleteItem(index: number) {
+    void persist(current, updates.filter((_, i) => i !== index));
+  }
+
+  function itemForm() {
+    if (!draft) return null;
+    return (
+      <div className="flex flex-col gap-2 rounded-lg border p-3">
+        <Textarea
+          autoFocus
+          value={draft.message}
+          onChange={(event) => setDraft((d) => (d ? { ...d, message: event.target.value } : d))}
+          placeholder="Ej: 2da entrevista agendada para el viernes"
+          className="min-h-[72px] text-sm"
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            type="datetime-local"
+            value={toLocalInput(draft.at)}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (!value) return;
+              const date = new Date(value);
+              if (!Number.isNaN(date.getTime()))
+                setDraft((d) => (d ? { ...d, at: date.toISOString() } : d));
+            }}
+            className="h-8 w-auto text-sm"
+          />
+          <label
+            className="flex cursor-pointer items-center gap-2 text-sm select-none"
+            title="Marcar como importante / por hacer"
+          >
+            <Switch
+              checked={draft.flag}
+              onCheckedChange={(checked) => setDraft((d) => (d ? { ...d, flag: checked } : d))}
+            />
+            <span>🚩 Por hacer</span>
+          </label>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setDraft(null)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button size="sm" onClick={saveItem} disabled={saving || draft.message.trim() === ""}>
+            {saving ? "Guardando…" : "Guardar"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  function itemCard({ update, index }: { update: StatusUpdate; index: number }) {
+    return (
+      <Item
+        variant="outline"
+        size="sm"
+        role="button"
+        tabIndex={0}
+        onClick={() => startEdit(index)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            startEdit(index);
+          }
+        }}
+        className="cursor-pointer"
+      >
+        <ItemContent className="gap-1.5">
+          <div className="flex items-start gap-2">
+            <p className="flex-1 text-sm whitespace-pre-wrap">{update.message}</p>
+            {update.flag && (
+              <span className="text-sm leading-none" aria-label="Marcado">
+                🚩
+              </span>
+            )}
+            <button
+              type="button"
+              aria-label="Borrar anotación"
+              title="Borrar"
+              onClick={(event) => {
+                event.stopPropagation();
+                deleteItem(index);
+              }}
+              className="text-muted-foreground transition-colors hover:text-destructive"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          </div>
+          <Badge variant="outline" className="w-fit gap-1 font-normal">
+            <Calendar className="size-3" />
+            {formatWhen(update.at)}
+          </Badge>
+        </ItemContent>
+      </Item>
+    );
+  }
+
+  const nothingYet =
+    Object.keys(current).length === 0 && updates.length === 0;
+
+  return (
+    <section className="flex flex-col gap-3">
+      <span className="text-xs font-medium text-muted-foreground">Seguimiento del proceso</span>
+      {nothingYet && (
+        <p className="text-xs text-muted-foreground">
+          Marcá el hito al que llegó la postulación y registrá qué pasó. Cada hito marca también los
+          anteriores.
+        </p>
+      )}
+
+      <ol className="flex flex-col">
+        {MILESTONE_KEYS.map((key, idx) => {
+          const reached = Boolean(current[key]);
+          const items = itemsFor(key);
+          const last = idx === MILESTONE_KEYS.length - 1;
+          const adding = draft?.index === null && draft.milestone === key;
+          return (
+            <li key={key} className="flex gap-3">
+              {/* Stepper gutter: stage dot + connector to the next stage. */}
+              <div className="flex flex-col items-center pt-1">
+                <span
+                  className={`flex size-4 shrink-0 items-center justify-center rounded-full ring-2 ring-background ${
+                    reached ? "bg-primary text-primary-foreground" : "border border-border bg-muted"
+                  }`}
+                >
+                  {reached && <Check className="size-2.5" />}
+                </span>
+                {!last && (
+                  <span className={`w-px flex-1 ${reached ? "bg-primary/40" : "bg-border"}`} />
+                )}
+              </div>
+
+              <div className={`min-w-0 flex-1 ${last ? "pb-1" : "pb-4"}`}>
+                {/* Stage header: label + date/unmark when reached, else "Marcar". */}
+                <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+                  <span className={`text-sm ${reached ? "font-medium" : "text-muted-foreground"}`}>
+                    {MILESTONE_LABELS[key]}
+                  </span>
+                  {reached ? (
+                    <div className="flex items-center gap-1">
+                      <div className="w-32">
+                        <DatePicker
+                          value={new Date(`${current[key]}T00:00:00`)}
+                          onChange={(date) => setMilestoneDate(key, date)}
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 text-muted-foreground hover:text-destructive"
+                        title="Desmarcar hito"
+                        aria-label="Desmarcar hito"
+                        disabled={saving}
+                        onClick={() => unreach(key)}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={saving}
+                      onClick={() => reach(key)}
+                    >
+                      <Check className="size-4" />
+                      Marcar
+                    </Button>
+                  )}
+                </div>
+
+                {reached && (
+                  <div className="mt-2 flex flex-col gap-2">
+                    {items.map(({ update, index }) =>
+                      draft?.index === index ? (
+                        <div key={index}>{itemForm()}</div>
+                      ) : (
+                        <div key={index}>{itemCard({ update, index })}</div>
+                      ),
+                    )}
+                    {adding && itemForm()}
+                    {!adding && items.length === 0 && (
+                      <p className="text-xs text-amber-500">Agregá al menos una anotación.</p>
+                    )}
+                    {!adding &&
+                      (atCap ? (
+                        <p className="text-xs text-muted-foreground">
+                          Tope de {MAX_UPDATES} anotaciones alcanzado.
+                        </p>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="self-start text-muted-foreground"
+                          onClick={() => startAdd(key)}
+                        >
+                          <Plus className="size-4" />
+                          Agregar anotación
+                        </Button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+
+      {orphans.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-lg border border-dashed p-3">
+          <span className="text-xs font-medium text-muted-foreground">Sin hito</span>
+          {orphans.map(({ update, index }) => (
+            <div key={index} className="flex flex-col gap-1.5">
+              <Item variant="outline" size="sm">
+                <ItemContent className="gap-1.5">
+                  <div className="flex items-start gap-2">
+                    <p className="flex-1 text-sm whitespace-pre-wrap">{update.message}</p>
+                    {update.flag && (
+                      <span className="text-sm leading-none" aria-label="Marcado">
+                        🚩
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      aria-label="Borrar anotación"
+                      title="Borrar"
+                      onClick={() => deleteItem(index)}
+                      className="text-muted-foreground transition-colors hover:text-destructive"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="w-fit gap-1 font-normal">
+                      <Calendar className="size-3" />
+                      {formatWhen(update.at)}
+                    </Badge>
+                    <div className="w-40">
+                      <IconSelect
+                        aria-label="Asignar hito"
+                        value=""
+                        onChange={(value) => value && assign(index, value as MilestoneKey)}
+                        container={container}
+                        options={[
+                          { value: "", label: "Asignar hito…" },
+                          ...MILESTONE_KEYS.map((key) => ({
+                            value: key,
+                            label: MILESTONE_LABELS[key],
+                          })),
+                        ]}
+                      />
+                    </div>
+                  </div>
+                </ItemContent>
+              </Item>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        Estos hitos alimentan el embudo AARRR (card Embudo). Un hito marca también los anteriores.
+      </p>
+    </section>
+  );
+}

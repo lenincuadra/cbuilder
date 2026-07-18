@@ -10,6 +10,31 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Timeline unificado: hitos + actualizaciones en un solo stepper (2026-07-18)
+**Decisión**: fusionar el bloque "Hitos del proceso" y el timeline de "Actualizaciones"
+en un único componente `MilestoneTimeline` (reemplaza `MilestonesSection` + `UpdatesTab`),
+presentado como **stepper vertical** de los 4 hitos AARRR. Cada actualización cuelga de un
+hito (`StatusUpdate.milestone`); reached = el hito tiene fecha (`row.milestones[key]`).
+
+**Contexto/razón**:
+- **Toggles → stepper**: los switches independientes no leían como funnel (marcar "Oferta"
+  dejaba los anteriores apagados, confuso). El stepper con conteo acumulativo se ve como lo
+  que es. Marcar un hito **ahora sí auto-setea los anteriores** con la fecha de hoy (editable)
+  — esto **revierte** el "el editor no auto-setea hitos anteriores" de la entrada 2026-07-17:
+  como el conteo ya implicaba las etapas previas, la UI ahora coincide con el conteo.
+- **Saltar es un atajo**: marcar un hito lejano (ej. oferta directa, o un proceso que se
+  actualiza tarde) marca alcanzados los intermedios; cada etapa alcanzada pide **al menos una
+  anotación** (hint ámbar), pero no bloquea — es guía, no traba.
+- **Todo bajo un hito**: cada item pertenece a un hito; las notas generales van al tab
+  **Notas** (que ya existe). Los items sin hito — legacy previos a este cambio y el marcador de
+  sistema "CV generado" (`deferredGenerationFields`) — caen en un grupo **"Sin hito"** con un
+  dropdown para reasignarlos. No es un bucket permanente para notas nuevas: el alta de items
+  siempre es por-hito.
+- **Fecha aparte por hito**: cada hito conserva su `DatePicker` editable, independiente de los
+  timestamps de los items (el funnel/gráfico usa la fecha del hito, no la de los items).
+- **Fuente de verdad intacta**: `computeFunnel` sigue leyendo `row.milestones`; el cambio es de
+  UI + un campo opcional `milestone` en `StatusUpdate` (jsonb, sin migración).
+
 ## Embudo AARRR: hitos estructurados y conteo acumulativo (2026-07-17)
 **Decisión**: leer la búsqueda como un pirate funnel (AARRR) de 6 etapas — Awareness =
 vacantes registradas, Acquisition = CV enviado (`status !== "Borrador"`), Activation =
@@ -20,12 +45,13 @@ del aside ("Embudo AARRR") con drawer. Las etapas 3–6 salen de un campo nuevo
 **Contexto/razón**:
 - **Hitos estructurados, no parsear `updates`**: el timeline es texto libre; inferir
   "entrevista" desde prosa es frágil y no auditable. Cuatro switches con fecha son
-  baratos y el funnel queda medible de verdad. El timeline no cambia.
+  baratos y el funnel queda medible de verdad. _(Switches y timeline separado superados
+  el 2026-07-18: ver "Timeline unificado" arriba — ahora cada update cuelga de un hito.)_
 - **Conteo acumulativo ("llegó al menos a la etapa N")**: un hito posterior cuenta
   también los anteriores, así el embudo es monotónico aunque falte marcar un hito
-  intermedio. El editor **no** auto-setea hitos anteriores (no inventa fechas): la
-  implicación vive solo en el conteo. Un Borrador con hito cuenta como Acquisition
-  (recruiter contactó sin CV enviado).
+  intermedio. ~~El editor **no** auto-setea hitos anteriores~~ _(superado 2026-07-18:
+  el stepper sí los auto-setea con la fecha de hoy, editable)_. Un Borrador con hito
+  cuenta como Acquisition (recruiter contactó sin CV enviado).
 - **Referral va último** por fidelidad al modelo AARRR (es la etapa de mayor
   engagement), aunque en un job hunt un referido puede llegar cronológicamente primero.
   El funnel es una lente de aprendizaje, no una línea de tiempo.

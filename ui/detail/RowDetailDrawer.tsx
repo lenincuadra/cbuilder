@@ -41,9 +41,8 @@ import { RowEditForm } from "./RowEditForm";
 import { ScreeningNewForm } from "./ScreeningNewForm";
 import { ScreeningSection } from "./ScreeningSection";
 import { ScreeningSuggestForm } from "./ScreeningSuggestForm";
-import { MilestonesSection } from "./MilestonesSection";
+import { MilestoneTimeline } from "./MilestoneTimeline";
 import { TrackedLinks } from "./TrackedLinks";
-import { UpdatesTab } from "./UpdatesTab";
 
 /** Which panel tab the drawer opens on. */
 export type DetailTab = "detalles" | "notas" | "updates";
@@ -390,11 +389,11 @@ export function RowDetailDrawer({
                   {!row.cvPending && (
                     <TrackedLinks code={row.code} focus={row.focus} links={row.links} />
                   )}
+                  <DeliveryInfo row={row} onGenerateCv={() => onGenerateCv?.(row)} />
                   <CoverLetterSection
                     row={row}
                     onStartGenerate={() => setMode({ kind: "cover-letter-generate" })}
                   />
-                  <DeliveryInfo row={row} onGenerateCv={() => onGenerateCv?.(row)} />
                   <ScreeningSection
                     code={row.code}
                     screening={screening}
@@ -407,14 +406,12 @@ export function RowDetailDrawer({
                 <TabsContent value="notas">
                   <NotesTab notes={row.notes} onSave={(notes) => onUpdate(row.code, { notes })} />
                 </TabsContent>
-                <TabsContent value="updates" className="space-y-4">
-                  <MilestonesSection
+                <TabsContent value="updates">
+                  <MilestoneTimeline
                     milestones={row.milestones}
-                    onSave={(next) => onUpdate(row.code, { milestones: next })}
-                  />
-                  <UpdatesTab
                     updates={updates}
-                    onSave={(next) => onUpdate(row.code, { updates: next })}
+                    container={drawerNode}
+                    onSave={(patch) => onUpdate(row.code, patch)}
                   />
                 </TabsContent>
               </DrawerBody>
