@@ -15,7 +15,7 @@ create table if not exists public.registry (
   email       text,                          -- required (app-side) when channel = 'Email'
   date        text not null,                 -- application date as "YYYY-MM-DD"
   notes       text,
-  status      text not null default 'Activo' check (status in ('Borrador', 'Activo', 'Rechazado')),
+  status      text not null default 'Activo' check (status in ('Borrador', 'Activo', 'Rechazado', 'Aceptado')),
   who         text,
   job_url     text,
   job_context text,                          -- free-text posting highlights, extra AI grounding
@@ -126,12 +126,13 @@ insert into storage.buckets (id, name, public)
 --   alter table public.registry add column if not exists delivery_files jsonb;
 --   alter table public.registry add column if not exists cover_letter_draft jsonb;
 --   alter table public.registry add column if not exists job_context text;
---   alter table public.registry drop constraint if exists registry_status_check;
---   alter table public.registry add constraint registry_status_check
---     check (status in ('Borrador', 'Activo', 'Rechazado'));
 --   alter table public.screening_questions add column if not exists draft boolean not null default false;
 --   alter table public.registry add column if not exists drive_letter_docs jsonb;
 --   alter table public.registry add column if not exists milestones jsonb;
+--   -- Add the 'Aceptado' outcome status (funnel close-out):
+--   alter table public.registry drop constraint if exists registry_status_check;
+--   alter table public.registry add constraint registry_status_check
+--     check (status in ('Borrador', 'Activo', 'Rechazado', 'Aceptado'));
 
 -- One-time move from the old single-document general_notes to
 -- general_notes_entries (run once, then drop the old table):
