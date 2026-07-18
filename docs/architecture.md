@@ -13,6 +13,9 @@ Genera el CV de Lenin Cuadra para una aplicación concreta, con un **código de
 tracking** insertado en los links del header, y mantiene un **registro** privado
 de a dónde y cómo se aplicó a cada puesto. El output es un `.docx` editable
 (nunca PDF renderizado): se rellena un master por reemplazo de un placeholder.
+Además lee la búsqueda como un **embudo AARRR** (card Embudo AARRR): las dos
+primeras etapas salen de las filas y su estado; las profundas, de los hitos
+manuales por aplicación (`milestones`).
 
 Dos sistemas separados, en repos distintos:
 
@@ -38,6 +41,9 @@ La regla de oro: **cv-builder ESCRIBE los links, el portfolio los RECIBE.** El
   - `generateCv.ts` — orquesta todo: código → llena master(s) → carta(s) opcionales → zip →
     fila del registro.
   - `staleness.ts`, `dates.ts` — alerta de inactividad, formato de fechas.
+  - `funnel.ts` — embudo AARRR: `FUNNEL_STAGES` (6 etapas con su copy educativo) y
+    `computeFunnel(rows)` (conteo acumulativo "llegó al menos a la etapa N" sobre
+    `status` + `milestones`; ver decisions.md → "Embudo AARRR").
   - `registry/types.ts`, `notes/types.ts` — modelos + interfaces de storage.
 - **`ui/`** — componentes React (la tabla, el wizard, el drawer, los cards).
 - **`lib/`** — pegamento con el navegador/servidor: storage, descarga, sinks
@@ -157,7 +163,7 @@ file store local. Se puede cambiar la implementación sin tocar `core/` ni `ui/`
 
 | Documento | Interfaz | Default local | Durable (deploy) — factory server |
 |---|---|---|---|
-| Registro | `RegistryStore` | File store (`data/registry.json`) vía API + `ApiRegistryStore` | `SupabaseRegistryStore` — `getServerRegistryStore` |
+| Registro | `RegistryStore` | File store (`data/registry.json`) vía API + `ApiRegistryStore` | `SupabaseRegistryStore` — `getServerRegistryStore`. Incluye `milestones` (jsonb `{responded?, interview?, offer?, referral?}`, fechas `YYYY-MM-DD`) para el embudo AARRR |
 | Notas generales (lista) | `GeneralNotesStore` (`core/notes/types.ts`) | File store (`data/notes.json`) vía API — migra sola el documento único viejo a la primera nota | `SupabaseGeneralNotesStore` contra `general_notes_entries` — `getServerNotesStore` |
 | Links estables | `StableLinksStore` | File store (`data/stable-links.json`) vía API | `SupabaseStableLinksStore` — `getServerStableLinksStore` |
 | Cover letters (templates) | `CoverLetterTemplatesStore` | File store (`data/cover-letter-templates.json`) vía API | `SupabaseCoverLetterTemplatesStore` — `getServerCoverLetterTemplatesStore` |

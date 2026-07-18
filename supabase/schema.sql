@@ -1,9 +1,9 @@
 -- cv-builder — run this in the Supabase SQL editor (prod after merges that touch schema).
--- schema_version: 7  (registry + notes + stable_links + cover_letter_templates
+-- schema_version: 8  (registry + notes + stable_links + cover_letter_templates
 --                     + screening_questions + cvs bucket + cv_pending/delivery_files
 --                     + Borrador status + cover_letter_draft/job_context
 --                     + screening_questions.draft + general_notes_entries
---                     + drive_letter_docs)
+--                     + drive_letter_docs + milestones)
 -- Bump schema_version when this file changes; see docs/versioning.md §3.
 -- Columns map to RegistryRow (camelCase) via snake_case; the app converts them.
 
@@ -32,7 +32,8 @@ create table if not exists public.registry (
   updates     jsonb not null default '[]'::jsonb,  -- follow-up timeline [{at, message}]
   archived    boolean not null default false,
   cv_pending  boolean not null default false,      -- process registered, CV not generated yet
-  delivery_files jsonb                             -- archived delivered files ["<folder>/<file>.docx", ...]
+  delivery_files jsonb,                            -- archived delivered files ["<folder>/<file>.docx", ...]
+  milestones  jsonb                                -- funnel milestones reached {responded?, interview?, offer?, referral?}: "YYYY-MM-DD"
 );
 
 -- Newest applications first when listing.
@@ -130,6 +131,7 @@ insert into storage.buckets (id, name, public)
 --     check (status in ('Borrador', 'Activo', 'Rechazado'));
 --   alter table public.screening_questions add column if not exists draft boolean not null default false;
 --   alter table public.registry add column if not exists drive_letter_docs jsonb;
+--   alter table public.registry add column if not exists milestones jsonb;
 
 -- One-time move from the old single-document general_notes to
 -- general_notes_entries (run once, then drop the old table):

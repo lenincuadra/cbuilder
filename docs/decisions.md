@@ -10,6 +10,39 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Embudo AARRR: hitos estructurados y conteo acumulativo (2026-07-17)
+**Decisión**: leer la búsqueda como un pirate funnel (AARRR) de 6 etapas — Awareness =
+vacantes registradas, Acquisition = CV enviado (`status !== "Borrador"`), Activation =
+respuesta, Retention = entrevista, Revenue = oferta, Referral = referido — en una card
+del aside ("Embudo AARRR") con drawer. Las etapas 3–6 salen de un campo nuevo
+`milestones` por fila (fechas `YYYY-MM-DD`, marcadas a mano en el tab Actualizaciones).
+
+**Contexto/razón**:
+- **Hitos estructurados, no parsear `updates`**: el timeline es texto libre; inferir
+  "entrevista" desde prosa es frágil y no auditable. Cuatro switches con fecha son
+  baratos y el funnel queda medible de verdad. El timeline no cambia.
+- **Conteo acumulativo ("llegó al menos a la etapa N")**: un hito posterior cuenta
+  también los anteriores, así el embudo es monotónico aunque falte marcar un hito
+  intermedio. El editor **no** auto-setea hitos anteriores (no inventa fechas): la
+  implicación vive solo en el conteo. Un Borrador con hito cuenta como Acquisition
+  (recruiter contactó sin CV enviado).
+- **Referral va último** por fidelidad al modelo AARRR (es la etapa de mayor
+  engagement), aunque en un job hunt un referido puede llegar cronológicamente primero.
+  El funnel es una lente de aprendizaje, no una línea de tiempo.
+- **Todo el histórico** (archivadas y Borrador incluidas): con N chico, filtrar deja el
+  embudo vacío; es la foto global de la búsqueda.
+- **Visitas fuera de scope**: cbuilder no puede leer las visitas a los links (viven en
+  el repo del portfolio y llegan como mails de Gmail) — la etapa "visitó tu portfolio"
+  queda para una futura integración.
+- **Chart**: shadcn `chart` + recharts con `BarChart layout="vertical"` (barras
+  horizontales decrecientes), no el `FunnelChart` de recharts (trapecio vertical, mal
+  control de labels en un drawer de 448px). El copy educativo va como HTML bajo el
+  gráfico, no como labels SVG. Recharts carga lazy (`next/dynamic`) solo al abrir el
+  drawer.
+- El export CSV/Markdown (`core/registry/export.ts`) no incluye `milestones` por ahora.
+- Requiere migración en Supabase prod **antes** del merge:
+  `alter table public.registry add column if not exists milestones jsonb;`
+
 ## Cartas en Drive: contrato del script parametrizado + links directos por doc (2026-07-16)
 **Decisión**: la cover letter también se sube a Google Drive como Doc nativo, en ambos
 flujos (generación del wizard y post-hoc). Tres piezas:

@@ -211,3 +211,19 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
   CV" vive en la card Entrega del panel de detalle), para que el link "Agregar" quede
   siempre a la izquierda.
 - Referencias: `ui/RegistryTable.tsx`, `ui/detail/*`.
+
+## Charts
+- Primer chart de la app: el embudo AARRR (`ui/FunnelChart.tsx`). Convenciones para
+  cualquier chart nuevo:
+- Usar `components/ui/chart.tsx` (shadcn: `ChartContainer` + recharts). Colores solo
+  de la rampa `--chart-1`…`--chart-6` (grayscale, definida en `app/globals.css`) — no
+  inventar paleta.
+- `ChartContainer` trae `aspect-video` por default: **override con altura explícita**
+  (`aspect-auto h-[...]`) para que el chart no salte al cargar.
+- Los drawers miden ~448px en desktop: **el copy largo va como HTML alrededor del
+  chart** (anotaciones, leyendas educativas), nunca como labels SVG dentro del plot.
+- Texto del chart siempre con tokens de texto (`fill-foreground` /
+  `text-muted-foreground`), no con el color de la serie. Tooltip por marca
+  (`ChartTooltip` + `ChartTooltipContent`) por default.
+- Recharts es pesado: importar la pieza recharts con `next/dynamic` (`ssr: false`)
+  desde la card que la abre, para que no entre al bundle inicial.
