@@ -209,11 +209,7 @@ export function RowDetailDrawer({
             <div className="mt-2 -mr-8 flex items-center gap-2">
               <StatusToggle
                 status={row.status}
-                onToggle={() =>
-                  onUpdate(row.code, {
-                    status: row.status === "Activo" ? "Rechazado" : "Activo",
-                  })
-                }
+                onSetStatus={(status) => onUpdate(row.code, { status })}
               />
               <Button
                 variant="outline"
@@ -410,8 +406,10 @@ export function RowDetailDrawer({
                   <MilestoneTimeline
                     milestones={row.milestones}
                     updates={updates}
+                    status={row.status}
                     container={drawerNode}
                     onSave={(patch) => onUpdate(row.code, patch)}
+                    onSetStatus={(status) => onUpdate(row.code, { status })}
                   />
                 </TabsContent>
               </DrawerBody>

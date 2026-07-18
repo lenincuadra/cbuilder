@@ -10,6 +10,39 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Estado Aceptado + cierre de proceso y colores del embudo (2026-07-18)
+**Decisión**: el embudo (stepper por aplicación y card agregada) pasa a colorearse por el
+**Estado** de la aplicación, con un modelo único Estado→color: **Aceptado** (verde, terminó
+bien) · **Activo** (ámbar, en curso) · **Rechazado** (rojo, terminó mal) · **Borrador** (gris,
+sin CV). Se agrega el Estado **Aceptado** al enum (`ApplicationStatus`). Cerrar un proceso =
+setear `status` a Aceptado/Rechazado desde el control **"Fin del proceso"** del stepper (o el
+badge de Estado); reabrir vuelve a Activo. Una sola resolución por aplicación.
+
+**Contexto/razón**:
+- **Faltaba "terminó"**: el stepper mostraba progreso (hitos alcanzados) pero no distinguía un
+  proceso vivo de uno cerrado. Ahora el resultado es explícito y de un solo valor (en curso /
+  terminó bien / terminó mal), que es justo lo que ya modela `status` (mutuamente excluyente).
+- **La etapa donde terminó no es un campo nuevo**: es la etapa más profunda alcanzada
+  (`computeFunnel`/`row.milestones`) + el `status`. Único cambio de datos: sumar `"Aceptado"`
+  al enum (jsonb, sin migración). Un rechazo sin hitos (ghost tras enviar) queda cubierto: el
+  control existe aunque no haya hitos marcados.
+- **Aceptado llega al fondo del embudo**: una aplicación Aceptada cuenta en **todas** las
+  etapas (hasta Referral), tenga o no hitos marcados — "terminó bien = llegó al final". Es el
+  único estado que rompe el conteo por hitos; el resto sigue saliendo de `milestones`. Regla en
+  `reachedStage` (`core/funnel.ts`).
+- **Activo pasó de verde a ámbar**: el verde queda reservado para Aceptado (terminó bien). Es
+  un cambio visible en todos los badges/tabla/filtro, pero mantiene una sola semántica de color
+  en toda la app (`statusBadgeClass`/`statusDotClass` en `ui/StatusToggle.tsx`).
+- **Chart agregado apilado por Estado**: cada nivel se apila por el color del Estado de las
+  filas que lo alcanzaron (cumulativo), orden verde→ámbar→rojo→gris (`FunnelStage.byStatus` en
+  `core/funnel.ts`). El gris (Borrador) sólo aparece en Awareness (no llegó a "CV enviado").
+- **Stepper**: un proceso cerrado pinta todas sus etapas alcanzadas con el color del resultado;
+  uno activo queda neutro salvo la **punta** (etapa más profunda), en ámbar.
+- **Colores como tokens de sistema**: `--success`/`--warning` en `globals.css` (junto a
+  `--destructive`), usados tanto por los badges como por el chart.
+- **Badge de Estado → dropdown**: con 3 estados seteables (Activo/Aceptado/Rechazado) el toggle
+  binario ya no alcanza; `StatusToggle` pasa a un `DropdownMenu`. Borrador sigue system-derived.
+
 ## Timeline unificado: hitos + actualizaciones en un solo stepper (2026-07-18)
 **Decisión**: fusionar el bloque "Hitos del proceso" y el timeline de "Actualizaciones"
 en un único componente `MilestoneTimeline` (reemplaza `MilestonesSection` + `UpdatesTab`),

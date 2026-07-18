@@ -108,3 +108,44 @@ describe("computeFunnel", () => {
     expect(stages[2].pctOfPrev).toBeNull();
   });
 });
+
+describe("computeFunnel byStatus", () => {
+  it("splits each reached stage by the row's outcome (cumulative)", () => {
+    const rows = [
+      row("Borrador"), // draft, awareness only
+      row("Activo"), // active, up to acquisition
+      row("Rechazado", { responded: "2026-07-02" }), // rejected, up to activation
+      row("Aceptado", { responded: "2026-07-02", interview: "2026-07-05", offer: "2026-07-10" }),
+    ];
+    const stages = computeFunnel(rows);
+    // Awareness: everyone.
+    expect(stages[0].byStatus).toEqual({ accepted: 1, active: 1, rejected: 1, draft: 1 });
+    // Acquisition: the draft drops (not sent).
+    expect(stages[1].byStatus).toEqual({ accepted: 1, active: 1, rejected: 1, draft: 0 });
+    // Activation: only rejected + accepted reached.
+    expect(stages[2].byStatus).toEqual({ accepted: 1, active: 0, rejected: 1, draft: 0 });
+    // Retention onward: only the accepted row — it reaches the very end.
+    expect(stages[3].byStatus).toEqual({ accepted: 1, active: 0, rejected: 0, draft: 0 });
+    expect(stages[4].byStatus).toEqual({ accepted: 1, active: 0, rejected: 0, draft: 0 });
+    // Referral (the end): the accepted row still counts, it's the only one.
+    expect(stages[5].byStatus).toEqual({ accepted: 1, active: 0, rejected: 0, draft: 0 });
+  });
+
+  it("counts an Aceptado row through every stage, even with no milestones", () => {
+    const stages = computeFunnel([row("Aceptado")]);
+    expect(stages.map((s) => s.count)).toEqual([1, 1, 1, 1, 1, 1]);
+    expect(stages.every((s) => s.byStatus.accepted === 1)).toBe(true);
+  });
+
+  it("keeps byStatus totals equal to the stage count", () => {
+    const rows = [
+      row("Activo"),
+      row("Rechazado", { responded: "2026-07-02" }),
+      row("Aceptado", { offer: "2026-07-10" }),
+    ];
+    for (const stage of computeFunnel(rows)) {
+      const { accepted, active, rejected, draft } = stage.byStatus;
+      expect(accepted + active + rejected + draft).toBe(stage.count);
+    }
+  });
+});

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, Check, Plus, Trash2, X } from "lucide-react";
+import { Calendar, Check, CircleCheck, CircleX, Plus, RotateCcw, Trash2, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,19 +12,43 @@ import { Textarea } from "@/components/ui/textarea";
 import { toISODate } from "@/core/dates";
 import { FUNNEL_STAGES } from "@/core/funnel";
 import {
+  type ApplicationStatus,
   MAX_UPDATES,
   MILESTONE_KEYS,
   type MilestoneKey,
   type Milestones,
   type StatusUpdate,
 } from "@/core/registry/types";
+import { cn } from "@/lib/utils";
 import { IconSelect } from "@/ui/IconSelect";
+import { statusBadgeClass } from "@/ui/StatusToggle";
 import { DatePicker } from "@/ui/wizard/DatePicker";
 
 /** ES label per milestone, from the funnel stage list (single source of truth). */
 const MILESTONE_LABELS = Object.fromEntries(
   FUNNEL_STAGES.flatMap((stage) => (stage.milestone ? [[stage.milestone, stage.label]] : [])),
 ) as Record<MilestoneKey, string>;
+
+/**
+ * Stepper dot color for a reached stage, by outcome (= status). A closed
+ * process paints every reached stage with its outcome (verde/rojo); an active
+ * one stays neutral except the furthest stage ("la punta"), which is ámbar.
+ */
+function dotClass(reached: boolean, isTip: boolean, status: ApplicationStatus): string {
+  if (!reached) return "border border-border bg-muted";
+  if (status === "Aceptado") return "bg-success text-background";
+  if (status === "Rechazado") return "bg-destructive text-background";
+  if (isTip && status === "Activo") return "bg-warning text-background";
+  return "bg-primary text-primary-foreground";
+}
+
+/** Connector line color between a stage and the next (tinted only when both reached). */
+function lineClass(reached: boolean, nextReached: boolean, status: ApplicationStatus): string {
+  if (!reached || !nextReached) return "bg-border";
+  if (status === "Aceptado") return "bg-success/40";
+  if (status === "Rechazado") return "bg-destructive/40";
+  return "bg-primary/30";
+}
 
 /** Fields this section owns, patched together so one save covers both. */
 export interface MilestoneTimelinePatch {
@@ -35,8 +59,12 @@ export interface MilestoneTimelinePatch {
 export interface MilestoneTimelineProps {
   milestones: Milestones | undefined;
   updates: StatusUpdate[];
+  /** Application outcome — drives the stepper colors and the "Fin del proceso" control. */
+  status: ApplicationStatus;
   /** Persist milestones + updates. Empty milestones drop the field from the row. */
   onSave: (patch: MilestoneTimelinePatch) => void | Promise<void>;
+  /** Close/reopen the process (sets the row's status: Aceptado / Rechazado / Activo). */
+  onSetStatus: (status: ApplicationStatus) => void | Promise<void>;
   /** Drawer node the assign-milestone dropdown portals into (focus/pe scope). */
   container?: HTMLElement | null;
 }
@@ -86,12 +114,17 @@ function untagged(update: StatusUpdate): StatusUpdate {
 export function MilestoneTimeline({
   milestones,
   updates,
+  status,
   onSave,
+  onSetStatus,
   container,
 }: MilestoneTimelineProps) {
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<ItemDraft | null>(null);
   const current = milestones ?? {};
+  /** Furthest reached milestone index ("la punta"), -1 when none is marked. */
+  const tipIndex = MILESTONE_KEYS.reduce((tip, key, i) => (current[key] ? i : tip), -1);
+  const closed = status === "Aceptado" || status === "Rechazado";
 
   async function persist(nextMilestones: Milestones, nextUpdates: StatusUpdate[]) {
     setSaving(true);
@@ -314,6 +347,9 @@ export function MilestoneTimeline({
       <ol className="flex flex-col">
         {MILESTONE_KEYS.map((key, idx) => {
           const reached = Boolean(current[key]);
+          const isTip = reached && idx === tipIndex;
+          const nextReached =
+            idx < MILESTONE_KEYS.length - 1 && Boolean(current[MILESTONE_KEYS[idx + 1]]);
           const items = itemsFor(key);
           const last = idx === MILESTONE_KEYS.length - 1;
           const adding = draft?.index === null && draft.milestone === key;
@@ -322,14 +358,20 @@ export function MilestoneTimeline({
               {/* Stepper gutter: stage dot + connector to the next stage. */}
               <div className="flex flex-col items-center pt-1">
                 <span
-                  className={`flex size-4 shrink-0 items-center justify-center rounded-full ring-2 ring-background ${
-                    reached ? "bg-primary text-primary-foreground" : "border border-border bg-muted"
-                  }`}
+                  className={cn(
+                    "flex size-4 shrink-0 items-center justify-center rounded-full ring-2 ring-background",
+                    dotClass(reached, isTip, status),
+                  )}
                 >
-                  {reached && <Check className="size-2.5" />}
+                  {reached &&
+                    (isTip && status === "Rechazado" ? (
+                      <X className="size-2.5" />
+                    ) : (
+                      <Check className="size-2.5" />
+                    ))}
                 </span>
                 {!last && (
-                  <span className={`w-px flex-1 ${reached ? "bg-primary/40" : "bg-border"}`} />
+                  <span className={cn("w-px flex-1", lineClass(reached, nextReached, status))} />
                 )}
               </div>
 
@@ -408,6 +450,58 @@ export function MilestoneTimeline({
           );
         })}
       </ol>
+
+      {/* Fin del proceso: closing the process sets the outcome (verde/rojo),
+          which colors the stepper + the AARRR funnel. The stage where it ended
+          is the furthest one reached above — a single outcome per application. */}
+      {status !== "Borrador" && (
+        <div className="flex flex-col gap-2 rounded-lg border p-3">
+          <span className="text-xs font-medium text-muted-foreground">Fin del proceso</span>
+          {closed ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className={cn("border-transparent", statusBadgeClass(status))}>
+                {status === "Aceptado" ? "Terminó bien" : "Terminó mal"}
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+                disabled={saving}
+                onClick={() => onSetStatus("Activo")}
+              >
+                <RotateCcw className="size-4" />
+                Reabrir
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-success hover:text-success"
+                disabled={saving}
+                onClick={() => onSetStatus("Aceptado")}
+              >
+                <CircleCheck className="size-4" />
+                Terminó bien
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                disabled={saving}
+                onClick={() => onSetStatus("Rechazado")}
+              >
+                <CircleX className="size-4" />
+                Terminó mal
+              </Button>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Cerrar marca el estado de la aplicación y colorea la etapa donde terminó.
+          </p>
+        </div>
+      )}
 
       {orphans.length > 0 && (
         <div className="flex flex-col gap-2 rounded-lg border border-dashed p-3">
