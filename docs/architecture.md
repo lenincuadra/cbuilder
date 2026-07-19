@@ -4,6 +4,7 @@ Mapa del **qué y cómo** del sistema. El **por qué** (trade-offs, decisiones q
 cambiaron) vive en [`decisions.md`](decisions.md); los flows a **altura de
 uso** (qué hace el usuario, paso a paso, catálogo completo), en
 [`flows.md`](flows.md); las convenciones de UI, en [`DESIGN.md`](DESIGN.md);
+el plan de las animaciones de marca, en [`animations.md`](animations.md);
 las reglas inviolables resumidas, en [`CLAUDE.md`](../CLAUDE.md). Este doc
 conecta las piezas.
 
