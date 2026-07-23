@@ -6,6 +6,7 @@ import {
   ArchiveRestore,
   ChevronLeft,
   ChevronRight,
+  EllipsisVertical,
   FileChartLine,
   Info,
   StickyNote,
@@ -23,6 +24,13 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateLong } from "@/core/dates";
 import type { CoverLetterTemplate } from "@/core/coverLetter/types";
@@ -85,11 +93,13 @@ export interface RowDetailDrawerProps {
   onNext?: () => void;
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+/** One data cell in the Detalles grid: small muted label stacked over its value
+ *  (same label-above-value shape as the other Detalles cards). */
+function DataField({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 py-1.5 text-sm">
-      <span className="shrink-0 text-muted-foreground">{label}</span>
-      <span className="min-w-0 text-right">{children}</span>
+    <div className="min-w-0 space-y-0.5 text-sm">
+      <span className="block text-xs text-muted-foreground">{label}</span>
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }
@@ -163,86 +173,98 @@ export function RowDetailDrawer({
           if (document.querySelector('[data-slot="alert-dialog-content"]')) event.preventDefault();
         }}
       >
-        <DrawerHeader className="relative pr-12">
-          {(onPrev || onNext) && (
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                onClick={onPrev}
-                disabled={!hasPrev}
-                title="Fila anterior"
-                aria-label="Fila anterior"
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <span className="text-xs tabular-nums">
-                {position} / {total}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                onClick={onNext}
-                disabled={!hasNext}
-                title="Fila siguiente"
-                aria-label="Fila siguiente"
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-          )}
+        <DrawerHeader className="relative pr-20">
+          {/* Top-right: actions menu + close, side by side (Archivar/Borrar now
+              live inside the menu to cut the header's visual noise). */}
+          <div className="absolute top-3 right-3 flex items-center gap-1">
+            {row && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={<Button variant="ghost" size="icon" title="Acciones" aria-label="Acciones" />}
+                >
+                  <EllipsisVertical className="size-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" container={drawerNode}>
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      // Archiving moves the row out of the current view, so close.
+                      await onUpdate(row.code, { archived: !row.archived });
+                      onOpenChange(false);
+                    }}
+                  >
+                    {row.archived ? (
+                      <>
+                        <ArchiveRestore />
+                        Desarchivar
+                      </>
+                    ) : (
+                      <>
+                        <Archive />
+                        Archivar
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onClick={() => setConfirmDelete(true)}>
+                    <Trash2 />
+                    Borrar
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onOpenChange(false)}
+              title="Cerrar"
+              aria-label="Cerrar"
+            >
+              <X className="size-4" />
+            </Button>
+          </div>
+
           <DrawerTitle>{row?.company}</DrawerTitle>
-          <DrawerDescription className="font-mono text-xs">{row?.code}</DrawerDescription>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onOpenChange(false)}
-            title="Cerrar"
-            className="absolute top-3 right-3"
-          >
-            <X className="size-4" />
-          </Button>
-          {row && (
-            // -mr-8 cancels the header's pr-12 so "Borrar" lines up with the body's right edge.
-            <div className="mt-2 -mr-8 flex items-center gap-2">
+          {/* Meta row: code + status (left), row navigation (right). -mr-16 cancels
+              the header's pr-20 (which only reserves space for the menu/close on the
+              row above) so the nav sits flush with the body's right edge. */}
+          <div className="mt-1 -mr-16 flex items-center gap-2">
+            <DrawerDescription className="font-mono text-xs">{row?.code}</DrawerDescription>
+            {row && (
               <StatusToggle
                 status={row.status}
                 onSetStatus={(status) => onUpdate(row.code, { status })}
               />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  // Archiving moves the row out of the current view, so close.
-                  await onUpdate(row.code, { archived: !row.archived });
-                  onOpenChange(false);
-                }}
-              >
-                {row.archived ? (
-                  <>
-                    <ArchiveRestore className="size-4" />
-                    Desarchivar
-                  </>
-                ) : (
-                  <>
-                    <Archive className="size-4" />
-                    Archivar
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => setConfirmDelete(true)}
-              >
-                <Trash2 className="size-4" />
-                Borrar
-              </Button>
-            </div>
-          )}
+            )}
+            {row && (onPrev || onNext) && (
+              <div className="ml-auto flex items-center gap-1 text-muted-foreground">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7"
+                  onClick={onPrev}
+                  disabled={!hasPrev}
+                  title="Fila anterior"
+                  aria-label="Fila anterior"
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+                <span className="text-xs tabular-nums">
+                  {position} / {total}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7"
+                  onClick={onNext}
+                  disabled={!hasNext}
+                  title="Fila siguiente"
+                  aria-label="Fila siguiente"
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            )}
+          </div>
         </DrawerHeader>
 
         {row && (
@@ -326,9 +348,9 @@ export function RowDetailDrawer({
             ) : (
               <DrawerBody>
                 <TabsContent value="detalles" className="space-y-2">
-                  <span className="block text-xs font-medium text-muted-foreground">Datos</span>
-                  {/* Fully-clickable card → edit takeover, same affordance as the
-                      manager drawers' items (no separate Editar button). */}
+                  {/* Fully-clickable card → edit takeover (the only way to edit these
+                      fields); chrome matches the read-only cards below, so the "Datos"
+                      label is gone — the fields are self-labeling. */}
                   <div
                     role="button"
                     tabIndex={0}
@@ -343,42 +365,73 @@ export function RowDetailDrawer({
                         setMode({ kind: "edit" });
                       }
                     }}
-                    className="cursor-pointer rounded-lg border px-3 py-1 transition-colors hover:bg-accent/40"
+                    className="cursor-pointer space-y-2 rounded-lg border px-3 py-2 transition-colors hover:bg-accent/40"
                   >
-                    {/* Only fields with a value are shown. */}
-                    <Field label="Rol">{row.role}</Field>
-                    <Field label="Fecha">
-                      <span className="tabular-nums">{formatDateLong(row.date)}</span>
-                    </Field>
-                    {row.channel && <Field label="Canal">{row.channel}</Field>}
-                    {row.email && (
-                      <Field label="Email">
-                        <span className="break-all">{row.email}</span>
-                      </Field>
-                    )}
-                    {row.who && <Field label="Quién">{row.who}</Field>}
-                    {row.language && <Field label="Idioma">{languageLabel(row.language)}</Field>}
-                    {row.jobUrl && (
-                      <Field label="Link del puesto">
-                        <a
-                          href={row.jobUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title={row.jobUrl}
-                          onClick={(event) => event.stopPropagation()}
-                          className="block max-w-full truncate text-primary underline underline-offset-2"
-                        >
-                          {row.jobUrl}
-                        </a>
-                      </Field>
-                    )}
+                    {/* Two-column grid of label-above-value cells; only fields with a value show. */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      <DataField label="Rol">{row.role}</DataField>
+                      <DataField label="Fecha">
+                        <span className="tabular-nums">{formatDateLong(row.date)}</span>
+                      </DataField>
+                      {row.channel ? (
+                        <DataField label="Canal">
+                          {row.channel}
+                          {/* Destination reached through this channel — the posting link
+                              and/or the address applied to — nested under it, not as own items. */}
+                          {row.jobUrl && (
+                            <a
+                              href={row.jobUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={row.jobUrl}
+                              onClick={(event) => event.stopPropagation()}
+                              className="mt-0.5 block max-w-full truncate text-xs text-primary underline underline-offset-2"
+                            >
+                              {row.jobUrl}
+                            </a>
+                          )}
+                          {row.email && (
+                            <span
+                              className="mt-0.5 block max-w-full truncate text-xs text-muted-foreground"
+                              title={row.email}
+                            >
+                              {row.email}
+                            </span>
+                          )}
+                        </DataField>
+                      ) : (
+                        <>
+                          {/* No channel to hang them on → each destination is its own item. */}
+                          {row.jobUrl && (
+                            <DataField label="Link del puesto">
+                              <a
+                                href={row.jobUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={row.jobUrl}
+                                onClick={(event) => event.stopPropagation()}
+                                className="block max-w-full truncate text-primary underline underline-offset-2"
+                              >
+                                {row.jobUrl}
+                              </a>
+                            </DataField>
+                          )}
+                          {row.email && (
+                            <DataField label="Email">
+                              <span className="break-all">{row.email}</span>
+                            </DataField>
+                          )}
+                        </>
+                      )}
+                      {row.language && (
+                        <DataField label="Idioma">{languageLabel(row.language)}</DataField>
+                      )}
+                      {row.who && <DataField label="Quién">{row.who}</DataField>}
+                    </div>
                     {row.jobContext && (
-                      <div className="space-y-0.5 py-1.5 text-sm">
-                        <span className="text-muted-foreground">Contexto del puesto</span>
-                        <p className="line-clamp-4 text-xs whitespace-pre-wrap text-muted-foreground">
-                          {row.jobContext}
-                        </p>
-                      </div>
+                      <DataField label="Contexto del puesto">
+                        <p className="line-clamp-4 whitespace-pre-wrap">{row.jobContext}</p>
+                      </DataField>
                     )}
                   </div>
                   {/* A pending row has no baked links yet — nothing was sent. */}
