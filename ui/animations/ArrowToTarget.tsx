@@ -52,6 +52,37 @@ const RING_CENTER_Y = 38;
 const ARROW_BASE_WIDTH_PX = 88;
 const ARROW_BASE_HEIGHT_PX = 24;
 
+// Where the arrowhead's actual point sits — "where it touches the target" —
+// expressed as a fraction of the rendered box, used to anchor+pivot each
+// shot on its tip instead of its bounding-box center (see the render below).
+// Two things make this need real math instead of just reading the tip's
+// raw (x,y) off the SVG's viewBox: (1) the viewBox (0 0 160 56, see
+// assets/Arrow.tsx) isn't the same aspect ratio as the box it's rendered
+// into (160:56 ≈ 2.86:1 vs 88:24 ≈ 3.67:1) — the browser's default
+// `preserveAspectRatio="xMidYMid meet"` fits it by the *constraining*
+// dimension (here, height) and centers it with empty margin on the other
+// axis (here, ~9.7px on each side at the base size), rather than stretching
+// it edge to edge; (2) that margin is a fraction of the *box*, not of the
+// viewBox, so it has to be folded in — using the tip's raw viewBox fraction
+// (150.1/160 ≈ 93.8%) lands short of where the tip actually renders
+// (verified empirically with a zero-rotation shot + SVGPoint.matrixTransform
+// against getScreenCTM(): true fraction ≈ 84.2%, not 93.8%). Both fractions
+// below are scale-invariant (arrowScalePct multiplies width/height equally,
+// so the ratios don't move), so this only needs computing once, not per
+// render or per arrowScalePct value.
+const ARROW_VIEWBOX_WIDTH = 160;
+const ARROW_VIEWBOX_HEIGHT = 56;
+// The arrowhead's rightmost vertex — see the triangle path in
+// assets/Arrow.tsx ("M121.3 13.65L126.9 28.25L121.1 42.35L150.1 28.25
+// L121.3 13.65Z").
+const ARROW_TIP_VIEWBOX_X = 150.1;
+const ARROW_TIP_VIEWBOX_Y = 28.25;
+const ARROW_FIT_SCALE = Math.min(ARROW_BASE_WIDTH_PX / ARROW_VIEWBOX_WIDTH, ARROW_BASE_HEIGHT_PX / ARROW_VIEWBOX_HEIGHT);
+const ARROW_FIT_MARGIN_X = (ARROW_BASE_WIDTH_PX - ARROW_VIEWBOX_WIDTH * ARROW_FIT_SCALE) / 2;
+const ARROW_FIT_MARGIN_Y = (ARROW_BASE_HEIGHT_PX - ARROW_VIEWBOX_HEIGHT * ARROW_FIT_SCALE) / 2;
+const ARROW_TIP_X_PCT = `${(((ARROW_FIT_MARGIN_X + ARROW_TIP_VIEWBOX_X * ARROW_FIT_SCALE) / ARROW_BASE_WIDTH_PX) * 100).toFixed(3)}%`;
+const ARROW_TIP_Y_PCT = `${(((ARROW_FIT_MARGIN_Y + ARROW_TIP_VIEWBOX_Y * ARROW_FIT_SCALE) / ARROW_BASE_HEIGHT_PX) * 100).toFixed(3)}%`;
+
 /**
  * Every tunable "feel" knob for this scene, gathered in one place so
  * `/dev/animations` can expose a live control for each of them (see that
@@ -197,6 +228,11 @@ const RING_BANDS = [
   { min: 0, max: 6.4 }, // gold bullseye — referral
 ] as const;
 
+/** How long every shot sits landed-but-gray before the whole group paints
+ * together (see the `paintedIds` effect) — a deliberate beat to actually
+ * look at the impact, not a "feel" knob worth exposing as a slider. */
+const PAINT_REVEAL_PAUSE_MS = 450;
+
 /**
  * "Raw" arrow, in flight — light gray, the same for every shot regardless of
  * where it's headed, so the outcome color only shows up once it actually
@@ -254,17 +290,25 @@ function ringIndexForRadius(radius: number): number {
 export type ArrowLandingMode = "random" | "funnel";
 
 // RING_BANDS and randomModeMaxRadiusPct's margins were tuned/verified
-// visually at DEFAULT_ARROW_TUNING.arrowScalePct (see the comment on
-// DEFAULT_ARROW_TUNING). arrowScalePct is now a playground slider that goes
-// well past that — at large enough sizes an arrow's half-length outgrows
-// the margin and its tip pokes past the diana's outer edge (reported with a
-// screenshot at the slider's max, 250%). Rather than re-deriving every
-// radius for an arbitrary scale (which would ripple through RING_BANDS too,
-// and those are tied to the artwork's actual painted rings, not just a
-// margin — see their comment), landing radius is shrunk by how far over
-// that baseline the current scale is. A no-op at/under the baseline (120%,
-// today's production value) — this only kicks in once you push the size
-// slider into territory the margins were never checked against.
+// visually against a *center*-anchored arrow, where the worst-case overhang
+// past the landing point is half the arrow's length (an arrow oriented
+// radially, anchored at its middle). Anchoring shots on the arrowhead's tip
+// instead (see ARROW_TIP_X_PCT and the render below) changed that worst
+// case: nothing overhangs *forward* of the tip anymore (the part that
+// determines which ring it's colored for is now exactly where it visually
+// sits), but nearly the whole arrow can trail *behind* it in one direction —
+// close to ARROW_TIP_X_PCT's own fraction of the length (~84%), not 50%.
+// Deliberately *not* re-shrinking the landing radius to compensate (like
+// this guard already does for oversized `arrowScalePct`): the radius is what
+// keeps the tip inside its correct ring band in the first place, so pulling
+// it inward to make room for the tail trades a real bug (tip in the wrong
+// ring, contradicting its own color) for a cosmetic one (a shaft trailing
+// past the diana's outer edge on some shots) — and a trailing shaft reads as
+// a real arrow stuck near the target's boundary, not as broken. Left as-is;
+// this guard still exists for genuinely oversized `arrowScalePct` (the
+// playground's slider goes well past any size these margins were checked
+// against — screenshot at the slider's max, 250%), a no-op at/under the
+// production baseline (120%, `DEFAULT_ARROW_TUNING.arrowScalePct`).
 function oversizeRadiusGuard(arrowScalePct: number): number {
   return Math.min(1, DEFAULT_ARROW_TUNING.arrowScalePct / arrowScalePct);
 }
@@ -472,12 +516,16 @@ export function ArrowToTarget({
   const containerRef = useRef<HTMLDivElement>(null);
   const animatedIds = useRef<Set<number>>(new Set());
   const animations = useRef<Animation[]>([]);
-  // Which shots have actually touched down — separate from `animatedIds`
-  // (which just tracks "already scheduled", set synchronously below): this
-  // one flips per-shot, asynchronously, exactly when that shot's own flight
-  // finishes, so the "unpainted" -> "landed" color swap (see the two
-  // palettes above) happens arrow by arrow instead of all at once.
-  const [landedIds, setLandedIds] = useState<ReadonlySet<number>>(() => new Set());
+  // Which shots are showing their ring color instead of the gray "unpainted"
+  // one (see the two palette families above). Deliberately *not* flipped
+  // per-shot as each one's own flight finishes — the whole group waits for
+  // every shot to land, holds a beat gray so there's a moment to actually
+  // look at the impact, and only then paints together in one pass (see the
+  // effect below). A single instance can still receive more shots later
+  // (`count` growing live — see the render effect's own comment); their ids
+  // just join this same set once *their* wave finishes landing, without
+  // touching ids already painted from an earlier wave.
+  const [paintedIds, setPaintedIds] = useState<ReadonlySet<number>>(() => new Set());
 
   // Play each shot's flight exactly once via the Web Animations API — no new
   // dependency, just the native browser API, but it lets the arc be sampled
@@ -500,15 +548,38 @@ export function ArrowToTarget({
         fill: "forwards",
       });
       animations.current.push(anim);
-      // Rejects (AbortError) if the unmount cleanup below cancels it first —
-      // that's expected, not an error, so it's swallowed rather than logged.
-      anim.finished
-        .then(() => {
-          setLandedIds((prev) => (prev.has(shot.id) ? prev : new Set(prev).add(shot.id)));
-        })
-        .catch(() => {});
     }
   }, [shots, reducedMotion]);
+
+  // Paints every currently-flying shot's ring color in one batch, once the
+  // *last* of them has landed — `totalFlightDuration` (below) is already the
+  // max over every shot's own delay+duration, so it's the exact moment
+  // "all of them are in". `PAINT_REVEAL_PAUSE_MS` on top is the deliberate
+  // pause to actually look at the gray, just-landed result before it
+  // resolves into color, instead of the two happening in the same instant.
+  // Re-running this on every `shots` change (not just once) is what lets a
+  // second wave (count growing live on the same mount) get its own
+  // land-all-then-paint cycle without touching ids an earlier wave already
+  // painted — the functional update below only ever adds ids, never removes.
+  useEffect(() => {
+    if (reducedMotion) return;
+    const shotIds = shots.map((s) => s.id);
+    if (shotIds.length === 0) return;
+    const timer = setTimeout(() => {
+      setPaintedIds((prev) => {
+        const next = new Set(prev);
+        let changed = false;
+        for (const id of shotIds) {
+          if (!next.has(id)) {
+            next.add(id);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, totalFlightDuration + PAINT_REVEAL_PAUSE_MS);
+    return () => clearTimeout(timer);
+  }, [shots, totalFlightDuration, reducedMotion]);
 
   // Unmount-only cleanup, deliberately on its own empty-deps effect so it
   // never fires just because `shots` changed. It clears *both* refs (not
@@ -587,7 +658,7 @@ export function ArrowToTarget({
           // Reduced motion skips the flight entirely (arrows just appear),
           // so there's nothing to "arrive" — go straight to the landed
           // color instead of sitting gray forever.
-          const landed = reducedMotion || landedIds.has(shot.id);
+          const landed = reducedMotion || paintedIds.has(shot.id);
           return (
             <div
               key={shot.id}
@@ -595,7 +666,13 @@ export function ArrowToTarget({
               style={{
                 left: `${shot.x}%`,
                 top: `${shot.y}%`,
-                transform: `translate(-50%, -50%) rotate(${shot.restRotation}deg)`,
+                // Anchored and pivoted on the arrowhead's actual tip (not the
+                // bounding-box center) — (x,y) is "where it touches", so the
+                // part that visually touches it should be the part sitting
+                // exactly there, both at rest and while `restRotation`'s
+                // jitter rotates the shaft/feathers around it.
+                transformOrigin: `${ARROW_TIP_X_PCT} ${ARROW_TIP_Y_PCT}`,
+                transform: `translate(-${ARROW_TIP_X_PCT}, -${ARROW_TIP_Y_PCT}) rotate(${shot.restRotation}deg)`,
               }}
             >
               <div data-shot-id={shot.id} style={reducedMotion ? undefined : { opacity: 0 }}>

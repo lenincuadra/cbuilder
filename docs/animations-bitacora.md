@@ -685,6 +685,102 @@ del embudo por color, sin necesitar la leyenda de texto al lado. Primer
 pase, no cerrado: el propio pedido preveía revisar "color por color" contra
 el arte real en una vuelta futura.
 
+### Ronda 12 — Esa misma vuelta futura: pintado en grupo y el ancla por la punta
+
+Llegó rápido, con dos capturas del resultado real de la ronda 11 (una en modo
+random, otra en funnel con la leyenda de distribución al lado) y un pedido en
+cadena:
+
+> cambiemos esta logica: " pick up color the instant they land" esperemos
+> que todas aterricen y luego que cambien al color correspondiente, y
+> dejamos unos milisegundos para analizar la interacción después de eso.
+>
+> Ademas, creo que no cambian al color correcto del que aterrizan (o
+> aterrizan en el color incorrecto(?)
+
+**La primera parte era un cambio de timing puro, directo de implementar.**
+El disparo por-flecha (`anim.finished` de la propia animación de esa flecha)
+se reemplazó por un único `setTimeout`, keyeado a `totalFlightDuration` (el
+mismo máximo de `delay+flightMs` que ya alimentaba el contador de texto) más
+una pausa fija nueva, `PAINT_REVEAL_PAUSE_MS = 450`. Cuando el timer dispara,
+un solo `setState` agrega **todos** los ids del grupo actual al set de
+"pintadas" de una vez — no uno por uno. Para que una segunda tanda (`count`
+creciendo en vivo sobre el mismo montaje, el mecanismo ya establecido en la
+ronda 9) tuviera su propio ciclo aterrizar→pausa→pintar sin re-grisar lo que
+una tanda anterior ya había pintado, el `setState` es puramente aditivo
+(nunca saca ids) y el efecto se re-arma en cada cambio de `shots`.
+
+**La segunda parte — "¿el color es incorrecto?" — pedía investigar antes de
+tocar código.** Se armó un script de Playwright que, en vez de mirar
+screenshots, leía directamente del DOM: la posición (%) de cada flecha
+(desde el `style` inline del wrapper) y el color realmente pintado (el
+atributo `fill` del primer `<path>`), calculaba a qué anillo *debería*
+corresponder ese radio, y comparaba contra el color real. Resultado sobre 40
+flechas: **0 desajustes**. El mapeo color↔anillo siempre fue exacto — el
+bug no estaba ahí.
+
+Lo que sí estaba pasando: con el ancla de cada flecha en el **centro** de su
+propio dibujo (`translate(-50%, -50%)`, sin cambios desde el diseño
+original), una flecha de ~106px (tamaño de producción, 120%) es larga en
+relación al ancho de cada banda de anillo — la mitad de su largo podía
+sobresalir hacia anillos vecinos aunque el punto de anclaje (y por lo tanto
+el color asignado) cayera exactamente donde debía. Confirmado bajando el
+tamaño a 50% en el playground: al mismo mapeo de color, con flechas más
+chicas cada una se leía limpiamente dentro de su propio anillo — no era un
+bug de lógica, era un efecto visual del tamaño de la flecha relativo al
+ancho de las bandas.
+
+Con ese diagnóstico en mano (no un bug, sino un problema de legibilidad por
+tamaño/forma), se plantearon cuatro caminos y se le pidió al usuario elegir:
+achicar la flecha solo en modo funnel, achicar el tamaño global (revisitando
+una decisión ya tomada en otra ronda), anclar por la punta en vez del
+centro, o dejarlo así (la nube de color agregada ya comunica la forma del
+embudo aunque una flecha individual no sea perfectamente legible). El
+usuario eligió **anclar por la punta**.
+
+**La implementación del ancla por la punta resultó tener su propia
+complicación no anticipada.** La primera aproximación — usar la fracción
+cruda del `viewBox` para la punta (150.1/160 ≈ 93.8%) — no coincidía con
+dónde realmente aparecía la punta en pantalla. La causa: el `viewBox` del
+asset (160×56) no comparte relación de aspecto con la caja de 88×24 donde se
+renderiza, así que el `preserveAspectRatio` por defecto del navegador
+(`xMidYMid meet`) ajusta por la dimensión limitante (la altura) y deja
+margen vacío en el ancho, en vez de estirar el dibujo para llenar la caja.
+Medido empíricamente (un shot forzado a rotación cero, para eliminar el
+efecto de que el *bounding box* de un elemento rotado es más grande que el
+elemento mismo, más `SVGPoint.matrixTransform` contra `svg.getScreenCTM()`
+para leer la posición real en pantalla de la punta): la fracción real es
+≈84.2% del ancho de la caja, no 93.8%. La constante final
+(`ARROW_TIP_X_PCT`/`ARROW_TIP_Y_PCT`, `ArrowToTarget.tsx`) se calcula con
+esa lógica de ajuste, no con el número crudo del `viewBox`.
+
+**El ancla por la punta trajo, a su vez, una regresión que hubo que
+revertir.** Con casi el 84% del largo de la flecha ahora sobresaliendo
+*detrás* de la punta (contra ~50% antes, repartido a ambos lados del
+centro), varias flechas empezaron a asomar la cola por fuera del borde
+blanco de la diana — incluso al tamaño de producción (120%), que antes
+nunca había tenido ese problema. El primer instinto fue extender
+`oversizeRadiusGuard` (el mecanismo ya existente para el caso de
+`arrowScalePct` extremo) con un baseline más chico para compensar. Probado
+en varios valores (70, 35, 20): a medida que se achicaba el radio de
+aterrizaje para esconder la cola, la **punta** — la parte que de verdad
+determina el color — se corría hacia anillos más centrales que el que
+realmente le correspondía. Es decir, el fix para el problema cosmético
+(cola sobresaliendo) reintroducía el problema real (punta en el anillo
+equivocado) que toda esta ronda existía para resolver. Se revirtió
+`oversizeRadiusGuard` a su fórmula original (baseline 120%, sin achicar en
+producción) y se aceptó el asomo de cola como un costo conocido de esta
+opción — un asta sobresaliendo un poco del borde de la diana se lee como una
+flecha real clavada cerca del borde, no como algo roto.
+
+Un detalle operativo de esta ronda, sin relación con el código en sí: a
+mitad del trabajo, el directorio de trabajo cambió de rama por fuera de la
+sesión (el usuario mergeó el PR de esta misma feature y se movió a otra
+rama para otra tarea), lo que hizo que los cambios sin commitear quedaran
+en un `git stash` automático. Se le avisó al usuario en vez de asumir y
+cambiar de rama por su cuenta; una vez confirmado, se retomó desde el stash
+sin perder nada.
+
 ---
 
 ## Notas sueltas que no encajan en la cronología pero valen la pena dejar anotadas

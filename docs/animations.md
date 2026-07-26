@@ -189,13 +189,25 @@ contempla — cambia solo **quién la dispara** y con qué `count`/`funnelRanks`
 
 Cada flecha nace **gris claro** (paleta `UNPAINTED_ARROW_PALETTE`,
 `ArrowToTarget.tsx`) — el mismo gris para todas, sin importar a qué anillo
-apunta, así el color todavía no revela nada mientras está en vuelo. Recién
-al aterrizar (cuando termina su propio `el.animate(...)`, vía
-`anim.finished`) se "pinta" del color del anillo que tocó —
-`RING_ARROW_PALETTES[shot.ringIndex]`, un array de 5 paletas en el mismo
-orden que `RING_BANDS`/`MILESTONE_KEYS`. El swap de color usa una transición
-CSS corta (`transition-colors`, 300ms) en vez de un salto abrupto — se lee
-como que el impacto "moja" a la flecha del color del anillo.
+apunta, así el color todavía no revela nada mientras está en vuelo. Se
+"pinta" del color del anillo que tocó —`RING_ARROW_PALETTES[shot.ringIndex]`,
+un array de 5 paletas en el mismo orden que `RING_BANDS`/`MILESTONE_KEYS`. El
+swap de color usa una transición CSS corta (`transition-colors`, 300ms) en
+vez de un salto abrupto — se lee como que el impacto "moja" a la flecha del
+color del anillo.
+
+**Todas juntas, no una por una.** El pintado no se dispara por flecha
+apenas aterriza (`anim.finished` de su propio `el.animate(...)`) — eso hacía
+que el grupo se fuera pintando disparejo mientras el resto seguía en vuelo.
+En cambio, un único efecto espera a que **la última** flecha del grupo
+aterrice (`totalFlightDuration`, el máximo de `delay+flightMs` sobre todos
+los shots — ya se calculaba para el contador de texto) y recién ahí, tras
+una pausa fija (`PAINT_REVEAL_PAUSE_MS`, 450ms — el tiempo para "mirar" el
+impacto todavía gris antes de que se resuelva en color), pinta **todas** de
+una sola vez con un solo `setState`. Un shot nuevo agregado en vivo (`count`
+creciendo sobre el mismo montaje) dispara su propio ciclo aterrizar→pausa→
+pintar sin re-pintar (ni re-grisar) los que una tanda anterior ya pintó — el
+`setState` funcional del efecto solo agrega ids, nunca los saca.
 
 `shot.ringIndex` se calcula en `landingSpot` para **ambos** modos, no solo
 funnel: en `mode="funnel"` es directamente el `funnelRank` clampeado (ya se
@@ -226,6 +238,30 @@ pasa `palette`) queda visualmente idéntico, sin tocarlo.
 **Reduced motion:** sin vuelo que mostrar, la flecha aparece directamente en
 su color de aterrizaje (no se ve la fase gris) — mismo criterio que ya
 aplicaba el resto de la escena en este modo.
+
+**Anclada por la punta, no por el centro.** El mapeo color↔anillo en sí
+siempre fue exacto (verificado programáticamente: 0 de 40 desajustes,
+comparando el radio real de cada shot contra el color pintado) — lo que no
+leía bien era que, con el ancla en el **centro** del dibujo (`translate(-50%,
+-50%)`), una flecha de ~106px podía tener la mitad de su largo asomando
+hacia anillos vecinos, aunque su punto de anclaje (y su color) fueran
+correctos para el anillo asignado. Se cambió el ancla y el pivot de rotación
+al **vértice de la punta** — literalmente "donde toca" — usando
+`ARROW_TIP_X_PCT`/`ARROW_TIP_Y_PCT` (`ArrowToTarget.tsx`). No es la fracción
+cruda del `viewBox` (150.1/160 ≈ 93.8%): el `viewBox` (160×56) no comparte
+relación de aspecto con la caja donde se renderiza (88×24), así que el
+`preserveAspectRatio` por defecto del navegador (`xMidYMid meet`) deja margen
+vacío en el eje que no es el limitante — la fracción real, medida
+empíricamente con un shot a rotación cero + `SVGPoint.matrixTransform` contra
+`getScreenCTM()`, es ≈84.2%, no 93.8%. Mejora parcial, no total: nada
+sobresale ya *delante* de la punta, pero el asta/plumas sí pueden seguir
+sobresaliendo *detrás* de ella (hacia anillos más centrales, o hacia afuera
+del borde de la diana) — se decidió no compensar eso encogiendo el radio de
+aterrizaje (`oversizeRadiusGuard`), porque encoger el radio para esconder la
+cola metía un bug peor: la punta terminaba en un anillo más central que el
+que realmente le corresponde por color. Un asta que sobresale un poco del
+borde de la diana se lee como una flecha real clavada cerca del borde, no
+como algo roto.
 
 ### Modo funnel — los 5 anillos son los 5 hitos (implementado)
 
@@ -834,6 +870,33 @@ contador = ease-out.
     el color aplica igual sin depender de si hay datos de funnel. Detalle
     completo, incluida la razón de elegir cada tono a mano en vez de una
     fórmula, en §2 "Color por anillo".
+19. **Pintado en grupo (no por flecha) + ancla por la punta** (2026-07-26) →
+    dos correcciones sobre la decisión #18, a partir de screenshots del
+    usuario mostrando el resultado real. Primera: *"esperemos que todas
+    aterricen y luego que cambien al color correspondiente, y dejamos unos
+    milisegundos para analizar la interacción después de eso"* — el pintado
+    por-flecha-al-aterrizar (`anim.finished`) se reemplaza por un único
+    timer que espera a que la **última** flecha aterrice
+    (`totalFlightDuration`) más una pausa fija (`PAINT_REVEAL_PAUSE_MS`,
+    450ms) y recién ahí pinta todas juntas. Segunda: el usuario sospechó que
+    el color no correspondía al anillo real de aterrizaje — verificado
+    programáticamente que el mapeo SIEMPRE fue exacto (0/40 desajustes,
+    radio real vs. color pintado), el problema era que el ancla de cada
+    flecha era el **centro** de su dibujo, así que a su tamaño de producción
+    (120%, ~106px) buena parte del largo sobresalía hacia anillos vecinos
+    aunque el ancla (y el color) fueran correctos para el anillo asignado.
+    De las cuatro opciones planteadas (achicar solo en funnel / achicar
+    global / anclar por la punta / dejarlo así), el usuario eligió anclar
+    por la punta — mejora parcial y conocida de antemano (no resuelve que la
+    cola siga cruzando hacia anillos más centrales), implementada calculando
+    la posición real de la punta dentro de la caja renderizada (no la
+    fracción cruda del `viewBox`, que no coincide por el letterboxing de
+    `preserveAspectRatio` — medido empíricamente con `getScreenCTM()`).
+    Encoger el radio de aterrizaje para esconder el sobrante de cola
+    (`oversizeRadiusGuard`) se probó y se descartó: movía la punta a un
+    anillo más central que el real, cambiando un problema cosmético por uno
+    de fondo (el color ya no correspondía a dónde leía la punta). Detalle
+    completo en §2 "Color por anillo" (ambas subsecciones nuevas).
 
 **Valores por defecto (tuneables, no bloquean):**
 
