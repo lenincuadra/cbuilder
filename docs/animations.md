@@ -224,37 +224,72 @@ custom property (los `%` de un keyframe no son variables). Terminaba viéndose
 deformaba encima la forma que ya estaba en los stops.
 
 **La solución fue sampleá la trayectoria en JS, no en CSS.** `buildFlightKeyframes`
-(`ArrowToTarget.tsx`) genera ~16 puntos de una parábola real por flecha:
+(`ArrowToTarget.tsx`) genera ~16 puntos de una parábola real por flecha, sobre
+un progreso `te = t^1.7` (no `t` crudo — ver "acelera y llega de golpe" abajo):
 
-- Horizontal: lineal (velocidad constante, como un proyectil real sin
-  arrastre).
-- Vertical: `h(t) = peak * (1 - distanciaAlPico²)` — la misma parábola de
-  antes/después del pico, solo que `peakAt` (dónde cae el pico en [0,1]) es
-  **por flecha**, cosa que un `@keyframes` no puede parametrizar.
+- Horizontal: lineal **en `te`** (no en tiempo real) — de ahí sale la
+  aceleración.
+- Vertical: `h(te) = peak * (1 - distanciaAlPico²)` sobre el mismo `te` — la
+  misma parábola de antes/después del pico, solo que `peakAt` (dónde cae el
+  pico en `te` ∈ [0,1]) es **por flecha**, cosa que un `@keyframes` no puede
+  parametrizar.
 - Rotación: la tangente real del camino en cada punto (diferencia finita
   entre puntos consecutivos), no un ángulo elegido a mano — la punta siempre
   apunta hacia donde se mueve.
 - El último frame fuerza rotación 0 así el ángulo visible final calza con
   `restRotation` (aplicado por el wrapper estático exterior).
+- **Contrarrotación:** el wrapper exterior aplica `rotate(restRotation)` sin
+  animar, desde el primer frame — no solo en el reposo final. Eso rota todo
+  el sistema de coordenadas local de la flecha durante *todo* el vuelo, no
+  solo la pose final. Como `restRotation` varía según en qué punto del anillo
+  cae cada flecha (tangente a esa posición), sin corregir esto cada flecha
+  entra rotada por un ángulo distinto según dónde aterriza — un camino armado
+  para "venir de la izquierda" terminaba entrando desde abajo/arriba/la
+  derecha según el caso. `buildFlightKeyframes` contrarrota el camino
+  sampleado por `-restRotation` antes de devolverlo, así el wrapper la vuelve
+  a rotar de vuelta a la forma real — el *approach* visual es el mismo
+  (viene de la izquierda) sin importar dónde cae. Esto era **el bug de fondo
+  del reporte "caen en espiral"**.
 
 Estos keyframes se pasan a `el.animate(keyframes, { duration, delay, easing:
 "linear", fill: "forwards" })` — `linear` porque el ritmo ya está en la
 densidad/valores de los puntos, no hace falta (ni conviene) otra curva de
 easing encima.
 
-**"Termina de golpe" (pedido explícito):** la física ya lo da gratis. Una
-caída bajo gravedad **acelera** — la velocidad vertical es máxima justo en el
-impacto, no mínima. Con `h(t)` así, la flecha llega a máxima velocidad y la
-animación simplemente termina ahí — no hay deceleration hacia el final que
-la haga "planear" hasta pararse.
+**"Acelera y llega de golpe" (pedido explícito):** dos mecanismos, uno físico
+y uno de timing. Físico: una caída bajo gravedad **acelera** — la velocidad
+vertical es máxima justo en el impacto, no mínima; con `h(te)` así, la
+flecha llega a máxima velocidad vertical y la animación simplemente termina
+ahí, sin deceleration hacia el final. Timing: el progreso `te = t^1.7`
+(`FLIGHT_EASE_IN_POWER`) además hace que la posición apenas cambie al
+principio del tiempo real y se mueva la mayor parte de la distancia sobre el
+final — un ease-in aplicado al *progreso*, no una curva de easing de WAAPI
+encima (que deformaría la parábola ya sampleada). `flightDurationMin`/`Max`
+se bajaron ~20% (253–360ms → 211–300ms) para la velocidad extra pedida.
 
 **Random real entre replays:** `buildShots` sigue siendo determinístico por
 índice (una flecha ya aterrizada no se reordena si `count` sube — misma
-escena, mismo montaje), pero ahora el seed incluye un `sessionSeed` generado
-una vez por montaje (`Math.random()`, seteado en un `useEffect` para no romper
-la hidratación SSR — ver gotcha abajo). Antes el seed dependía solo del
-índice, así que cada "Replay" (mismo `count`) producía exactamente el mismo
-arreglo — de ahí el reporte "no se siente random".
+escena, mismo montaje), y el seed incluye un `sessionSeed` generado una vez
+por montaje (`Math.random()`, seteado en un `useEffect` para no romper la
+hidratación SSR). Antes el seed dependía solo del índice, así que cada
+"Replay" (mismo `count`) producía exactamente el mismo arreglo — de ahí el
+reporte original "no se siente random".
+
+Esa primera solución tenía un bug residual: `sessionSeed` arrancaba en `0`
+(placeholder para el primer render SSR-safe) y `shots` se computaba —y
+**animaba**— con ese placeholder antes de que el `useEffect` lo re-sorteara.
+El efecto que agenda `el.animate(...)` marca cada flecha como "ya animada" en
+un `Set` indexado por `shot.id` (no por sus valores), así que cuando
+`sessionSeed` cambiaba al valor real un render después, ese mismo `id` ya
+estaba marcado — el efecto lo saltea y la animación real (con los valores
+random correctos, incluida la `restRotation` que usa la contrarrotación de
+arriba) **nunca se crea**. El wrapper estático sí se re-renderiza con los
+valores nuevos, así que el resultado era una flecha que aterriza en el lugar
+correcto pero vuela con la forma/rotación de un shot completamente distinto
+— la otra mitad del reporte "caen en espiral" / "no se siente random".
+Arreglado haciendo que `sessionSeed` arranque en `null` (no en `0`) y que
+`shots` sea `[]` mientras tanto: así el placeholder nunca llega a agendarse,
+y la única tanda de animaciones que se crea es la del seed real.
 
 **Gotcha de implementación (para no repetirlo):** con dos `useEffect`
 separados — uno que agenda animaciones (sin cleanup, para no cortar flechas
@@ -302,11 +337,13 @@ Un solo lugar para las constantes de movimiento — todas las escenas las compar
 | `volleySize` | 4 | Flechas por tanda en andanadas |
 | `dianaVisualCap` | ~40 | Máximo de flechas clavadas dibujadas (el resto lo carga el contador) |
 | `hammerCycle` | ~1500 ms | Duración de un ciclo de golpe de martillo (loop) |
-| `flightDurationMin`/`Max` | 253–360 ms | Rango de duración del vuelo — cada flecha sortea un valor propio |
+| `flightDurationMin`/`Max` | 211–300 ms | Rango de duración del vuelo — cada flecha sortea un valor propio (~20% más rápido que el original 253–360) |
+| `FLIGHT_EASE_IN_POWER` | 1.7 | Exponente del ease-in de progreso (`te = t^1.7`, en `ArrowToTarget.tsx`, no en `motionTokens.ts` — es interno al sampler, no una constante compartida entre escenas) — acelera el vuelo y hace que "llegue de golpe" |
 
 Easings: vuelo de la flecha = `linear` sobre una parábola ya sampleada en JS
-(§4 — el ritmo vive en los puntos, no en la curva de easing), golpe de
-martillo = ease-in (acelera hacia el impacto), tick del contador = ease-out.
+con progreso ease-in (§4 — el ritmo vive en los puntos, no en la curva de
+easing), golpe de martillo = ease-in (acelera hacia el impacto), tick del
+contador = ease-out.
 
 ---
 
@@ -340,6 +377,26 @@ martillo = ease-in (acelera hacia el impacto), tick del contador = ease-out.
    browser, no librería). Detalle técnico completo, incluido un gotcha de
    React Strict Mode a no repetir, en §4 "El vuelo de la flecha: por qué WAAPI
    y no `@keyframes`".
+6. **Fix: flechas "en espiral" / poco random + ajuste de sensación** (2026-07-26)
+   → dos bugs de fondo detrás del reporte "caen en espiral, no se siente
+   random": (1) el wrapper exterior aplica `rotate(restRotation)` sin animar
+   desde el primer frame, así que rotaba el sistema de coordenadas local de
+   la flecha durante todo el vuelo, no solo en el reposo — un camino armado
+   para "venir de la izquierda" terminaba entrando desde cualquier lado según
+   dónde caía esa flecha en el anillo; (2) `sessionSeed` arrancaba en un
+   placeholder (`0`) que llegaba a **animarse de verdad** antes de que el
+   `useEffect` lo re-sorteara, y el `Set` de "ya animada" (indexado por
+   `shot.id`, no por valores) bloqueaba que la animación real (con el seed
+   correcto) se creara — la flecha aterrizaba en el lugar correcto pero volaba
+   con la forma/rotación de un shot completamente distinto. Fixes: contrarrotar
+   el camino sampleado por `-restRotation` en `buildFlightKeyframes`, y hacer
+   que `sessionSeed`/`shots` arranquen en `null`/`[]` en vez de `0` para que el
+   placeholder nunca se agende. De paso, pedido explícito del usuario: vuelo
+   ~20% más rápido (`flightDurationMin`/`Max` bajan a 211–300ms) con un ease-in
+   de progreso (`te = t^1.7`) para que acelere y "llegue de golpe", y la flecha
+   dibujada ~20% más grande (24×88px → 29×106px — verificado que sigue sin
+   pisar el borde de la diana en ambos modos a `dianaVisualCap`). Detalle
+   técnico completo en §4.
 
 **Valores por defecto (tuneables, no bloquean):**
 

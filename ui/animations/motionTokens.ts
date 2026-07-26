@@ -16,9 +16,9 @@ export const motionTokens = {
   dianaVisualCap: 40,
   /** Duration of one hammer-strike loop cycle. */
   hammerCycle: 1500,
-  /** Range for a single arrow's flight time, ms — each shot picks its own value so a batch doesn't move in lockstep. */
-  flightDurationMin: 253,
-  flightDurationMax: 360,
+  /** Range for a single arrow's flight time, ms — each shot picks its own value so a batch doesn't move in lockstep. ~20% faster than the original 253-360. */
+  flightDurationMin: 211,
+  flightDurationMax: 300,
 } as const;
 
 /** N -> visual register, per docs/animations.md §2 "Mapeo por registros". */

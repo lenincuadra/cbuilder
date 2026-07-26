@@ -122,24 +122,50 @@ function buildShots(count: number, mode: ArrowLandingMode, funnelRanks: number[]
   return shots;
 }
 
+// Progress is warped through this power before it drives position, while
+// keyframe `offset`s stay linear in real time — so the same real-time step
+// covers less distance early on and more late, i.e. the arrow visibly
+// accelerates and simply *stops* on landing (no built-in glide-to-a-halt).
+const FLIGHT_EASE_IN_POWER = 1.7;
+
 /**
  * Ballistic arc, sampled directly (not via a CSS easing curve on top of a
  * hand-picked midpoint — that's what made earlier passes look kinked/floaty).
- * Horizontal motion is linear (constant velocity); vertical follows a real
- * parabola around `peakAt`, so it decelerates into the apex and *accelerates*
- * back down — arriving at full speed and just stopping, not gliding to a
- * halt. Rotation is the actual tangent of the path at each sample, so the
- * nose always leads the direction of travel; the final frame is forced flat
- * (0deg) so the visible angle lands exactly on `restRotation` (applied by the
- * static outer wrapper).
+ * Horizontal motion is linear-in-progress (constant "velocity" once warped
+ * through the ease-in above); vertical follows a real parabola around
+ * `peakAt`, so it *also* decelerates into the apex and accelerates back down
+ * — arriving at full speed and just stopping, not gliding to a halt.
+ * Rotation is the actual tangent of the path at each sample, so the nose
+ * always leads the direction of travel; the final frame is forced flat
+ * (0deg) so the visible angle lands exactly on `restRotation` (applied by
+ * the static outer wrapper).
+ *
+ * The outer wrapper's `rotate(restRotation)` is applied unconditionally,
+ * from the very first frame — not eased in — so it rotates this element's
+ * whole local coordinate system for the entire flight, not just the resting
+ * pose. Landing angles are spread around the full ring, so left uncorrected
+ * this drags each arrow's path around by a different amount depending on
+ * where it lands (a path built to arrive "from the left" ends up swooping in
+ * from below/above/the right for anything not landing near the top or
+ * bottom) — the reported "spiral". Counter-rotating the sampled path by
+ * `-restRotation` here cancels that ancestor rotation out, so every arrow's
+ * *visual* approach direction stays the same regardless of where it lands;
+ * only the final resting angle (still owned by the wrapper) differs.
  */
 function buildFlightKeyframes(shot: ArrowShot): Keyframe[] {
   const samples = 16;
+  const restRad = (shot.restRotation * Math.PI) / 180;
+  const cos = Math.cos(restRad);
+  const sin = Math.sin(restRad);
   const points = Array.from({ length: samples }, (_, k) => {
     const t = k / (samples - 1);
-    const x = shot.ox * (1 - t);
-    const distFromPeak = t < shot.peakAt ? (shot.peakAt - t) / shot.peakAt : (t - shot.peakAt) / (1 - shot.peakAt);
-    const h = shot.peak * (1 - distFromPeak * distFromPeak);
+    const te = Math.pow(t, FLIGHT_EASE_IN_POWER);
+    const worldX = shot.ox * (1 - te);
+    const distFromPeak = te < shot.peakAt ? (shot.peakAt - te) / shot.peakAt : (te - shot.peakAt) / (1 - shot.peakAt);
+    const worldH = shot.peak * (1 - distFromPeak * distFromPeak);
+    // Counter-rotate into the wrapper's frame (inverse of its rotate(restRotation)).
+    const x = worldX * cos + worldH * sin;
+    const h = worldH * cos - worldX * sin;
     return { t, x, h };
   });
 
@@ -176,19 +202,33 @@ export function ArrowToTarget({
   className?: string;
 }) {
   const reducedMotion = usePrefersReducedMotion();
-  // SSR-safe: starts at a fixed value so server and client render the same
-  // markup on the first pass, then rerolls client-side right after mount.
-  // Stable across later re-renders of the same mount (a growing `count`
-  // doesn't reshuffle arrows already on the board), but a fresh value — and
-  // so a genuinely different layout — every time the scene remounts.
-  const [sessionSeed, setSessionSeed] = useState(0);
+  // SSR-safe: `null` on the first pass so server and client render the same
+  // (arrow-less) markup, then rerolls client-side right after mount. Stable
+  // across later re-renders of the same mount (a growing `count` doesn't
+  // reshuffle arrows already on the board), but a fresh value — and so a
+  // genuinely different layout — every time the scene remounts.
+  //
+  // Deliberately `null`, not a fixed placeholder number like 0: `shots`
+  // below must render as empty (no shots at all) until the real seed lands.
+  // The flight-scheduling effect keys its "already started" bookkeeping
+  // (`animatedIds`) by `shot.id` alone, not by the shot's actual values — if
+  // a placeholder seed produced a real (0-length or not) `shots` array that
+  // got scheduled, those ids would be marked "animated" against the
+  // placeholder's numbers, and the effect would then skip them forever once
+  // the real seed's `shots` (same ids, different random values) came in on
+  // the next render. That desync is exactly what caused arrows to fly in
+  // from the wrong side / on a rotation that didn't match where they
+  // actually land — the wrapper's resting rotation would update to the real
+  // seed, but the flight path animating into it was still built from the
+  // placeholder's numbers.
+  const [sessionSeed, setSessionSeed] = useState<number | null>(null);
   useEffect(() => {
     // Math.random() can only run client-side without a hydration mismatch —
     // there's no non-effect way to get a fresh value right after mount.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSessionSeed(Math.random() * 10000);
   }, []);
-  const shots = useMemo(() => buildShots(count, mode, funnelRanks, sessionSeed), [count, mode, funnelRanks, sessionSeed]);
+  const shots = useMemo(() => (sessionSeed === null ? [] : buildShots(count, mode, funnelRanks, sessionSeed)), [count, mode, funnelRanks, sessionSeed]);
   const visualCount = shots.length;
   const totalFlightDuration = shots.length ? Math.max(...shots.map((s) => s.delay + s.flightMs)) : 0;
 
@@ -291,8 +331,16 @@ export function ArrowToTarget({
 
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [count, reducedMotion]);
+    // `shots` (not just `count`) is a real dependency here, not an
+    // exhaustive-deps false positive: `shots` is empty on the very first
+    // client render (see `sessionSeed` above) and only gets its real,
+    // randomized values a render later. Without `shots` in this list, the
+    // counter tick loop launched on mount would capture that placeholder
+    // (empty) closure — landing count stuck at 0, `totalFlightDuration`
+    // stuck at 0 — and never re-sync once the real shots (and their real
+    // flight animations) actually show up, decoupling the tally from what's
+    // on screen.
+  }, [count, reducedMotion, shots, totalFlightDuration, visualCount]);
 
   return (
     <div className={className}>
@@ -309,7 +357,7 @@ export function ArrowToTarget({
             }}
           >
             <div data-shot-id={shot.id} style={reducedMotion ? undefined : { opacity: 0 }}>
-              <Arrow className="h-[24px] w-[88px]" />
+              <Arrow className="h-[29px] w-[106px]" />
             </div>
           </div>
         ))}
