@@ -10,6 +10,125 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Flechas clavadas: tamaño, radio y rotación están acoplados (2026-07-26)
+**Decisión**: se achica la flecha de 113×31px a 88×24px, se orienta
+**tangencialmente** al anillo (no en ángulo random) en vez de radial, y se
+recorta el radio máximo de aterrizaje — `RANDOM_MODE_MAX_RADIUS` de 30→19, y
+`RING_BANDS` (modo funnel) escalados a ~71% de su radio "real" — porque
+algunas flechas quedaban con la punta fuera de la diana.
+
+**Contexto/razón**:
+- La causa no era un bug de posicionamiento: es geometría. Una flecha
+  centrada a radio `R` del centro, orientada tangencialmente, igual tiene sus
+  puntas a `sqrt(R² + medioLargo²)` del centro (Pitágoras) — cuanto más larga
+  la flecha respecto al radio de la diana, más "se abre" hacia afuera aunque
+  esté acostada sobre el anillo. Con la flecha en su tamaño anterior (113px,
+  ~39% del ancho del contenedor) esto no cerraba con ningún radio razonable.
+- Verificado empíricamente con Playwright (no a ojo): se leen `left/top/rotate`
+  reales de cada flecha asentada, se calculan las 4 esquinas rotadas
+  analíticamente, y se compara contra el borde real del anillo blanco (~33.2%,
+  medido del path del SVG). 80 corridas (8 seeds × 2 modos × 5 counts): máximo
+  32.3%, sin overhang.
+- **Si se vuelve a agrandar la flecha o el radio en el futuro, hay que
+  re-correr esta verificación** — no alcanza con mirar una captura, el
+  overhang solo aparece en ciertos ángulos/posiciones (ver `RANDOM_MODE_MAX_RADIUS`
+  y `RING_BANDS` en `ArrowToTarget.tsx` para la fórmula).
+- El modo funnel pierde algo de precisión (los anillos ya no calzan pixel-perfect
+  con el radio real de cada color) a cambio de que ninguna flecha quede afuera —
+  trade-off deliberado, no un bug pendiente.
+
+## Vuelo de la flecha: Web Animations API en vez de `@keyframes` CSS (2026-07-26)
+**Decisión**: el vuelo de cada flecha (`ArrowToTarget.tsx`) se genera con
+`el.animate(keyframes, opts)` (Web Animations API nativa del browser) en vez
+de clases CSS con `@keyframes`. Los keyframes se calculan en JS por flecha,
+sampleando una parábola real (~16 puntos: horizontal lineal, altura
+`peak*(1-distanciaAlPico²)`, rotación = tangente real del camino). Sigue
+siendo "sin dependencia nueva" — WAAPI es una API del DOM, no una librería.
+
+**Contexto/razón**:
+- Dos rondas de `@keyframes` (una con un pico fijo al 50%, otra con 3
+  variantes `lob`/`punch`/`loft` de 5-6 stops cada una) seguían sin sentirse
+  naturales — el usuario lo señaló dos veces. La limitación de fondo: un
+  `@keyframes` tiene stops en **porcentajes fijos**, no parametrizables por
+  custom property — no hay forma de que cada flecha tenga su propio "dónde
+  pica el arco" sin escribir un keyframe por combinación posible. JS puede
+  generar esa curva por instancia; CSS no.
+- "Que termine de golpe" (pedido explícito del usuario) salió gratis de la
+  física correcta: una caída acelera, no desacelera — la parábola llega a
+  velocidad máxima justo en el aterrizaje, así que la animación simplemente
+  termina ahí en vez de planear hasta pararse.
+- **Gotcha de React Strict Mode a no repetir**: con un efecto que agenda
+  animaciones (sin cleanup, para no cortar flechas ya en vuelo cuando `count`
+  sube) y otro efecto separado, solo-para-desmontaje, que cancela todo —
+  Strict Mode (dev) duplica el ciclo mount→cleanup→remount de **todos** los
+  efectos en el commit inicial, incluidos los de deps `[]`. Eso cancelaba las
+  animaciones recién creadas sin des-marcar el set de "ya animadas", dejando
+  flechas fantasma (nunca se recreaban). Fix: el cleanup de desmontaje limpia
+  el ref de animaciones **y** el set de IDs juntos, para que el remount
+  inmediato de Strict Mode se autocorrija.
+- **"El modo random no se sentía random"**: el seed de cada flecha dependía
+  solo de su índice, así que dos "Replay" con el mismo `count` producían el
+  arreglo idéntico. Fix: se suma un `sessionSeed` (`Math.random()`, seteado en
+  un `useEffect` para no romper la hidratación SSR — no se puede llamar
+  `Math.random()` durante el render sin un mismatch server/cliente) generado
+  una vez por montaje. Estable dentro del mismo montaje (una flecha ya
+  aterrizada no se reordena si `count` sube), distinto en cada remount.
+
+## Animación de la flecha: los 5 anillos = los 5 hitos del funnel (2026-07-26)
+**Decisión**: `ArrowToTarget` suma `mode: "random" | "funnel"`. En `"funnel"`,
+dónde cae cada flecha ya no es estético — cada uno de los 5 anillos de la diana
+(blanco → oscuro → azul → rojo → dorado) representa, de afuera hacia adentro,
+uno de los 5 `MILESTONE_KEYS` (`sent → responded → interview → offer →
+referral`, `core/registry/types.ts`). El componente recibe `funnelRanks:
+number[]` ya calculado (0-4 por flecha) — no importa `core/registry` ni
+calcula el rank él mismo, mantiene la regla dura del contrato (§1 de
+`animations.md`). `mode: "random"` (default) preserva el comportamiento
+anterior.
+
+**Contexto/razón**:
+- Ya existía la idea anotada como "extensión post-v1" (colorear por estado del
+  funnel); se implementó como **posición** en vez de color porque la diana ya
+  tiene 5 anillos concéntricos de sobra — no hace falta un canal visual nuevo,
+  y "más cerca del centro = más lejos en el funnel" es una lectura más directa
+  que un código de colores que hay que aprender.
+- El adaptador real (`rows → funnelRanks`) todavía no existe — es el mismo
+  pendiente que ya bloquea montar la escena en la app real (ver
+  `animations.md` §1 "Contrato" y estado del doc).
+
+## Animaciones: sin personaje, solo objetos, sin Rive/Quiver/Lottie (2026-07-25)
+**Decisión**: se recorta el plan v1 de `animations.md` en dos pasos. Primero, el
+arquero pierde el **arco** — la flecha se autolanza (sin tensar/soltar cuerda) — y
+el forjador baja de 4 etapas a **un solo beat en loop** (martillo golpea la
+flecha sobre el yunque). Después, se saca **el personaje/mascota por completo**:
+no hay muñeco disparando ni forjando, son **objetos animando solos** (flecha,
+martillo, diana, yunque). Con esto, "arquero"/"forjador" dejan de ser roles de un
+personaje y pasan a ser nombres de escena ("flecha a la diana" / "martillo en el
+yunque"). Ambas escenas se implementan con **SVG dibujado en código + CSS puro**
+(`@keyframes`, custom properties), sin sumar Rive, Lottie, Quiver AI, Framer
+Motion ni GSAP.
+
+**Contexto/razón**:
+- El plan original pedía **riggear a mano** en Rive (state machine + number input)
+  y generar arte con Quiver AI. El usuario no sabe usar Rive y no quiere pagar esa
+  curva de aprendizaje solo para esta feature.
+- Con el concepto reducido (sin arco, sin etapas de forja, sin personaje), la
+  complejidad que justificaba un motor de rig dedicado desaparece: el vuelo de
+  una flecha y un martillo golpeando son animables con `@keyframes` + estado de
+  React, sin necesitar una state machine visual ni un input numérico atado a un
+  runtime externo. Sacar el personaje además elimina el problema de riguear
+  anatomía (articulaciones, solapes) — el único pivot que queda es el del
+  martillo.
+- **Cero dependencia nueva** era un requisito explícito del usuario, no solo
+  preferencia de tooling — descarta también las alternativas de código con
+  librería (Framer Motion/GSAP) que ya estaban anotadas como plan B.
+- Lo que **no** se recorta: la lógica data-driven de la flecha (registros 1:1 /
+  andanadas / lluvia, presupuesto de tiempo, gap decreciente) sigue en pie — esa
+  complejidad viene de que `count` puede ir de 0 a cientos, no del personaje, así
+  que sacar la mascota no la simplifica.
+- Trade-off asumido: el arte sale más geométrico/simple (dibujado a mano en
+  código) en vez de ilustrado por una tool dedicada — aceptable porque el pedido
+  explícito fue "reducir", no "más fiel visualmente".
+
 ## "CV enviado" como hito auto-marcado (2026-07-18)
 **Decisión**: sumar `sent` ("CV enviado") como primer hito de `MILESTONE_KEYS`
 (Acquisition). Se **auto-marca al generar el CV** (directo y diferido, en
