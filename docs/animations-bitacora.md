@@ -98,10 +98,12 @@ Lo que **no** se recortó: toda la lógica data-driven de la flecha (registros
 — esa complejidad viene de que `count` puede ir de 0 a cientos, no del personaje,
 así que sacar la mascota no la simplificaba.
 
-Trade-off asumido explícitamente: el arte iba a salir más geométrico/simple
-(dibujado a mano, sea en código o por el usuario) en vez de ilustrado por una
-tool dedicada — aceptable porque el pedido explícito fue "reducir", no "quedar
-más lindo".
+Trade-off asumido explícitamente en el momento de esta decisión: el arte iba a
+salir más geométrico/simple (dibujado a mano, sea en código o por el usuario)
+en vez de ilustrado por una tool dedicada — aceptable porque el pedido
+explícito fue "reducir", no "quedar más lindo". En la práctica no fue así: el
+arte terminó siendo generado por Quiver AI de todas formas (ver más abajo),
+solo que sin el rig de Rive ni el personaje.
 
 ---
 
@@ -112,16 +114,28 @@ commit que agrega código de verdad. 17 archivos, 1343 líneas insertadas. Este
 commit, aunque aparece como uno solo en el log, empaquetó una sesión larga con
 varios sub-episodios propios:
 
-### El arte ya no se dibuja en código
+### El arte no se dibuja en código — y el paso de Quiver AI sí se ejecutó
 
-El plan de "sacar el personaje" (07-25) todavía suponía dibujar los objetos
-(flecha, diana, yunque, martillo) a mano en código — pero terminaron siendo
-**ilustraciones que el propio usuario hizo** en `assets/illustrations/*.svg`,
-después portadas a componentes React en `ui/animations/assets/`. Un detalle
-arqueológico de este commit: se generó también `assets/illustrations/arc.svg`
-(un arco/bow) — pero como el recorte del día anterior ya había sacado el arco de
-la escena, ese asset quedó generado y sin componente React ni uso alguno. Nunca
-se borró; simplemente no se convirtió en un `.tsx`.
+El plan de "sacar el personaje" (07-25) suponía dibujar los objetos (flecha,
+diana, yunque, martillo) a mano en código, como trade-off aceptado a cambio de
+reducir alcance (ver la cita de `decisions.md` en la sección anterior). Eso no
+fue lo que pasó: el paso de generación de arte del plan **original** —
+Quiver AI, con referencias visuales, tal como estaba prompteado desde el
+día 1 (07-19) — sí se ejecutó, y se ejecutó **completo**: se generó el set
+entero que se había planeado, mascota-búho incluida, no solo los 4 objetos
+que terminaron en el proyecto. Lo que se cortó fue el paso *siguiente*
+(riguear en Rive) y, con él, la decisión de usar personaje — no la
+generación en sí.
+
+De ese set completo, solo 4 objetos (flecha, diana, yunque+fuego, martillo)
+se trajeron a `assets/illustrations/*.svg` y se portaron a componentes React
+en `ui/animations/assets/`. El resto — la mascota y otros assets generados
+para el plan original — existe fuera del repo, generado pero nunca
+importado. Un caso menor de esto mismo que sí quedó adentro del repo, a modo
+de rastro: `assets/illustrations/arc.svg` (un arco/bow) se generó y se
+copió, pero como el recorte del día anterior ya había sacado el arco de la
+escena, quedó sin componente React ni uso alguno — nunca se borró, solo
+nunca se convirtió en un `.tsx`.
 
 ### Dos rondas de `@keyframes` que no se sentían naturales
 
@@ -459,12 +473,18 @@ El pedido que dio lugar a este mismo documento. Cuatro puntos:
 
 ## Notas sueltas que no encajan en la cronología pero valen la pena dejar anotadas
 
-- **El personaje-búho del plan original nunca se dibujó.** El plan de
-  2026-07-19 tenía prompts completos para generarlo en Quiver AI; se abandonó
-  antes de que existiera un solo asset del personaje.
-- **`assets/illustrations/arc.svg` existe y no se usa.** Se generó como parte
-  del primer lote de ilustraciones (commit `51adb27`), pero el arco ya había
-  sido recortado de la escena un día antes. Sigue en el repo.
+- **El personaje-búho del plan original sí se generó** — vía Quiver AI, con
+  referencias visuales, siguiendo los prompts del plan de 2026-07-19 — pero
+  nunca se importó al proyecto. Existe fuera del repo, junto con otros
+  assets del set completo que se generó y no se terminó usando (se redujo el
+  alcance de qué se **integraba**, no de qué se **generaba**). Si hace falta
+  para referencia o para retomar el personaje más adelante, están
+  disponibles para agregar al repo.
+- **`assets/illustrations/arc.svg` existe y no se usa.** Se generó (vía
+  Quiver AI) como parte del mismo lote de ilustraciones traído al proyecto
+  en el commit `51adb27`, pero el arco ya había sido recortado de la escena
+  un día antes. Es el único de los assets "de más" que sí llegó a copiarse
+  al repo — el resto (mascota incluida) quedó afuera.
 - **El bug de "no se siente random" apareció dos veces, por causas
   relacionadas pero distintas.** La primera vez (commit `51adb27`) el
   problema era que no existía ningún `sessionSeed` — el seed dependía solo del

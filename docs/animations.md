@@ -371,10 +371,17 @@ quedar en un estado inconsistente.
 
 ### Assets (SVG, sin arco, sin personaje)
 
-Los 4 objetos (**flecha, diana, yunque+fuego, martillo**) son ilustraciones ya
-hechas por el usuario en `assets/illustrations/*.svg` (no dibujadas a mano en
-código como se planteaba originalmente) — se copiaron a componentes React en
-`ui/animations/assets/`. Sin arco, sin cuerda, sin mascota.
+Los 4 objetos (**flecha, diana, yunque+fuego, martillo**) son ilustraciones
+generadas con **Quiver AI** (con referencias visuales) — no dibujadas a mano
+en código como se planteaba originalmente, y tampoco dibujadas a mano por el
+usuario. El paso de generación de arte del plan original (Quiver AI → Rive,
+ver `animations-bitacora.md`) sí se ejecutó tal cual estaba planeado; lo que
+se cortó después fue el rigging en Rive y el personaje/mascota. Se generó
+**el set completo planeado**, mascota incluida — solo estos 4 objetos
+entraron al proyecto una vez reducido el alcance; el resto quedó generado
+pero fuera del repo. Traídos a `assets/illustrations/*.svg` y portados a
+componentes React en `ui/animations/assets/`. Sin arco, sin cuerda, sin
+mascota (en el proyecto).
 
 - La **flecha es el mismo asset** en las dos escenas (martillo en el yunque →
   flecha a la diana), como ya establece el backbone (§1).
