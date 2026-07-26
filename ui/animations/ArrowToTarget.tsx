@@ -38,6 +38,48 @@ function seededRandom(seed: number) {
 const RING_CENTER_X = 50;
 const RING_CENTER_Y = 38;
 
+// Progress is warped through this power before it drives position, in the
+// real sampled path in buildFlightKeyframes below.
+const FLIGHT_EASE_IN_POWER = 1.7;
+
+/**
+ * `restRotation` (the angle an arrow is left stuck at, in screen deg — 0 =
+ * flat/pointing right, 90 = pointing straight down) went through three
+ * designs before landing here. Worth keeping this history: the "obvious"
+ * options both looked wrong for non-obvious reasons, and it's easy to
+ * reintroduce either mistake while touching this code later.
+ *
+ * 1. **Tangent to the ring** (original): rotate each arrow to lie flush
+ *    against the curve of whatever ring it lands on. Reads fine for any
+ *    *one* arrow in isolation, but the tangent angle swings wildly with
+ *    landing position — near-horizontal at the top/bottom of the ring,
+ *    near-vertical at the sides. Since every arrow's actual flight comes
+ *    from the same side (see `ox`), arrows landing at different clock
+ *    positions ended up stuck at wildly different angles despite having
+ *    flown in identically — reported as "the landing point is right, but it
+ *    looks like this one fell from below" (screenshot of a near-vertical
+ *    arrow, next to several near-horizontal ones).
+ * 2. **Blend of a fixed angle and each shot's own "real" arrival angle**
+ *    (computed from the flight path's direction one sample before landing):
+ *    fixes #1's inconsistency, but the "real" angle turned out to be a bad
+ *    signal — thanks to the ease-in (`FLIGHT_EASE_IN_POWER`), the *last*
+ *    sample before landing is disproportionately steep/vertical compared to
+ *    the flight's overall direction (which is mostly horizontal — `ox`'s
+ *    range is 2-3x `peak`'s). So even blended 50/50 with a flat-ish fixed
+ *    angle, arrows still read as steeper than they actually flew — "looks
+ *    like it fell from above even though the trajectory wasn't like that".
+ * 3. **Current: a single near-flat rest angle, plus jitter, full stop** —
+ *    no per-shot physics involved. Matched to a reference photo the user
+ *    provided of real arrows stuck in a target: all of them lie close to
+ *    horizontal and close to parallel to each other, with only minor,
+ *    non-systematic variation — not tangent to the target's rings, not
+ *    tracking each arrow's individual flight arc. `REST_ANGLE_JITTER_DEG`
+ *    was reverse-engineered off that same photo (arrows in it measured
+ *    roughly -14deg to +12deg off horizontal).
+ */
+const BASE_REST_ANGLE_DEG = 0;
+const REST_ANGLE_JITTER_DEG = 14;
+
 /**
  * The 5 rings, outermost first, as {min,max} radius (% of the container box)
  * — read off the Diana artwork's own circles. In "funnel" mode each ring is
@@ -59,11 +101,18 @@ const RING_BANDS = [
   { min: 6.4, max: 10.7 }, // red — offer
   { min: 0, max: 6.4 }, // gold bullseye — referral
 ] as const;
-// An arrow centered at radius R, oriented roughly tangentially, still has
-// endpoints at sqrt(R² + halfLength²) from center (Pythagoras — the longer
-// the arrow relative to R, the more its tips "bulge" outward even when lying
-// along the ring). At the current arrow size, R=22 is the largest radius
-// that keeps every corner inside the diana's true outer (white ring) edge.
+// An arrow centered at radius R has endpoints up to R + halfLength from
+// center (worst case: an arrow oriented radially, pointing straight out —
+// since the rest angle is now ~fixed/near-horizontal (see
+// BASE_REST_ANGLE_DEG) rather than tangent to the ring, that worst case does
+// happen for arrows landing near the left/right of the ring). 19 leaves
+// enough margin for the arrow's half-length at its current (enlarged) size —
+// verified visually at `dianaVisualCap` in both random and funnel modes
+// (funnel's outer band, RING_BANDS[0].max = 22, is the tighter case and was
+// checked too) rather than re-derived algebraically, since the true bulge
+// depends on the angle between each arrow's near-fixed rest angle and its
+// own landing position's radial direction, which isn't a single clean
+// formula any more.
 const RANDOM_MODE_MAX_RADIUS = 19;
 
 export type ArrowLandingMode = "random" | "funnel";
@@ -99,34 +148,28 @@ function buildShots(count: number, mode: ArrowLandingMode, funnelRanks: number[]
     const groupIndex = Math.floor(i / groupSize);
     const withinGroup = i % groupSize;
     const delay = Math.round(groupIndex * groupGap + withinGroup * 18);
-    const { x, y, theta } = landingSpot(rand, i, mode, funnelRanks?.[i]);
-    // Tangent to the ring at this point, not radial — an arrow lying "along"
-    // its ring reads as naturally stuck in, and (unlike a random angle)
-    // never points straight outward, which is what pushes it past the
-    // diana's edge. A small jitter keeps it from looking too uniform.
-    const tangentDeg = (theta * 180) / Math.PI + 90;
-    const jitter = -12 + rand(i + 0.25) * 24;
+    const { x, y } = landingSpot(rand, i, mode, funnelRanks?.[i]);
+    const ox = -Math.round(170 + rand(i + 0.1) * 110);
+    const peak = -Math.round(45 + rand(i + 0.6) * 65);
+    const peakAt = 0.32 + rand(i + 0.85) * 0.3;
+    // See BASE_REST_ANGLE_DEG above for why this isn't derived from the
+    // flight path or the landing ring.
+    const jitter = -REST_ANGLE_JITTER_DEG + rand(i + 0.25) * (2 * REST_ANGLE_JITTER_DEG);
 
     shots.push({
       id: i,
       x,
       y,
-      restRotation: tangentDeg + jitter,
-      ox: -Math.round(170 + rand(i + 0.1) * 110),
-      peak: -Math.round(45 + rand(i + 0.6) * 65),
-      peakAt: 0.32 + rand(i + 0.85) * 0.3,
+      restRotation: BASE_REST_ANGLE_DEG + jitter,
+      ox,
+      peak,
+      peakAt,
       delay,
       flightMs: Math.round(motionTokens.flightDurationMin + rand(i + 0.15) * (motionTokens.flightDurationMax - motionTokens.flightDurationMin)),
     });
   }
   return shots;
 }
-
-// Progress is warped through this power before it drives position, while
-// keyframe `offset`s stay linear in real time — so the same real-time step
-// covers less distance early on and more late, i.e. the arrow visibly
-// accelerates and simply *stops* on landing (no built-in glide-to-a-halt).
-const FLIGHT_EASE_IN_POWER = 1.7;
 
 /**
  * Ballistic arc, sampled directly (not via a CSS easing curve on top of a

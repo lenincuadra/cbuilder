@@ -241,15 +241,51 @@ un progreso `te = t^1.7` (no `t` crudo — ver "acelera y llega de golpe" abajo)
 - **Contrarrotación:** el wrapper exterior aplica `rotate(restRotation)` sin
   animar, desde el primer frame — no solo en el reposo final. Eso rota todo
   el sistema de coordenadas local de la flecha durante *todo* el vuelo, no
-  solo la pose final. Como `restRotation` varía según en qué punto del anillo
-  cae cada flecha (tangente a esa posición), sin corregir esto cada flecha
-  entra rotada por un ángulo distinto según dónde aterriza — un camino armado
-  para "venir de la izquierda" terminaba entrando desde abajo/arriba/la
+  solo la pose final. Sin corregir esto, cada flecha entraba rotada por un
+  ángulo distinto según el valor de `restRotation` de esa flecha — un camino
+  armado para "venir de la izquierda" terminaba entrando desde abajo/arriba/la
   derecha según el caso. `buildFlightKeyframes` contrarrota el camino
   sampleado por `-restRotation` antes de devolverlo, así el wrapper la vuelve
   a rotar de vuelta a la forma real — el *approach* visual es el mismo
   (viene de la izquierda) sin importar dónde cae. Esto era **el bug de fondo
   del reporte "caen en espiral"**.
+
+**`restRotation` (el ángulo en el que queda clavada cada flecha) pasó por
+tres diseños.** Vale la pena dejar registradas las dos primeras vueltas, no
+solo la final: ambas parecían razonables y fallaban por motivos no obvios, y
+es fácil reintroducir cualquiera de los dos errores si se vuelve a tocar este
+código sin este contexto.
+
+1. **Tangente al anillo** (original) → cada flecha rota para quedar "apoyada"
+   contra la curva del anillo donde cae, así se lee como naturalmente
+   clavada. Funciona bien para una flecha aislada, pero la tangente varía
+   muchísimo según en qué punto del círculo cae cada flecha (casi horizontal
+   arriba/abajo del anillo, casi vertical a los costados). Como el vuelo real
+   de **todas** las flechas viene del mismo lado (§ arriba), flechas que
+   volaron idéntico terminaban clavadas en ángulos finales muy distintos
+   entre sí. Reporte del usuario, con captura de una flecha casi vertical al
+   lado de varias casi horizontales: "el punto de caída está bien, pero la
+   dirección de donde viene es rara, parece que salió desde abajo".
+2. **Mezcla de un ángulo fijo + el ángulo "real" de llegada de cada flecha**
+   (calculado con las mismas fórmulas del vuelo, evaluadas un sample antes de
+   aterrizar) → soluciona la inconsistencia del #1, pero el ángulo "real"
+   resultó ser una mala señal: por el ease-in del vuelo
+   (`FLIGHT_EASE_IN_POWER`), el *último* tramo antes de aterrizar es
+   desproporcionadamente empinado/vertical comparado con la dirección
+   general del vuelo (que es sobre todo horizontal — el rango de `ox` es 2-3
+   veces el de `peak`). Entonces aunque se mezclara 50/50 con un ángulo fijo
+   más bajo, las flechas seguían leyendo más paradas de lo que realmente
+   volaron — "se ven como que cayeron desde arriba aunque la trayectoria no
+   fue así".
+3. **Actual: un ángulo de reposo casi fijo (~horizontal) + jitter, sin física
+   de por medio** — `BASE_REST_ANGLE_DEG = 0` (flecha acostada, apuntando a
+   la derecha) y `REST_ANGLE_JITTER_DEG = 14`. Ajustado contra una foto de
+   referencia que trajo el usuario (flechas reales clavadas en una diana):
+   todas quedan cerca de la horizontal y casi paralelas entre sí, con
+   variación menor y no sistemática — ni tangente al anillo, ni atada al arco
+   de vuelo de cada flecha individual. El rango del jitter salió de medir los
+   ángulos de esas flechas en la foto (~-14° a +12° respecto a la
+   horizontal).
 
 Estos keyframes se pasan a `el.animate(keyframes, { duration, delay, easing:
 "linear", fill: "forwards" })` — `linear` porque el ritmo ya está en la
@@ -397,6 +433,28 @@ contador = ease-out.
    dibujada ~20% más grande (24×88px → 29×106px — verificado que sigue sin
    pisar el borde de la diana en ambos modos a `dianaVisualCap`). Detalle
    técnico completo en §4.
+7. **Fix: ángulo de reposo, de tangente al anillo a casi-fijo/horizontal**
+   (2026-07-26) → con el fix anterior, el *vuelo* ya venía consistentemente
+   del mismo lado, pero el *ángulo final* (`restRotation`, tangente al punto
+   de aterrizaje) seguía sin relación con eso — variaba mucho según dónde
+   caía cada flecha en el anillo (casi horizontal arriba/abajo, casi vertical
+   a los costados). Reporte del usuario, con captura: "el punto de caída está
+   bien, pero la dirección de donde viene es rara, parece que salió desde
+   abajo […] deberían lucir que todas vienen de la izquierda, más o menos de
+   la misma dirección". Pasó por dos vueltas antes de resolverse: primero una
+   mezcla 50/50 entre el ángulo real de llegada de cada flecha y un ángulo
+   fijo de referencia (49°) — visualmente mejor, pero el usuario notó que
+   seguían leyendo "como caídas desde arriba" pese a que el vuelo real era
+   sobre todo horizontal (el ángulo "real" resultó ser una mala señal — ver
+   §4). Se resolvió con una foto de referencia (flechas reales clavadas en
+   una diana, casi horizontales y casi paralelas) que el usuario aportó
+   directamente: ángulo de reposo casi fijo (`BASE_REST_ANGLE_DEG = 0`) con
+   jitter ±14° (`REST_ANGLE_JITTER_DEG`), sin ninguna relación con la física
+   del vuelo ni con el anillo — ver §4 "`restRotation` … pasó por tres
+   diseños" para el detalle completo y el razonamiento de por qué las dos
+   vueltas anteriores fallaban (documentado también como comentario largo en
+   `ArrowToTarget.tsx`, a pedido explícito del usuario, para no repetir el
+   mismo camino la próxima vez que se toque este código).
 
 **Valores por defecto (tuneables, no bloquean):**
 
