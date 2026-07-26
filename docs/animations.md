@@ -384,6 +384,32 @@ la animación ya agendada para esos mismos ids.
 código (ángulo de reposo y altura del arco pasaron por varias iteraciones
 rechazadas — ver el comentario ahí, resumido también en §6 más abajo).
 
+**Layout:** la escena vive a la izquierda (columna fija, `w-72`) y todos los
+controles a la derecha (`count`/modo/Replay arriba, el panel de playground
+debajo) — `flex flex-col lg:flex-row` en `app/dev/animations/page.tsx`, así
+en pantallas angostas cae a una columna en vez de romperse.
+
+**Componentes:** el harness usa el design system (`components/ui/`) en vez
+de HTML plano — `Button`, `Input`, `Label`, `Select`, `Card`, `Separator`, y
+`Slider` (instalado vía `npx shadcn add slider` para esta tarea, no existía
+antes en el repo). El `Slider` generado envuelve `@base-ui/react/slider`;
+`onValueChange` para un slider de un solo valor entrega un `number` directo
+(no un evento) — por eso los handlers son `onValueChange={(v) => setTuning(t
+=> ({...t, [key]: v}))}`, distinto del `onChange={(e) =>
+...Number(e.target.value)}` que usa un `<input>` nativo.
+
+**Presets (guardar/cargar tuning):** además de `DEFAULT_ARROW_TUNING`, la
+página guarda combinaciones de `ArrowTuning` con nombre en
+`localStorage` (`cbuilder:dev-animations:arrow-tuning-presets`) — puramente
+client-side, dev-only, nunca viaja a ningún backend. Flujo: nombrás el
+preset actual y "Guardar preset actual" lo agrega al objeto persistido;
+aparece en una lista con botones "Cargar" (pisa el `tuning` activo entero) y
+"Borrar". Sobrevive a un refresh de página (motivo de que exista: "Reset a
+valores por defecto" descarta el tuning en curso, así que sin esto cualquier
+combinación que gustara se perdía). El estado de `presets` arranca en `null`
+y se hidrata en un `useEffect` (mismo patrón SSR-safe que `sessionSeed` en
+`ArrowToTarget` — `localStorage` no existe en el server).
+
 ---
 
 ## 5. Motion tokens (valores de arranque, tuneables)
@@ -503,6 +529,20 @@ contador = ease-out.
    manejar todo, incluyendo todos los cambios que hemos hecho en este chat")
    para poder iterar visualmente sobre el feel sin volver a tocar código cada
    vez. Ver §4 "`ArrowTuning` — el prop de tuning y el playground".
+10. **Playground: layout dos columnas, componentes del DS, presets
+    guardables** (2026-07-26) → tres pedidos explícitos del usuario sobre el
+    playground de #9: (1) animación a la izquierda, controles a la derecha
+    (antes todo apilado verticalmente); (2) usar los componentes del design
+    system en vez de `<input>`/`<select>`/`<button>` planos — se instaló
+    `Slider` vía `npx shadcn add slider` (no existía en el repo) y se
+    migraron los demás controles a `Button`/`Input`/`Label`/`Select`/`Card`/
+    `Separator`; (3) poder **guardar** combinaciones de tuning con nombre,
+    no solo tener el default — "si bien me gusta lo de valores por defecto,
+    podemos hacer algo para almacenar animaciones que me gusten? porque al
+    hacer reset los pierdo". Se agregaron presets con nombre persistidos en
+    `localStorage` (guardar/cargar/borrar), sobreviven a un refresh de
+    página; "Reset a valores por defecto" sigue sin tocarlos. Detalle
+    completo en §4, mismo subtítulo que #9.
 
 **Valores por defecto (tuneables, no bloquean):**
 
