@@ -1,25 +1,13 @@
-import { COVER_LETTER_AI, COVER_LETTER_NONE, type CoverLetterBodies } from "@/core/coverLetter/types";
 import type { Channel } from "@/core/registry/types";
 import { languagesFor, type LanguageChoice } from "@/core/types";
 
-export { languagesFor, COVER_LETTER_AI, COVER_LETTER_NONE };
+export { languagesFor };
 
 /** Sentinel select value meaning "omitir" (no channel). */
 export const CHANNEL_OMIT = "__omit__";
 
 /** Sentinel select value meaning "sin foco" (default portfolio order). */
 export const FOCUS_NONE = "__none__";
-
-/**
- * A pre-screening question captured in the wizard. `savedId` is set once the
- * entry got persisted to the bank mid-wizard (the AI path saves immediately),
- * so finishing the wizard updates it instead of creating a duplicate.
- */
-export interface WizardScreeningQuestion {
-  question: string;
-  answer: string;
-  savedId?: string;
-}
 
 /** Mutable wizard state. Notes and status are not set here — they live in the table. */
 export interface WizardData {
@@ -40,14 +28,6 @@ export interface WizardData {
   jobContext: string;
   /** Portfolio focus profile id (from the spec) for the tracked links. "" = sin foco. */
   focus: string;
-  /** Selected cover letter template id. "" = sin cover letter. */
-  coverLetterTemplateId: string;
-  /** Per-language letter bodies: template resolved with the wizard fields, then hand-editable. */
-  coverLetterBodies: CoverLetterBodies;
-  /** True once the user touched a body — stops re-resolving over their edits. */
-  coverLetterEdited: boolean;
-  /** Pre-screening questions captured in the wizard's Preguntas step. */
-  screeningQuestions: WizardScreeningQuestion[];
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

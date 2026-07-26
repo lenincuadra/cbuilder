@@ -4,7 +4,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { COVER_LETTER_FILENAME } from "@/core/coverLetter/docx";
-import type { CoverLetterBodies } from "@/core/coverLetter/types";
 import {
   buildPendingRow,
   deferredGenerationFields,
@@ -171,13 +170,15 @@ export default function Home() {
 
   /**
    * Row this wizard session is bound to, creating the silent Borrador row
-   * (reserved code, cvPending) on first use. Shared mechanism behind anything
-   * mid-wizard that must persist immediately (AI cover-letter drafts, AI
-   * screening answers): a paid call always has a row to land on.
+   * (reserved code, cvPending) on first use — triggered by the confirm
+   * step's optional cover letter/preguntas actions. `code` is the code
+   * already reserved for the session's preview (the wizard's `previewCode`),
+   * so the row lands on the exact code already shown on screen.
    */
   async function ensureDraftRow(
     data: WizardData,
     activeRow: RegistryRow | null,
+    code?: string,
   ): Promise<RegistryRow> {
     if (activeRow) return activeRow;
     if (!spec) throw new Error("No se pudo leer el link-spec del portfolio.");
@@ -191,27 +192,12 @@ export default function Home() {
         email: data.email,
         jobUrl: data.jobUrl,
         jobContext: data.jobContext,
+        code,
       },
       { spec, existingCodes },
     );
     await add(row);
     return row;
-  }
-
-  /**
-   * Persist a cover letter AI draft (wizard step 4) immediately — a paid
-   * generation call is never lost to a closed wizard. First call this wizard
-   * session creates the Borrador row via ensureDraftRow; later calls just
-   * patch it. Returns the row so the wizard tracks it for the session.
-   */
-  async function handleSaveCoverLetterDraft(
-    data: WizardData,
-    activeRow: RegistryRow | null,
-    draft: { templateId: string; templateName?: string; bodies: CoverLetterBodies },
-  ): Promise<RegistryRow> {
-    const row = await ensureDraftRow(data, activeRow);
-    await update(row.code, { coverLetterDraft: draft });
-    return { ...row, coverLetterDraft: draft };
   }
 
   /**
@@ -407,7 +393,7 @@ export default function Home() {
             generating={generating}
             onGenerate={handleGenerate}
             onSavePending={handleSavePending}
-            onSaveDraft={handleSaveCoverLetterDraft}
+            onUpdate={handleUpdate}
             screening={screening}
             onEnsureRow={ensureDraftRow}
           />
@@ -428,7 +414,7 @@ export default function Home() {
         templates={coverLetters.templates}
         generating={generating}
         onGenerate={(input) => handleGenerate(input, pendingTarget ?? undefined)}
-        onSaveDraft={handleSaveCoverLetterDraft}
+        onUpdate={handleUpdate}
         screening={screening}
         onEnsureRow={ensureDraftRow}
       />

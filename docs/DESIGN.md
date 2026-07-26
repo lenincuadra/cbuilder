@@ -46,8 +46,9 @@ Antes de crear cualquier componente o comportamiento de UI:
   (`ui/useIsMobile.ts`, breakpoint 768px).
 - Referencia: `ui/detail/RowDetailDrawer.tsx` (takeovers `edit`/`screening-new`/
   `screening-suggest`/`cover-letter-generate`), `ui/wizard/Wizard.tsx` (body + nav en
-  footer) y `ui/ScreeningCard.tsx` / `ui/CoverLettersCard.tsx` / `ui/StableLinksCard.tsx` /
-  `ui/GeneralNotesCard.tsx`
+  footer; el paso Confirmar reusa esos mismos takeovers para sus acciones opcionales, ver
+  "Wizard" más abajo) y `ui/ScreeningCard.tsx` / `ui/CoverLettersCard.tsx` /
+  `ui/StableLinksCard.tsx` / `ui/GeneralNotesCard.tsx`
   (managers lista ↔ form).
 
 ## Contenido Markdown
@@ -147,16 +148,30 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
 - Mostrar el idioma con `languageLabel()` — "Ambos" se muestra como "EN · ES", no la palabra.
 
 ## Wizard
-- **6 pasos**: Empresa y fecha · Opcionales · Idioma y foco · Cover letter · Preguntas ·
-  Confirmar. **"Registrar sin CV"** vive en el footer de todos los pasos previos a
-  Confirmar (outline, junto a Siguiente/Generar CV).
+- **4 pasos**: Empresa y fecha · Opcionales · Idioma y foco · Confirmar. **"Registrar sin
+  CV"** vive en el footer de todos los pasos previos a Confirmar (outline, junto a
+  Siguiente/Generar CV).
 - **Nada bloquea salvo Empresa** (ver `decisions.md` → "Registro nunca bloqueante"): los
   requeridos condicionales avisan pero no frenan — un email inválido se omite con un
   toast, nunca se guarda roto. Todo lo opcional lleva un hint de que también puede
   completarse después desde el detalle.
 - **Todo campo que se rellena en el wizard se muestra en el review final** (`StepConfirm`).
-  Al agregar un input al wizard, agregarlo también al resumen del último paso (los opcionales
-  vacíos se omiten; las preguntas capturadas se resumen como conteo).
+  Al agregar un input al wizard, agregarlo también al resumen del último paso (los
+  opcionales vacíos se omiten).
+- **Confirmar (paso 4) suma, al final del resumen y la preview de carpeta, las mismas
+  secciones opcionales "Cover letter" y "Preguntas" del detalle post-generación**
+  (`ui/detail/CoverLetterSection.tsx` / `ScreeningSection.tsx`, mismo chrome de card que
+  el capture original) — no son pasos dedicados. Sin fila real todavía (nada se generó
+  ni se registró), muestran un teaser colapsado ("Sin cover letter todavía." / "Ninguna
+  pregunta registrada…" + botón); al tocar el botón se crea silenciosamente la fila
+  Borrador (`onEnsureRow`, reutilizando el código ya mostrado en la preview de carpeta —
+  nunca uno distinto) y recién ahí se abre el takeover real (`CoverLetterGenerateForm` /
+  `ScreeningNewForm` / `ScreeningSuggestForm`, los mismos que usa `RowDetailDrawer`),
+  reemplazando el body + footer del wizard igual que cualquier otro takeover. Si el wizard
+  se cierra sin generar el CV, esa fila Borrador queda en la tabla (caso ya soportado, ver
+  "Registro nunca bloqueante"). Consecuencia: la carta ya no se empaqueta en el mismo
+  .zip que el CV — siempre se entrega como archivo aparte (mismo camino post-hoc, sin
+  importar si se dispara desde Confirmar o después desde el detalle).
 
 ## Tabla del registro
 - Tabla plana, 7 columnas. Orden: `Código · Empresa · Rol · Canal · Fecha · Estado · Seguimiento`

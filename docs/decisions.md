@@ -10,6 +10,32 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Wizard: cover letter y preguntas dejan de ser pasos, pasan a acciones opcionales en Confirmar (2026-07-26)
+**Decisión**: se borran `StepCoverLetter.tsx` y `StepScreening.tsx` — el wizard pasa de 6
+a **4 pasos** (Empresa y fecha · Opcionales · Idioma y foco · Confirmar). El último paso
+(`StepConfirm.tsx`) suma, al final del resumen y la preview de carpeta, las mismas
+secciones `CoverLetterSection`/`ScreeningSection` que ya usaba `RowDetailDrawer` para el
+detalle post-generación — no una reimplementación liviana. Sin fila real todavía muestran
+un teaser colapsado; al tocar el botón, `onEnsureRow` crea en silencio la fila Borrador
+reutilizando el `previewCode` ya mostrado en pantalla (nunca un código distinto al de la
+carpeta que se va a generar) y recién ahí se abre el takeover real
+(`CoverLetterGenerateForm` / `ScreeningNewForm` / `ScreeningSuggestForm`), reemplazando
+body + footer del wizard igual que cualquier otro takeover de `RowDetailDrawer`.
+
+**Consecuencia (aceptada, no accidental)**: la carta deja de empaquetarse en el mismo
+`.zip` que el CV — siempre se entrega aparte, con "Generar y entregar" (mismo camino que
+ya tenía el flujo post-hoc para un CV ya enviado). También deja de tener draft
+intermedio: el texto generado con IA vive en el textarea hasta que se entrega, no se
+persiste solo. `PendingRowInput`/`buildPendingRow` (`core/generateCv.ts`) ganan un
+`code?` opcional para que la fila creada por `onEnsureRow` caiga siempre en el código ya
+reservado; `deferredGenerationFields` deja de pisar `row.coverLetter` con `undefined`
+cuando la generación del CV no trae carta propia (ahora nunca la trae).
+
+**Razón**: los dos pasos dedicados duplicaban UI que el detalle de la fila ya resolvía
+mejor (incluía "Vincular del banco" para preguntas, que el wizard nunca tuvo). Pedido
+explícito del usuario tras ver el detalle post-generación y notar que era "lo mismo"
+que los pasos 4/5 del wizard, pero más completo.
+
 ## Flechas clavadas: tamaño, radio y rotación están acoplados (2026-07-26)
 **Decisión**: se achica la flecha de 113×31px a 88×24px, se orienta
 **tangencialmente** al anillo (no en ángulo random) en vez de radial, y se

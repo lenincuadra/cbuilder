@@ -7,34 +7,36 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DrawerBody, DrawerFooter } from "@/components/ui/drawer";
 import { Progress } from "@/components/ui/progress";
-import {
-  AI_TEMPLATE_NAME,
-  resolveBodiesFor,
-  type CoverLetterBodies,
-  type CoverLetterTemplate,
-} from "@/core/coverLetter/types";
+import type { CoverLetterTemplate } from "@/core/coverLetter/types";
 import type { GenerateCvInput, PendingRowInput } from "@/core/generateCv";
-import { DEFAULT_ROLE, type RegistryRow } from "@/core/registry/types";
+import { DEFAULT_ROLE, type EditableFields, type RegistryRow } from "@/core/registry/types";
+import type { ScreeningQuestion } from "@/core/screening/types";
 import { generateCode } from "@/core/spec/code";
 import type { LinkSpec } from "@/core/spec/types";
+import { CoverLetterGenerateForm } from "@/ui/detail/CoverLetterGenerateForm";
+import { ScreeningNewForm } from "@/ui/detail/ScreeningNewForm";
+import { ScreeningSuggestForm } from "@/ui/detail/ScreeningSuggestForm";
 import type { UseScreening } from "@/ui/useScreening";
 import { StepCompany } from "./StepCompany";
 import { StepConfirm } from "./StepConfirm";
-import { StepCoverLetter } from "./StepCoverLetter";
 import { StepLanguage } from "./StepLanguage";
 import { StepOptional } from "./StepOptional";
-import { StepScreening } from "./StepScreening";
-import { COVER_LETTER_AI, emailRequirementMet, languagesFor, type WizardData } from "./types";
+import { emailRequirementMet, type WizardData } from "./types";
 
-const TOTAL_STEPS = 6;
-const STEP_TITLES = [
-  "Empresa y fecha",
-  "Opcionales",
-  "Idioma y foco",
-  "Cover letter",
-  "Preguntas",
-  "Confirmar",
-];
+const TOTAL_STEPS = 4;
+/**
+ * What occupies the confirm step's slot: the summary + optional actions, or
+ * one of their takeover forms (each brings its own DrawerBody + pinned
+ * footer, same "full takeover" shape as the row detail drawer's — see
+ * `RowDetailDrawer`'s `DetailMode`).
+ */
+type ConfirmMode =
+  | { kind: "view" }
+  | { kind: "cover-letter-generate" }
+  | { kind: "screening-new" }
+  | { kind: "screening-edit"; entry: ScreeningQuestion }
+  | { kind: "screening-suggest"; entry: ScreeningQuestion };
+const STEP_TITLES = ["Empresa y fecha", "Opcionales", "Idioma y foco", "Confirmar"];
 
 /**
  * Fresh wizard state. With a pending row (deferred generation), steps 1–2 come
@@ -43,7 +45,6 @@ const STEP_TITLES = [
  * process-start date untouched.
  */
 function initialData(pendingRow?: RegistryRow): WizardData {
-  const draft = pendingRow?.coverLetterDraft;
   return {
     company: pendingRow?.company ?? "",
     language: "EN",
@@ -55,12 +56,6 @@ function initialData(pendingRow?: RegistryRow): WizardData {
     jobUrl: pendingRow?.jobUrl ?? "",
     jobContext: pendingRow?.jobContext ?? "",
     focus: "",
-    coverLetterTemplateId: draft?.templateId ?? "",
-    coverLetterBodies: draft?.bodies ?? {},
-    // true when resuming a saved draft: keeps goNext's step 3→4 transition
-    // from overwriting it with a freshly-resolved (unedited) template body.
-    coverLetterEdited: draft !== undefined,
-    screeningQuestions: [],
   };
 }
 
@@ -69,48 +64,44 @@ export interface WizardProps {
   spec: LinkSpec | null;
   /** Codes already in the registry, for collision-checked preview. */
   existingCodes: string[];
-  /** Cover letter templates for the optional letter step. */
+  /** Cover letter templates for the confirm step's optional "Generar cover letter" takeover. */
   templates: CoverLetterTemplate[];
   /** True while a generation is in flight. */
   generating: boolean;
   /**
    * Runs the generation; rejects on error (the caller surfaces the message).
    * The second argument is the row this session ended up bound to (either the
-   * original `pendingRow` prop, or one silently created mid-session by an AI
-   * cover-letter draft) — present means "update this row", absent "add new".
+   * original `pendingRow` prop, or one silently created mid-session by an
+   * optional cover letter/preguntas action) — present means "update this
+   * row", absent "add new".
    */
   onGenerate: (input: GenerateCvInput, activeRow?: RegistryRow) => Promise<void>;
   /**
    * Registers the process without generating a CV. When provided, every step
    * before Confirmar offers a "Registrar sin CV" exit (Empresa is the only
-   * requirement). With `activeRow` (a Borrador silently created mid-session by
-   * an AI draft) it must update that row instead of adding a second one.
-   * Returns the registered row (the wizard links captured questions to its
-   * code). Rejects on error.
+   * requirement). With `activeRow` (a Borrador silently created mid-session)
+   * it must update that row instead of adding a second one. Returns the
+   * registered row. Rejects on error.
    */
   onSavePending?: (input: PendingRowInput, activeRow?: RegistryRow) => Promise<RegistryRow>;
   /**
-   * Persists the cover letter step's AI draft the moment it's generated — a
-   * paid API call is never lost to a closed wizard. Creates a Borrador row
-   * (reserved code, `cvPending: true`) if this session doesn't have one yet,
-   * or patches the existing one. Returns the row so the wizard can track it.
+   * Persists row field edits — needed by the confirm step's optional cover
+   * letter/preguntas takeovers once a row exists (same shape the detail
+   * drawer already uses).
    */
-  onSaveDraft?: (
-    data: WizardData,
-    activeRow: RegistryRow | null,
-    draft: { templateId: string; templateName?: string; bodies: CoverLetterBodies },
-  ) => Promise<RegistryRow>;
+  onUpdate: (code: string, fields: EditableFields) => void | Promise<void>;
   /**
-   * Shared screening-questions bank — the Preguntas step creates captured
-   * questions there, pre-linked to this application's code.
+   * Shared screening-questions bank — the confirm step's Preguntas section
+   * reads/writes it, same as the row detail drawer.
    */
   screening?: UseScreening;
   /**
    * Returns the row this session is bound to, creating the silent Borrador
-   * row (reserved code) on first use — the Preguntas step needs it before an
-   * AI answer can persist. Same row-ensuring mechanism behind `onSaveDraft`.
+   * row (reserved code — `code` when given, otherwise a fresh one) on first
+   * use. The confirm step's optional cover letter/preguntas actions need it
+   * before either can attach to a real row.
    */
-  onEnsureRow?: (data: WizardData, activeRow: RegistryRow | null) => Promise<RegistryRow>;
+  onEnsureRow?: (data: WizardData, activeRow: RegistryRow | null, code?: string) => Promise<RegistryRow>;
   /**
    * Deferred generation for a pending row: steps 1–2 are skipped (their data
    * lives on the row, editable from the detail panel) and the confirm step
@@ -130,7 +121,7 @@ export function Wizard({
   generating,
   onGenerate,
   onSavePending,
-  onSaveDraft,
+  onUpdate,
   screening,
   onEnsureRow,
   pendingRow,
@@ -143,8 +134,9 @@ export function Wizard({
   const [previewCode, setPreviewCode] = useState<string | null>(null);
   const [savingPending, setSavingPending] = useState(false);
   // The row this session is bound to — the `pendingRow` prop, or one silently
-  // created mid-session by an AI cover-letter draft (see StepCoverLetter).
+  // created mid-session by an optional cover letter/preguntas action (see StepConfirm).
   const [activeRow, setActiveRow] = useState<RegistryRow | null>(pendingRow ?? null);
+  const [confirmMode, setConfirmMode] = useState<ConfirmMode>({ kind: "view" });
 
   const set = (patch: Partial<WizardData>) => setData((current) => ({ ...current, ...patch }));
 
@@ -167,22 +159,6 @@ export function Wizard({
   }
 
   function goNext() {
-    if (step === 3) {
-      // Entering the letter step: refresh the resolved bodies so earlier field
-      // changes (empresa/rol/quién/idioma) are reflected. Hand-edited texts win;
-      // resolution still fills languages added after the edit (EN → Ambos).
-      const template = templates.find((candidate) => candidate.id === data.coverLetterTemplateId);
-      if (template) {
-        const resolved = resolveBodiesFor(template, data);
-        set({
-          coverLetterBodies: data.coverLetterEdited
-            ? { ...resolved, ...data.coverLetterBodies }
-            : resolved,
-        });
-      }
-      setStep(4);
-      return;
-    }
     if (step < TOTAL_STEPS - 1) {
       setStep(step + 1);
       return;
@@ -193,7 +169,7 @@ export function Wizard({
     }
     // Entering the confirm step: lock in a collision-checked code for the
     // preview — or the code already reserved (pendingRow, or a Borrador
-    // silently created by an AI draft earlier in this same session).
+    // silently created earlier in this same session).
     try {
       const code = activeRow?.code ?? generateCode({ spec, date: data.date, existingCodes });
       setPreviewCode(code);
@@ -204,62 +180,15 @@ export function Wizard({
   }
 
   function goBack() {
+    setConfirmMode({ kind: "view" });
     setStep((current) => Math.max(startStep, current - 1));
-  }
-
-  /**
-   * Final letter bodies for the chosen languages, only non-empty texts. With
-   * no template/AI mode or all-empty bodies, there is no letter.
-   */
-  function finalLetterBodies(): CoverLetterBodies {
-    const template = templates.find((candidate) => candidate.id === data.coverLetterTemplateId);
-    const isAiMode = data.coverLetterTemplateId === COVER_LETTER_AI;
-    const bodies: CoverLetterBodies = {};
-    if (template || isAiMode) {
-      for (const language of languagesFor(data.language)) {
-        const body = data.coverLetterBodies[language]?.trim();
-        if (body) bodies[language] = body;
-      }
-    }
-    return bodies;
-  }
-
-  /**
-   * Create/update the bank entries for the questions captured in the
-   * Preguntas step, linked to the application's final code. Entries the AI
-   * path already persisted (savedId) get their later hand-edits synced instead
-   * of duplicating. Failures warn without undoing the main success.
-   */
-  async function persistQuestions(code: string) {
-    if (!screening) return;
-    for (const entry of data.screeningQuestions) {
-      const question = entry.question.trim();
-      if (question === "") continue;
-      try {
-        if (entry.savedId) {
-          // Don't touch `draft`: the AI flag stays until a deliberate review.
-          await screening.update(entry.savedId, { question, answer: entry.answer.trim() });
-        } else {
-          await screening.add({ question, answer: entry.answer.trim(), codes: [code] });
-        }
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "No se pudo guardar una pregunta capturada.",
-        );
-      }
-    }
   }
 
   async function handleSavePending() {
     if (!onSavePending) return;
     setSavingPending(true);
     try {
-      // A letter typed (or AI-drafted) mid-wizard travels as the row's draft —
-      // nothing is lost; the deferred generation preloads it later.
-      const draftBodies = finalLetterBodies();
-      const template = templates.find((candidate) => candidate.id === data.coverLetterTemplateId);
-      const isAiMode = data.coverLetterTemplateId === COVER_LETTER_AI;
-      const row = await onSavePending(
+      await onSavePending(
         {
           company: data.company,
           date: data.date,
@@ -269,21 +198,13 @@ export function Wizard({
           email: sanitizedEmail(),
           jobUrl: data.jobUrl,
           jobContext: data.jobContext,
-          coverLetterDraft:
-            Object.keys(draftBodies).length > 0
-              ? {
-                  templateId: data.coverLetterTemplateId,
-                  templateName: isAiMode ? AI_TEMPLATE_NAME : template?.name,
-                  bodies: draftBodies,
-                }
-              : undefined,
         },
         activeRow ?? undefined,
       );
-      await persistQuestions(row.code);
       // Success: reset for the next application.
       setData(initialData());
       setActiveRow(null);
+      setConfirmMode({ kind: "view" });
       setStep(1);
     } catch {
       // The page already surfaced the error; stay on the step.
@@ -293,57 +214,95 @@ export function Wizard({
   }
 
   /**
-   * Persist an AI-generated cover letter draft immediately (see StepCoverLetter):
-   * creates the Borrador row on the first call this session, patches it on
-   * later ones. Errors surface via toast in the caller — the generated text
-   * still shows in the textarea either way.
+   * Row this session is bound to, creating the silent Borrador row on first
+   * use — same mechanism `onSavePending`/`pendingRow` rely on, triggered here
+   * by the confirm step's optional cover letter/preguntas actions instead.
+   * Reuses `previewCode` (already shown in the folder preview) so the row's
+   * code always matches what's on screen.
    */
-  async function persistDraft(draft: {
-    templateId: string;
-    templateName?: string;
-    bodies: CoverLetterBodies;
-  }) {
-    if (!onSaveDraft) return;
-    const row = await onSaveDraft(data, activeRow, draft);
+  async function ensureRow(): Promise<RegistryRow> {
+    if (activeRow) return activeRow;
+    if (!onEnsureRow) throw new Error("No se pudo crear el registro.");
+    const row = await onEnsureRow(data, activeRow, previewCode ?? undefined);
     setActiveRow(row);
+    return row;
   }
 
   async function handleGenerate() {
     if (previewCode === null) return;
-    const template = templates.find((candidate) => candidate.id === data.coverLetterTemplateId);
-    const isAiMode = data.coverLetterTemplateId === COVER_LETTER_AI;
-    const letterBodies = finalLetterBodies();
     try {
-      await onGenerate({
-        company: data.company,
-        languageChoice: data.language,
-        date: data.date,
-        role: data.role,
-        who: data.who,
-        channel: data.channel === "" ? undefined : data.channel,
-        email: sanitizedEmail(),
-        jobUrl: data.jobUrl,
-        jobContext: data.jobContext,
-        focus: data.focus === "" ? undefined : data.focus,
-        coverLetter:
-          (template || isAiMode) && Object.keys(letterBodies).length > 0
-            ? {
-                templateId: isAiMode ? COVER_LETTER_AI : template!.id,
-                templateName: isAiMode ? AI_TEMPLATE_NAME : template!.name,
-                bodies: letterBodies,
-              }
-            : undefined,
-        code: previewCode,
-      }, activeRow ?? undefined);
-      await persistQuestions(previewCode);
+      await onGenerate(
+        {
+          company: data.company,
+          languageChoice: data.language,
+          date: data.date,
+          role: data.role,
+          who: data.who,
+          channel: data.channel === "" ? undefined : data.channel,
+          email: sanitizedEmail(),
+          jobUrl: data.jobUrl,
+          jobContext: data.jobContext,
+          focus: data.focus === "" ? undefined : data.focus,
+          code: previewCode,
+        },
+        activeRow ?? undefined,
+      );
       // Success: reset for the next application.
       setData(initialData(pendingRow));
       setPreviewCode(null);
       setActiveRow(pendingRow ?? null);
+      setConfirmMode({ kind: "view" });
       setStep(startStep);
     } catch {
       // The page already surfaced the error; stay on the confirm step.
     }
+  }
+
+  // Confirm step's optional cover letter/preguntas actions take over the
+  // whole slot (own DrawerBody + pinned footer, same shape as every other
+  // form takeover in the app) — the wizard's own body/nav step aside for it,
+  // exactly like RowDetailDrawer does for its own takeovers.
+  if (step === TOTAL_STEPS && confirmMode.kind === "cover-letter-generate" && activeRow) {
+    return (
+      <CoverLetterGenerateForm
+        row={activeRow}
+        templates={templates}
+        onUpdate={onUpdate}
+        container={container}
+        onDone={() => setConfirmMode({ kind: "view" })}
+      />
+    );
+  }
+  if (
+    step === TOTAL_STEPS &&
+    activeRow &&
+    screening &&
+    (confirmMode.kind === "screening-new" ||
+      confirmMode.kind === "screening-edit" ||
+      confirmMode.kind === "screening-suggest")
+  ) {
+    const jobFields = {
+      company: activeRow.company,
+      role: activeRow.role,
+      focus: activeRow.focus,
+      jobUrl: activeRow.jobUrl,
+      jobContext: activeRow.jobContext,
+      onUpdateJobFields: (fields: { jobUrl?: string; jobContext?: string }) =>
+        onUpdate(activeRow.code, fields),
+      screening,
+      container,
+      onDone: () => setConfirmMode({ kind: "view" }),
+    };
+    if (confirmMode.kind === "screening-suggest") {
+      return <ScreeningSuggestForm entry={confirmMode.entry} {...jobFields} />;
+    }
+    return (
+      <ScreeningNewForm
+        code={activeRow.code}
+        entry={confirmMode.kind === "screening-edit" ? confirmMode.entry : undefined}
+        {...jobFields}
+      />
+    );
   }
 
   // The wizard always runs inside a drawer, so it renders the drawer slots
@@ -365,42 +324,19 @@ export function Wizard({
           {step === 1 && <StepCompany data={data} set={set} container={container} />}
           {step === 2 && <StepOptional data={data} set={set} container={container} />}
           {step === 3 && <StepLanguage data={data} set={set} container={container} spec={spec} />}
-          {step === 4 && (
-            <StepCoverLetter
-              data={data}
-              set={set}
-              container={container}
-              templates={templates}
-              onSaveDraft={onSaveDraft ? persistDraft : undefined}
-            />
-          )}
-          {step === 5 && (
-            <StepScreening
-              data={data}
-              set={set}
-              container={container}
-              screening={screening}
-              onEnsureRow={
-                onEnsureRow
-                  ? async () => {
-                      const row = await onEnsureRow(data, activeRow);
-                      setActiveRow(row);
-                      return row;
-                    }
-                  : undefined
-              }
-            />
-          )}
-          {step === 6 && previewCode && (
+          {step === 4 && previewCode && (
             <StepConfirm
               data={data}
               previewCode={previewCode}
               spec={spec}
-              coverLetterName={
-                data.coverLetterTemplateId === COVER_LETTER_AI
-                  ? AI_TEMPLATE_NAME
-                  : templates.find((candidate) => candidate.id === data.coverLetterTemplateId)?.name
-              }
+              activeRow={activeRow}
+              onEnsureRow={onEnsureRow ? ensureRow : undefined}
+              onStartCoverLetterGenerate={() => setConfirmMode({ kind: "cover-letter-generate" })}
+              onStartScreeningNew={() => setConfirmMode({ kind: "screening-new" })}
+              onEditScreening={(entry) => setConfirmMode({ kind: "screening-edit", entry })}
+              onSuggestScreening={(entry) => setConfirmMode({ kind: "screening-suggest", entry })}
+              screening={screening}
+              container={container}
             />
           )}
         </div>
