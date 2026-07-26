@@ -582,6 +582,205 @@ reduzcamos el tamaño total de la animación a un 80% y hasta 50% máximo
 chica, dentro del mismo scroll horizontal que ya tenía la tabla en esos
 anchos (comportamiento previo de la tabla, no algo nuevo de este cambio).
 
+### Ronda 10 — El reveal no necesitaba scroll, y lo estaba forzando
+
+Chequeo rápido de responsive sobre la ronda 9: en mobile, mientras se
+mostraba el reveal (diana quieta o animando), aparecía scroll horizontal en
+la tabla — pero el reveal es una sola celda con una sola animación centrada,
+nada que justifique scrollear para verla completa. El pedido del usuario fue
+puntual: *"tiene que estar siempre centrado al viewport del contenedor, es
+scroleable la tabla y eso está bien, pero al momento de cargar el scroll es
+completamente innecesario porque lo único que contiene es la animación."*
+
+La causa: `RegistryTable` fuerza `min-w-[720px]` por debajo de 640px para
+que las columnas reales (Código, Foco, Empresa, Rol...) no se aplasten en
+pantallas angostas. Ese mínimo se aplicaba también durante el reveal, que no
+tiene columnas — nada que aplastar, pero el ancho mínimo empujaba igual la
+diana fuera del centro del viewport visible, exigiendo scrollear para verla
+completa. El header de columnas (`<TableHeader>`) también se seguía
+renderizando durante el reveal, y sin el `min-width` sus labels con
+`whitespace-nowrap` se apretujaban entre sí, ilegibles.
+
+Fix: tanto el `min-width` como el `<TableHeader>` pasan a condicionales
+sobre el mismo booleano `showingReveal` que ya decidía qué mostrar en el
+body de la tabla — sin `min-width` y sin header mientras se muestra el
+reveal, ambos vuelven en cuanto hay filas reales que mostrar.
+
+Un detalle de la verificación, no del fix en sí: el primer intento de medir
+"¿hay scroll?" con Playwright dio un falso negativo — la query apuntaba a
+`.overflow-x-auto`, que en el DOM matcheaba el div **externo** (el que
+`RegistryTable.tsx` envuelve alrededor de `<Table>`, que resultó ser
+redundante e inerte) en vez del contenedor **interno** que el propio
+componente `Table` de shadcn ya arma (`[data-slot="table-container"]`, con
+su propio `overflow-x-auto`) y que es el que efectivamente scrollea. Se
+descubrió leyendo `components/ui/table.tsx` directamente en vez de seguir
+adivinando. Corregida la query, la verificación confirmó lo esperado: sin
+scroll durante carga/reveal a 375px, scroll de vuelta apenas renderizan
+filas reales.
+
+### Ronda 11 — Las flechas se pintan del color que tocaron
+
+Con la escena data-driven ya asentada en la tabla real, el siguiente pedido
+fue sobre lo que comunica visualmente el color de cada flecha. Punto de
+partida: una captura de la leyenda de colores del embudo (sent blanco,
+responded gris oscuro, interview azul, offer rojo, referral dorado) y el
+pedido en cadena:
+
+> ahora. podemos hacer la flecha base gris claro? y cuando toquen la
+> superficie se pinten del color que tocaron? debería seguir esa misma
+> lógica de colores. habría que definir exactamente como pintarse cada
+> flecha, si bien el color base es el de la leyenda, tiene tonos y luces y
+> el borde de la flecha, elige la más apropiada para cada color y luego
+> vamos verificando color por color.
+>
+> la lógica de todo esto es que al ver todas las flechas en la diana los
+> colores de las flechas comuniquen tu proceso visualmente
+
+Hasta este punto toda flecha usaba el mismo naranja/marrón decorativo
+(`Arrow.tsx`), heredado del asset original de Quiver, sin relación alguna
+con dónde caía — el color no comunicaba nada del funnel, solo el `ringIndex`
+de posición ya lo hacía (indirectamente, vía qué tan cerca del centro
+aterrizaba).
+
+Implementación en tres piezas:
+
+1. **`Arrow.tsx` gana un prop `palette`** (fill / fillLight / fillDark /
+   shaftFill / line — un color por cada parte pintada del dibujo: plumas,
+   punta con sus dos facetas, asta, y el borde compartido), con default =
+   los mismos 5 valores hex que ya tenía hardcodeados. El uso decorativo en
+   `HammerAnvil` no pasa `palette`, así que queda pixel-idéntico a como
+   estaba.
+2. **Dos familias de paleta en `ArrowToTarget.tsx`**: `UNPAINTED_ARROW_PALETTE`
+   (un gris claro único, para toda flecha en vuelo, sin importar destino) y
+   `RING_ARROW_PALETTES` (5 paletas, una por anillo, `fill` calcado del
+   propio anillo pintado en `Diana.tsx`). Los tonos de luz/sombra/asta/borde
+   de cada paleta de anillo se eligieron a mano, no con una fórmula de
+   aclarar/oscurecer aplicada parejo — probado que un tinte plano se veía
+   sucio en algunos colores (el blanco necesitaba un off-white para que la
+   faceta de brillo siguiera siendo visible contra él; el anillo casi negro
+   necesitaba mucho más levante en `fillLight` o esa faceta directamente
+   desaparecía).
+3. **`ringIndex` por flecha, para los dos modos.** En `mode="funnel"` ya
+   existía la banda (el `funnelRank` clampeado); en `mode="random"` no había
+   ese dato, así que se agregó `ringIndexForRadius`, que ubica el radio de
+   aterrizaje contra las mismas `RING_BANDS` que ya definían las bandas de
+   funnel — el anillo físico dibujado es el mismo objeto en ambos modos, así
+   que "el color que tocó" también aplica en modo random sin necesitar datos
+   de funnel detrás.
+
+El disparo del color usa el resultado de `anim.finished` (la promesa nativa
+de Web Animations API que resuelve cuando termina esa animación puntual) —
+no el conteo agregado que ya se usaba para el contador de texto — así cada
+flecha cambia de color exactamente cuando *ella* aterriza, no cuando aterriza
+la última del grupo. El cambio de color no es un salto: las paths llevan
+`transition-colors` (300ms) para que se lea como "se moja" del color del
+anillo en vez de teletransportarse a él.
+
+Verificado visualmente en `/dev/animations`, en ambos modos y con
+`prefers-reduced-motion` activado (que salta directo al color de aterrizaje,
+sin fase gris intermedia, porque tampoco hay vuelo que mostrar): las flechas
+en vuelo se ven todas del mismo gris, y al aterrizar cada una toma el color
+de su anillo — de un vistazo a la diana llena se puede leer la distribución
+del embudo por color, sin necesitar la leyenda de texto al lado. Primer
+pase, no cerrado: el propio pedido preveía revisar "color por color" contra
+el arte real en una vuelta futura.
+
+### Ronda 12 — Esa misma vuelta futura: pintado en grupo y el ancla por la punta
+
+Llegó rápido, con dos capturas del resultado real de la ronda 11 (una en modo
+random, otra en funnel con la leyenda de distribución al lado) y un pedido en
+cadena:
+
+> cambiemos esta logica: " pick up color the instant they land" esperemos
+> que todas aterricen y luego que cambien al color correspondiente, y
+> dejamos unos milisegundos para analizar la interacción después de eso.
+>
+> Ademas, creo que no cambian al color correcto del que aterrizan (o
+> aterrizan en el color incorrecto(?)
+
+**La primera parte era un cambio de timing puro, directo de implementar.**
+El disparo por-flecha (`anim.finished` de la propia animación de esa flecha)
+se reemplazó por un único `setTimeout`, keyeado a `totalFlightDuration` (el
+mismo máximo de `delay+flightMs` que ya alimentaba el contador de texto) más
+una pausa fija nueva, `PAINT_REVEAL_PAUSE_MS = 450`. Cuando el timer dispara,
+un solo `setState` agrega **todos** los ids del grupo actual al set de
+"pintadas" de una vez — no uno por uno. Para que una segunda tanda (`count`
+creciendo en vivo sobre el mismo montaje, el mecanismo ya establecido en la
+ronda 9) tuviera su propio ciclo aterrizar→pausa→pintar sin re-grisar lo que
+una tanda anterior ya había pintado, el `setState` es puramente aditivo
+(nunca saca ids) y el efecto se re-arma en cada cambio de `shots`.
+
+**La segunda parte — "¿el color es incorrecto?" — pedía investigar antes de
+tocar código.** Se armó un script de Playwright que, en vez de mirar
+screenshots, leía directamente del DOM: la posición (%) de cada flecha
+(desde el `style` inline del wrapper) y el color realmente pintado (el
+atributo `fill` del primer `<path>`), calculaba a qué anillo *debería*
+corresponder ese radio, y comparaba contra el color real. Resultado sobre 40
+flechas: **0 desajustes**. El mapeo color↔anillo siempre fue exacto — el
+bug no estaba ahí.
+
+Lo que sí estaba pasando: con el ancla de cada flecha en el **centro** de su
+propio dibujo (`translate(-50%, -50%)`, sin cambios desde el diseño
+original), una flecha de ~106px (tamaño de producción, 120%) es larga en
+relación al ancho de cada banda de anillo — la mitad de su largo podía
+sobresalir hacia anillos vecinos aunque el punto de anclaje (y por lo tanto
+el color asignado) cayera exactamente donde debía. Confirmado bajando el
+tamaño a 50% en el playground: al mismo mapeo de color, con flechas más
+chicas cada una se leía limpiamente dentro de su propio anillo — no era un
+bug de lógica, era un efecto visual del tamaño de la flecha relativo al
+ancho de las bandas.
+
+Con ese diagnóstico en mano (no un bug, sino un problema de legibilidad por
+tamaño/forma), se plantearon cuatro caminos y se le pidió al usuario elegir:
+achicar la flecha solo en modo funnel, achicar el tamaño global (revisitando
+una decisión ya tomada en otra ronda), anclar por la punta en vez del
+centro, o dejarlo así (la nube de color agregada ya comunica la forma del
+embudo aunque una flecha individual no sea perfectamente legible). El
+usuario eligió **anclar por la punta**.
+
+**La implementación del ancla por la punta resultó tener su propia
+complicación no anticipada.** La primera aproximación — usar la fracción
+cruda del `viewBox` para la punta (150.1/160 ≈ 93.8%) — no coincidía con
+dónde realmente aparecía la punta en pantalla. La causa: el `viewBox` del
+asset (160×56) no comparte relación de aspecto con la caja de 88×24 donde se
+renderiza, así que el `preserveAspectRatio` por defecto del navegador
+(`xMidYMid meet`) ajusta por la dimensión limitante (la altura) y deja
+margen vacío en el ancho, en vez de estirar el dibujo para llenar la caja.
+Medido empíricamente (un shot forzado a rotación cero, para eliminar el
+efecto de que el *bounding box* de un elemento rotado es más grande que el
+elemento mismo, más `SVGPoint.matrixTransform` contra `svg.getScreenCTM()`
+para leer la posición real en pantalla de la punta): la fracción real es
+≈84.2% del ancho de la caja, no 93.8%. La constante final
+(`ARROW_TIP_X_PCT`/`ARROW_TIP_Y_PCT`, `ArrowToTarget.tsx`) se calcula con
+esa lógica de ajuste, no con el número crudo del `viewBox`.
+
+**El ancla por la punta trajo, a su vez, una regresión que hubo que
+revertir.** Con casi el 84% del largo de la flecha ahora sobresaliendo
+*detrás* de la punta (contra ~50% antes, repartido a ambos lados del
+centro), varias flechas empezaron a asomar la cola por fuera del borde
+blanco de la diana — incluso al tamaño de producción (120%), que antes
+nunca había tenido ese problema. El primer instinto fue extender
+`oversizeRadiusGuard` (el mecanismo ya existente para el caso de
+`arrowScalePct` extremo) con un baseline más chico para compensar. Probado
+en varios valores (70, 35, 20): a medida que se achicaba el radio de
+aterrizaje para esconder la cola, la **punta** — la parte que de verdad
+determina el color — se corría hacia anillos más centrales que el que
+realmente le correspondía. Es decir, el fix para el problema cosmético
+(cola sobresaliendo) reintroducía el problema real (punta en el anillo
+equivocado) que toda esta ronda existía para resolver. Se revirtió
+`oversizeRadiusGuard` a su fórmula original (baseline 120%, sin achicar en
+producción) y se aceptó el asomo de cola como un costo conocido de esta
+opción — un asta sobresaliendo un poco del borde de la diana se lee como una
+flecha real clavada cerca del borde, no como algo roto.
+
+Un detalle operativo de esta ronda, sin relación con el código en sí: a
+mitad del trabajo, el directorio de trabajo cambió de rama por fuera de la
+sesión (el usuario mergeó el PR de esta misma feature y se movió a otra
+rama para otra tarea), lo que hizo que los cambios sin commitear quedaran
+en un `git stash` automático. Se le avisó al usuario en vez de asumir y
+cambiar de rama por su cuenta; una vez confirmado, se retomó desde el stash
+sin perder nada.
+
 ---
 
 ## Notas sueltas que no encajan en la cronología pero valen la pena dejar anotadas

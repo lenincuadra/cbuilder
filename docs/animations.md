@@ -185,6 +185,84 @@ Quedan disponibles, sin implementar todavía:
 El mismo componente sirve para los tres casos porque el contrato (§1) ya lo
 contempla — cambia solo **quién la dispara** y con qué `count`/`funnelRanks`.
 
+### Color por anillo — "se pintan del color que tocaron" (implementado)
+
+Cada flecha nace **gris claro** (paleta `UNPAINTED_ARROW_PALETTE`,
+`ArrowToTarget.tsx`) — el mismo gris para todas, sin importar a qué anillo
+apunta, así el color todavía no revela nada mientras está en vuelo. Se
+"pinta" del color del anillo que tocó —`RING_ARROW_PALETTES[shot.ringIndex]`,
+un array de 5 paletas en el mismo orden que `RING_BANDS`/`MILESTONE_KEYS`. El
+swap de color usa una transición CSS corta (`transition-colors`, 300ms) en
+vez de un salto abrupto — se lee como que el impacto "moja" a la flecha del
+color del anillo.
+
+**Todas juntas, no una por una.** El pintado no se dispara por flecha
+apenas aterriza (`anim.finished` de su propio `el.animate(...)`) — eso hacía
+que el grupo se fuera pintando disparejo mientras el resto seguía en vuelo.
+En cambio, un único efecto espera a que **la última** flecha del grupo
+aterrice (`totalFlightDuration`, el máximo de `delay+flightMs` sobre todos
+los shots — ya se calculaba para el contador de texto) y recién ahí, tras
+una pausa fija (`PAINT_REVEAL_PAUSE_MS`, 450ms — el tiempo para "mirar" el
+impacto todavía gris antes de que se resuelva en color), pinta **todas** de
+una sola vez con un solo `setState`. Un shot nuevo agregado en vivo (`count`
+creciendo sobre el mismo montaje) dispara su propio ciclo aterrizar→pausa→
+pintar sin re-pintar (ni re-grisar) los que una tanda anterior ya pintó — el
+`setState` funcional del efecto solo agrega ids, nunca los saca.
+
+`shot.ringIndex` se calcula en `landingSpot` para **ambos** modos, no solo
+funnel: en `mode="funnel"` es directamente el `funnelRank` clampeado (ya se
+usaba para elegir la banda de radio); en `mode="random"` no hay rank, así
+que se deriva del radio de aterrizaje contra los mismos `RING_BANDS`
+(`ringIndexForRadius`) — el anillo físico es el mismo objeto dibujado en
+ambos modos, así que "el color que tocó" aplica igual de bien sin depender
+de si hay datos de funnel detrás.
+
+**Paletas por anillo** — cada `fill` matiza exacto con el propio anillo
+pintado en `assets/Diana.tsx` (blanco / `#333335` / `#30ABE2` / `#DF3C38` /
+`#DAA737`), así una flecha "pertenece" visualmente al anillo donde quedó. Los
+otros campos (`fillLight`/`fillDark`/facetas del asta y del borde) están
+elegidos a mano por color, no derivados con una fórmula de aclarar/oscurecer
+genérica — un tinte plano se veía sucio en algunos tonos (el anillo blanco
+necesitaba un off-white contra el que la faceta de brillo siguiera
+distinguiéndose; el anillo casi negro necesitaba bastante más luz en
+`fillLight` o esa faceta desaparecía). Primer pase, no definitivo — a
+verificar color por color contra el arte real antes de asumir que quedó
+bien.
+
+El componente `Arrow` (`assets/Arrow.tsx`) pasó de colores hardcodeados a un
+prop `palette?: ArrowPalette` (fill/fillLight/fillDark/shaftFill/line), con
+default = exactamente los mismos valores que tenía antes
+(`DEFAULT_ARROW_PALETTE`) — así el uso decorativo en `HammerAnvil` (que no
+pasa `palette`) queda visualmente idéntico, sin tocarlo.
+
+**Reduced motion:** sin vuelo que mostrar, la flecha aparece directamente en
+su color de aterrizaje (no se ve la fase gris) — mismo criterio que ya
+aplicaba el resto de la escena en este modo.
+
+**Anclada por la punta, no por el centro.** El mapeo color↔anillo en sí
+siempre fue exacto (verificado programáticamente: 0 de 40 desajustes,
+comparando el radio real de cada shot contra el color pintado) — lo que no
+leía bien era que, con el ancla en el **centro** del dibujo (`translate(-50%,
+-50%)`), una flecha de ~106px podía tener la mitad de su largo asomando
+hacia anillos vecinos, aunque su punto de anclaje (y su color) fueran
+correctos para el anillo asignado. Se cambió el ancla y el pivot de rotación
+al **vértice de la punta** — literalmente "donde toca" — usando
+`ARROW_TIP_X_PCT`/`ARROW_TIP_Y_PCT` (`ArrowToTarget.tsx`). No es la fracción
+cruda del `viewBox` (150.1/160 ≈ 93.8%): el `viewBox` (160×56) no comparte
+relación de aspecto con la caja donde se renderiza (88×24), así que el
+`preserveAspectRatio` por defecto del navegador (`xMidYMid meet`) deja margen
+vacío en el eje que no es el limitante — la fracción real, medida
+empíricamente con un shot a rotación cero + `SVGPoint.matrixTransform` contra
+`getScreenCTM()`, es ≈84.2%, no 93.8%. Mejora parcial, no total: nada
+sobresale ya *delante* de la punta, pero el asta/plumas sí pueden seguir
+sobresaliendo *detrás* de ella (hacia anillos más centrales, o hacia afuera
+del borde de la diana) — se decidió no compensar eso encogiendo el radio de
+aterrizaje (`oversizeRadiusGuard`), porque encoger el radio para esconder la
+cola metía un bug peor: la punta terminaba en un anillo más central que el
+que realmente le corresponde por color. Un asta que sobresale un poco del
+borde de la diana se lee como una flecha real clavada cerca del borde, no
+como algo roto.
+
 ### Modo funnel — los 5 anillos son los 5 hitos (implementado)
 
 En vez de posición aleatoria, `mode="funnel"` ubica cada flecha en el anillo
@@ -757,6 +835,68 @@ contador = ease-out.
     (`w-32 sm:w-52 lg:w-64` — 50% en mobile, ~80% en tablet, 100% en
     desktop), pedido explícito para no verse sobredimensionada en pantallas
     chicas. Detalle en §2/§3 "Dónde vive".
+
+17. **Fix: el reveal forzaba scroll horizontal que no hacía falta** (2026-07-26)
+    → la tabla lleva un `min-w-[720px]` por debajo de 640px para que las
+    columnas reales no se aplasten — pero ese mínimo también se aplicaba
+    durante el reveal (`showingReveal`), cuya única celda es una animación
+    centrada, nada que aplastar. Efecto: en mobile la diana quedaba
+    descentrada y hacía falta scrollear para verla completa, un scroll que
+    no tenía ningún motivo de ser en ese momento (pedido del usuario: *"tiene
+    que estar siempre centrado al viewport del contenedor, es scroleable la
+    tabla y eso está bien, pero al momento de cargar el scroll es
+    completamente innecesario porque lo único que contiene es la
+    animación"*). Fix: tanto el `min-width` como el `<TableHeader>` (nada que
+    rotular sin columnas) pasan a condicionales sobre `showingReveal`.
+    Verificado a 375px: sin scroll durante carga/reveal, y el scroll vuelve
+    solo una vez que rendericen filas reales (`[data-slot="table-container"]`,
+    el wrapper propio de `Table` de shadcn — no el `div.overflow-x-auto`
+    externo y redundante en `RegistryTable.tsx`, que fue la primera fuente
+    de una verificación en falso).
+18. **Las flechas se pintan del color del anillo que tocaron** (2026-07-26) →
+    hasta acá todas las flechas usaban el mismo naranja/marrón decorativo sin
+    relación con dónde caían. Pedido del usuario, con la leyenda de colores
+    del funnel como referencia: *"la flecha base gris claro? y cuando toquen
+    la superficie se pinten del color que tocaron? […] la lógica de todo
+    esto es que al ver todas las flechas en la diana los colores de las
+    flechas comuniquen tu proceso visualmente"*. Se agregó un prop
+    `palette` a `Arrow` (default = los colores originales, sin cambios para
+    `HammerAnvil`), una paleta gris única para el vuelo
+    (`UNPAINTED_ARROW_PALETTE`) y 5 paletas — una por anillo, `fill` calcado
+    del propio anillo en `Diana.tsx` — que se aplican recién cuando el vuelo
+    de esa flecha termina (`anim.finished`), con una transición corta en vez
+    de un salto. `ringIndex` se calcula para los dos modos (funnel: del
+    `funnelRank`; random: del radio de aterrizaje contra `RING_BANDS`), así
+    el color aplica igual sin depender de si hay datos de funnel. Detalle
+    completo, incluida la razón de elegir cada tono a mano en vez de una
+    fórmula, en §2 "Color por anillo".
+19. **Pintado en grupo (no por flecha) + ancla por la punta** (2026-07-26) →
+    dos correcciones sobre la decisión #18, a partir de screenshots del
+    usuario mostrando el resultado real. Primera: *"esperemos que todas
+    aterricen y luego que cambien al color correspondiente, y dejamos unos
+    milisegundos para analizar la interacción después de eso"* — el pintado
+    por-flecha-al-aterrizar (`anim.finished`) se reemplaza por un único
+    timer que espera a que la **última** flecha aterrice
+    (`totalFlightDuration`) más una pausa fija (`PAINT_REVEAL_PAUSE_MS`,
+    450ms) y recién ahí pinta todas juntas. Segunda: el usuario sospechó que
+    el color no correspondía al anillo real de aterrizaje — verificado
+    programáticamente que el mapeo SIEMPRE fue exacto (0/40 desajustes,
+    radio real vs. color pintado), el problema era que el ancla de cada
+    flecha era el **centro** de su dibujo, así que a su tamaño de producción
+    (120%, ~106px) buena parte del largo sobresalía hacia anillos vecinos
+    aunque el ancla (y el color) fueran correctos para el anillo asignado.
+    De las cuatro opciones planteadas (achicar solo en funnel / achicar
+    global / anclar por la punta / dejarlo así), el usuario eligió anclar
+    por la punta — mejora parcial y conocida de antemano (no resuelve que la
+    cola siga cruzando hacia anillos más centrales), implementada calculando
+    la posición real de la punta dentro de la caja renderizada (no la
+    fracción cruda del `viewBox`, que no coincide por el letterboxing de
+    `preserveAspectRatio` — medido empíricamente con `getScreenCTM()`).
+    Encoger el radio de aterrizaje para esconder el sobrante de cola
+    (`oversizeRadiusGuard`) se probó y se descartó: movía la punta a un
+    anillo más central que el real, cambiando un problema cosmético por uno
+    de fondo (el color ya no correspondía a dónde leía la punta). Detalle
+    completo en §2 "Color por anillo" (ambas subsecciones nuevas).
 
 **Valores por defecto (tuneables, no bloquean):**
 
