@@ -28,9 +28,9 @@ export interface PendingCvDrawerProps {
   generating: boolean;
   /** Runs the deferred generation; rejects on error (the caller surfaces it). */
   onGenerate: (input: GenerateCvInput) => Promise<void>;
-  /** Persists the cover letter step's AI draft as soon as it's regenerated. */
-  onSaveDraft?: WizardProps["onSaveDraft"];
-  /** Shared screening bank + row-ensuring callback for the Preguntas step. */
+  /** Persists row field edits — the confirm step's optional takeovers need it. */
+  onUpdate: WizardProps["onUpdate"];
+  /** Shared screening bank + row-ensuring callback for the confirm step's optional actions. */
   screening?: WizardProps["screening"];
   onEnsureRow?: WizardProps["onEnsureRow"];
 }
@@ -49,7 +49,7 @@ export function PendingCvDrawer({
   templates,
   generating,
   onGenerate,
-  onSaveDraft,
+  onUpdate,
   screening,
   onEnsureRow,
 }: PendingCvDrawerProps) {
@@ -88,7 +88,7 @@ export function PendingCvDrawer({
             templates={templates}
             generating={generating}
             pendingRow={row}
-            onSaveDraft={onSaveDraft}
+            onUpdate={onUpdate}
             screening={screening}
             onEnsureRow={onEnsureRow}
             onGenerate={async (input) => {

@@ -14,21 +14,22 @@ export interface GenerateCardProps {
   spec: LinkSpec | null;
   /** Codes already in the registry, for collision-checked preview. */
   existingCodes: string[];
-  /** Cover letter templates for the wizard's optional letter step. */
+  /** Cover letter templates for the confirm step's optional letter takeover. */
   templates: CoverLetterTemplate[];
   /** True while a generation is in flight. */
   generating: boolean;
   /**
    * Runs the generation; rejects on error (the caller surfaces the message).
-   * `activeRow` is set when an AI cover-letter draft silently created a
-   * Borrador row earlier in this session — update it instead of adding new.
+   * `activeRow` is set when an optional cover letter/preguntas action silently
+   * created a Borrador row earlier in this session — update it instead of
+   * adding new.
    */
   onGenerate: (input: GenerateCvInput, activeRow?: RegistryRow) => Promise<void>;
   /** Registers a process without CV (wizard's "Registrar sin CV" exit, any step). */
   onSavePending: WizardProps["onSavePending"];
-  /** Persists the cover letter step's AI draft as soon as it's generated. */
-  onSaveDraft?: WizardProps["onSaveDraft"];
-  /** Shared screening bank + row-ensuring callback for the Preguntas step. */
+  /** Persists row field edits — the confirm step's optional takeovers need it. */
+  onUpdate: WizardProps["onUpdate"];
+  /** Shared screening bank + row-ensuring callback for the confirm step's optional actions. */
   screening?: WizardProps["screening"];
   onEnsureRow?: WizardProps["onEnsureRow"];
 }
@@ -48,7 +49,7 @@ export function GenerateCard({
   generating,
   onGenerate,
   onSavePending,
-  onSaveDraft,
+  onUpdate,
   screening,
   onEnsureRow,
 }: GenerateCardProps) {
@@ -71,7 +72,7 @@ export function GenerateCard({
           existingCodes={existingCodes}
           templates={templates}
           generating={generating}
-          onSaveDraft={onSaveDraft}
+          onUpdate={onUpdate}
           onGenerate={async (input, activeRow) => {
             // Throws on error → the wizard stays on the confirm step with the message.
             await onGenerate(input, activeRow);

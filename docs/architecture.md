@@ -107,16 +107,34 @@ fila**, así el drawer muestra dónde quedó la entrega para siempre (no solo re
 generado) — card `DeliveryInfo`: una fila por archivo (`EN · CV`, `EN · Carta`) con
 abrir-en-Drive + re-descargar.
 
-**Segunda vía: cover letter post-hoc.** Para una aplicación cuyo CV ya se entregó y no
-llevó carta, el detalle de la fila ofrece "Generar cover letter" (sección Cover letter
-del tab Detalles, `CoverLetterSection`/`CoverLetterGenerateForm`) — reusa el mismo picker
-de template/IA del wizard (`ui/CoverLetterFields.tsx`, compartido) pero **sin** tocar
+**Segunda vía: cover letter siempre post-hoc, nunca dentro del `.zip` del CV.** La
+carta no es un paso del wizard — es una acción opcional (`CoverLetterSection`/
+`CoverLetterGenerateForm`) disponible en dos puntos: el detalle de la fila (CV ya
+entregado) y el paso Confirmar del wizard, antes de generar el CV (ver "Confirmar:
+acciones opcionales" abajo). Mismo componente en los dos, reusando el mismo picker
+de template/IA (`ui/CoverLetterFields.tsx`, compartido) pero **sin** tocar
 `generateCv()`: `core/coverLetter/deliver.ts` construye el/los `.docx` con
 `buildCoverLetterDocx()` y reconstruye la(s) misma(s) carpeta(s) del CV con `folderName()`
-(depende solo de `language`/`company`/`code`, ya en la fila). Mismos tres destinos que
-una generación del wizard: descarga + archivo durable + Drive (`archiveDeliveryFiles` /
+(depende solo de `language`/`company`/`code`, ya en la fila). Mismos tres destinos
+siempre: descarga + archivo durable + Drive (`archiveDeliveryFiles` /
 `createGoogleDoc`, siempre **agregando/mergeando** sobre `deliveryFiles`/
 `driveLetterDocs`, nunca reemplazo — lectura-modificación-escritura).
+
+**Confirmar: acciones opcionales (cover letter / preguntas).** El último paso del
+wizard (`StepConfirm.tsx`) suma, al final del resumen y la preview de carpeta, las
+mismas secciones `CoverLetterSection`/`ScreeningSection` que usa `RowDetailDrawer` —
+no pasos dedicados. Sin fila real todavía muestran un teaser colapsado ("Sin cover
+letter todavía." / "Ninguna pregunta registrada…" + botón); al tocar el botón,
+`Wizard.tsx` llama `onEnsureRow` (`ensureDraftRow`, `app/page.tsx`) pasándole el
+`previewCode` **ya mostrado** en la preview de carpeta — así la fila Borrador que se
+crea en silencio siempre cae en el mismo código, nunca uno distinto — y recién ahí
+abre el takeover real (`CoverLetterGenerateForm` / `ScreeningNewForm` /
+`ScreeningSuggestForm`, idénticos a los que usa el detalle post-generación),
+reemplazando el body + footer del wizard igual que cualquier otro takeover. Si el
+wizard se cierra sin generar el CV, esa fila Borrador queda en la tabla (mismo caso
+que "Registrar sin CV", arriba). Al generar el CV de verdad, `deferredGenerationFields`
+preserva el `coverLetter` que ya haya quedado seteado en la fila (no lo pisa con
+`undefined` solo porque la generación en sí ya no carga una carta).
 
 ## Registrar sin CV (generación diferida)
 
@@ -124,14 +142,13 @@ Un proceso puede arrancar sin entregable (ej. un recruiter escribe y la charla
 empieza antes de mandar nada, o todavía no sabés qué te van a pedir). Todos los
 pasos previos a Confirmar ofrecen **"Registrar sin CV"** (con Empresa alcanza):
 `buildPendingRow()` (`core/generateCv.ts`) crea la fila con un **código reservado**
-(mismo `generateCode`, chequeado contra colisiones) y `cvPending: true` — sin
-idioma, foco, links ni delivery. Una carta escrita a medias viaja como
-`coverLetterDraft` (`PendingRowInput.coverLetterDraft`) y las preguntas
-capturadas van al banco vinculadas al código reservado — nada de lo tipeado se
-pierde. Si la sesión ya creó una fila Borrador silenciosa (draft IA),
-Registrar la **actualiza** en vez de duplicar. En la tabla, la celda
-Seguimiento muestra un `FileClock` muted; puede quedar así para siempre
-(procesos que mueren temprano).
+(mismo `generateCode`, o el ya reservado si se pasa uno explícito — ver abajo —
+chequeado contra colisiones) y `cvPending: true` — sin idioma, foco, links ni
+delivery. Si la sesión ya creó una fila Borrador silenciosa (una carta o
+pregunta opcional generada desde Confirmar, ver más abajo), Registrar la
+**actualiza** en vez de duplicar. En la tabla, la celda Seguimiento muestra un
+`FileClock` muted; puede quedar así para siempre (procesos que mueren
+temprano).
 
 Cuando el CV hace falta, la card Entrega del drawer abre el wizard en **modo
 diferido** (`PendingCvDrawer` + prop `pendingRow`): arranca en "Idioma y foco"
@@ -223,12 +240,12 @@ a paso, en [`flows.md`](flows.md)):
 
 | # | Acción hecha | Dónde/qué sucede por detrás |
 |---|---|---|
-| 1 | Una acción explícita abre el bloque de contexto (**dos pasos siempre**, ver `DESIGN.md` → "Generación con IA"): "Compartir contexto" en el wizard, "Sugerir con IA" en preguntas | `ui/AiContextPanel.tsx` — un solo componente, usado tal cual en el wizard (paso 4) y en los takeovers de sugerencia del drawer (`ScreeningSuggestForm`, reveal en `ScreeningNewForm`); nunca fijo en vistas de lectura |
+| 1 | Una acción explícita abre el bloque de contexto (**dos pasos siempre**, ver `DESIGN.md` → "Generación con IA"): "Compartir contexto" al generar una carta, "Sugerir con IA" en preguntas | `ui/AiContextPanel.tsx` — un solo componente, usado tal cual en `CoverLetterGenerateForm` (detalle de la fila o paso Confirmar del wizard) y en los takeovers de sugerencia del drawer (`ScreeningSuggestForm`, reveal en `ScreeningNewForm`); nunca fijo en vistas de lectura |
 | 2 | Usuario ajusta el contexto opcional: link del puesto + "Detectar", contexto libre, modelo (precargados de la fila) | "Detectar": `POST /api/job-context` — busca `JobPosting` en JSON-LD del HTML (sin headless), `context: null` si no encuentra nada; nunca bloquea ni llama a Anthropic |
-| 3 | Click en "Generar con IA" / "Generar y guardar" — la única llamada paga | Sin atajos one-click ni regenerar sobre respuestas existentes (misclick = texto pisado + llamada gastada) |
+| 3 | Click en "Generar con IA" (carta) / "Generar y guardar" (pregunta) — la única llamada paga | Sin atajos one-click ni regenerar sobre respuestas existentes (misclick = texto pisado + llamada gastada) |
 | 4 | Llamada a `/api/ai/cover-letter` o `/api/ai/screening-answer` con el contexto compartido + el modelo elegido + lo específico del caso | `core/ai/prompt.ts` arma el prompt igual en ambos (capa `jobContext` a 4000 chars — un pegado gigante no infla el costo de input); `core/ai/models.ts` valida el `model` contra el allow-list (`DEFAULT_AI_MODEL` si falta o es inválido); la respuesta **ecoa el modelo usado** |
-| 5 | El resultado se persiste **inmediatamente**, marcado como borrador | Carta: fila **Borrador** + `coverLetterDraft` (ver abajo). Pregunta: entrada del banco con `draft: true` |
-| 6 | El usuario sigue editando después | Carta: mismo textarea. Pregunta: editor de la card Preguntas (click en el item) — guardar ahí limpia `draft` |
+| 5 | El resultado se persiste — momento distinto en cada caso | Pregunta: **inmediatamente**, entrada del banco con `draft: true` (una llamada paga nunca se pierde por cerrar algo). Carta: recién al enviar el form con **"Generar y entregar"** — el texto generado vive en el textarea hasta ahí, sin persistencia intermedia (ver "Carta" abajo) |
+| 6 | El usuario sigue editando después | Carta: mismo textarea, hasta entregar. Pregunta: editor de la card Preguntas (click en el item) — guardar ahí limpia `draft` |
 
 La card Preguntas (banco global) **no genera** — solo gestiona/edita: sin
 contexto de aplicación la respuesta saldría genérica (gasto con poco valor);
@@ -269,25 +286,28 @@ valida con `isAiModel()` y cae a `DEFAULT_AI_MODEL` si falta o no es válido.
   con IA — dejó de estar en el paso 2 (ver decisión).
 
 **Carta — dos caminos, uno mecánico y uno con IA, nunca mezclados**: el
-dropdown "Cover letter" (`StepCoverLetter.tsx`) ofrece un template real
+dropdown de `CoverLetterFields.tsx` (compartido por `CoverLetterGenerateForm`,
+el único lugar donde una carta se genera hoy) ofrece un template real
 (resuelve `{company}`/`{role}`/`{who}` con `resolveTemplateVars`, sin IA — es
 sustitución de variables, no hace falta un LLM) **o** "Compartir contexto"
-(`COVER_LETTER_AI` sentinel en `ui/wizard/types.ts`, sin template, el
+(`COVER_LETTER_AI` sentinel en `core/coverLetter/types.ts`, sin template, el
 `AiContextPanel` completo). La IA nunca toca el cuerpo resuelto de un template
 real. En modo IA, `CoverLetterRecord.templateId` queda `"__ai__"` /
-`templateName: "Generado con IA"` (`AI_TEMPLATE_NAME`, exportado de
-`StepCoverLetter.tsx`).
+`templateName: "Generado con IA"` (`AI_TEMPLATE_NAME`).
 
-**El borrador de carta persiste apenas se genera** — una llamada pagada nunca
-se pierde por cerrar el wizard. Primer click en "Generar con IA" sin fila
-todavía: crea una fila **Borrador** (`RegistryRow.status`, mismo mecanismo que
-"Guardar sin CV" — código reservado, `cvPending: true`) con el texto en
-`coverLetterDraft` (separado de `coverLetter`, que sigue siendo el registro
-fiel de lo efectivamente enviado); clicks siguientes actualizan esa misma
-fila. `Wizard.tsx` trackea esto en `activeRow` (empieza como `pendingRow` si
-existía, o se completa mid-sesión vía `onSaveDraft`) — `onGenerate` recibe ese
-`activeRow` para actualizar en vez de crear al confirmar. Al generar de
-verdad, `deferredGenerationFields` pasa el estado a **Activo**.
+**La carta no tiene draft intermedio — se genera y se entrega en el mismo
+paso.** A diferencia de una respuesta de pre-screening (persiste apenas se
+genera, ver arriba), el texto que "Generar con IA" pone en el textarea de
+`CoverLetterGenerateForm` vive solo en estado local hasta que el usuario hace
+click en **"Generar y entregar"**: ahí se arma el `.docx`, se descarga, se
+archiva y se sube a Drive, y recién ahí `row.coverLetter` queda seteado —
+cerrar el form antes pierde el texto (y la llamada paga). Es el mismo
+trade-off que ya tenía el flujo post-hoc para una aplicación con CV ya
+entregado; ahora es el único camino, disparado desde el detalle de la fila o
+desde el paso Confirmar del wizard (que primero asegura la fila Borrador si
+todavía no existe — ver "Confirmar: acciones opcionales" arriba). Al generar
+el CV de verdad después de haber cargado una carta ahí, `deferredGenerationFields`
+preserva ese `row.coverLetter` en vez de pisarlo.
 
 **La respuesta de pre-screening también queda marcada como borrador hasta que
 un humano la confirma**: `ScreeningQuestion.draft` (booleano) — `true` cuando

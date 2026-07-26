@@ -14,13 +14,12 @@ export interface CoverLetterSectionProps {
 
 /**
  * Detalles-tab cover letter slot: the faithful record if one already shipped
- * (`CoverLetterInfo`, unchanged/read-only), otherwise a CTA to generate one
- * post-hoc — same inline-in-section shape as `DeliveryInfo`'s pending-CV CTA.
- * Nothing shows for a `cvPending` row: that case is still the deferred
- * wizard's job (step 4), not this one.
+ * (`CoverLetterInfo`, unchanged/read-only), otherwise a CTA to generate one —
+ * same inline-in-section shape as `DeliveryInfo`'s pending-CV CTA. Also the
+ * confirm step's optional "Generar cover letter" (once its Borrador row is
+ * ensured), so a `cvPending` row gets the same CTA as any other.
  */
 export function CoverLetterSection({ row, onStartGenerate }: CoverLetterSectionProps) {
-  if (row.cvPending) return null;
   if (row.coverLetter) return <CoverLetterInfo row={row} />;
 
   return (

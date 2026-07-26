@@ -177,6 +177,14 @@ export interface PendingRowInput {
    * generation preloads it in its letter step.
    */
   coverLetterDraft?: CoverLetterRecord;
+  /**
+   * Precomputed tracking code (e.g. the wizard's already-shown folder-name
+   * preview). When provided it is used as-is, so a row created silently
+   * behind an optional action (cover letter/preguntas) in the confirm step
+   * lands on the exact code already displayed there — otherwise a fresh,
+   * collision-checked code is generated.
+   */
+  code?: string;
 }
 
 export interface PendingRowDeps {
@@ -197,12 +205,14 @@ export interface PendingRowDeps {
  * (language, focus, links, letter, delivery) stays unset until then.
  */
 export function buildPendingRow(input: PendingRowInput, deps: PendingRowDeps): RegistryRow {
-  const code = generateCode({
-    spec: deps.spec,
-    date: input.date,
-    existingCodes: deps.existingCodes,
-    rng: deps.rng,
-  });
+  const code =
+    input.code ??
+    generateCode({
+      spec: deps.spec,
+      date: input.date,
+      existingCodes: deps.existingCodes,
+      rng: deps.rng,
+    });
   const now = deps.now ?? (() => new Date());
   return {
     code,
@@ -246,7 +256,9 @@ export function deferredGenerationFields(
     language: generated.language,
     focus: generated.focus,
     links: generated.links,
-    coverLetter: generated.coverLetter,
+    // A letter delivered while still pending (post-hoc form, confirm step)
+    // sits only on `row` — the generation itself carries no letter anymore.
+    coverLetter: generated.coverLetter ?? row.coverLetter,
     zipName: generated.zipName,
     updates,
     // Auto-mark "CV enviado" now that the CV shipped (keeps the earlier date).

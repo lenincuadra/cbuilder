@@ -1,21 +1,42 @@
 "use client";
 
-import { FolderIcon } from "lucide-react";
+import { useState } from "react";
+import { FolderIcon, Plus } from "lucide-react";
+import { toast } from "sonner";
 
-import { COVER_LETTER_FILENAME } from "@/core/coverLetter/docx";
+import { Button } from "@/components/ui/button";
 import { folderName } from "@/core/folderName";
 import { profileLabel } from "@/core/spec/profiles";
 import type { LinkSpec } from "@/core/spec/types";
+import type { RegistryRow } from "@/core/registry/types";
+import type { ScreeningQuestion } from "@/core/screening/types";
 import { languageLabel } from "@/core/types";
 import { CV_FILENAME } from "@/core/zip";
+import { CoverLetterSection } from "@/ui/detail/CoverLetterSection";
+import { ScreeningSection } from "@/ui/detail/ScreeningSection";
+import type { UseScreening } from "@/ui/useScreening";
 import { languagesFor, type WizardData } from "./types";
 
 export interface StepConfirmProps {
   data: WizardData;
   previewCode: string;
   spec: LinkSpec | null;
-  /** Name of the selected cover letter template, if any. */
-  coverLetterName?: string;
+  /**
+   * Row this session is bound to, once ensured — governs whether the
+   * optional cover letter/preguntas sections below show their real, row-bound
+   * UI or a collapsed teaser that creates the row on first use.
+   */
+  activeRow: RegistryRow | null;
+  /** Silently creates/reuses the session's Borrador row. Absent hides the optional sections entirely. */
+  onEnsureRow?: () => Promise<RegistryRow>;
+  onStartCoverLetterGenerate: () => void;
+  onStartScreeningNew: () => void;
+  onEditScreening: (entry: ScreeningQuestion) => void;
+  onSuggestScreening: (entry: ScreeningQuestion) => void;
+  /** Shared screening-questions bank — required for the Preguntas section. */
+  screening?: UseScreening;
+  /** Portal target for the Preguntas section's "Vincular del banco" dropdown. */
+  container?: HTMLElement | null;
 }
 
 function SummaryRow({
@@ -45,20 +66,40 @@ function SummaryRow({
   );
 }
 
-/** Step 6 — Confirm. Shows a summary and a preview of the folder name(s) to be created. */
-export function StepConfirm({ data, previewCode, spec, coverLetterName }: StepConfirmProps) {
+/** Step 4 — Confirm. Shows a summary, a preview of the folder name(s) to be
+ *  created, and — at the end — the optional cover letter/preguntas actions
+ *  (same sections as the row's post-generation detail view). */
+export function StepConfirm({
+  data,
+  previewCode,
+  spec,
+  activeRow,
+  onEnsureRow,
+  onStartCoverLetterGenerate,
+  onStartScreeningNew,
+  onEditScreening,
+  onSuggestScreening,
+  screening,
+  container,
+}: StepConfirmProps) {
+  const [ensuring, setEnsuring] = useState(false);
   const folders = languagesFor(data.language).map((language) => ({
     language,
     name: folderName({ language, company: data.company, code: previewCode }),
-    // The folder carries a letter only when its language has a non-empty body.
-    withLetter:
-      data.coverLetterTemplateId !== "" &&
-      (data.coverLetterBodies[language]?.trim() ?? "") !== "",
   }));
-  const anyLetter = folders.some((folder) => folder.withLetter);
-  const capturedQuestions = data.screeningQuestions.filter(
-    (entry) => entry.question.trim() !== "",
-  ).length;
+
+  async function ensureThenStart(start: () => void) {
+    if (!onEnsureRow) return;
+    setEnsuring(true);
+    try {
+      await onEnsureRow();
+      start();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo crear el registro.");
+    } finally {
+      setEnsuring(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -79,12 +120,6 @@ export function StepConfirm({ data, previewCode, spec, coverLetterName }: StepCo
         {data.jobContext.trim() !== "" && (
           <SummaryRow label="Contexto del puesto" value={data.jobContext} truncate />
         )}
-        {anyLetter && coverLetterName && (
-          <SummaryRow label="Cover letter" value={coverLetterName} />
-        )}
-        {capturedQuestions > 0 && (
-          <SummaryRow label="Preguntas" value={String(capturedQuestions)} />
-        )}
       </div>
 
       <div className="space-y-2">
@@ -100,11 +135,6 @@ export function StepConfirm({ data, previewCode, spec, coverLetterName }: StepCo
             <div className="mt-1 pl-6 font-mono text-xs text-muted-foreground">
               └ {CV_FILENAME}
             </div>
-            {folder.withLetter && (
-              <div className="pl-6 font-mono text-xs text-muted-foreground">
-                └ {COVER_LETTER_FILENAME}
-              </div>
-            )}
           </div>
         ))}
         <p className="text-xs text-muted-foreground">
@@ -112,6 +142,56 @@ export function StepConfirm({ data, previewCode, spec, coverLetterName }: StepCo
           nombre del archivo nunca lleva datos de tracking.
         </p>
       </div>
+
+      {onEnsureRow && (
+        <div className="space-y-2">
+          {activeRow ? (
+            <CoverLetterSection row={activeRow} onStartGenerate={onStartCoverLetterGenerate} />
+          ) : (
+            <div className="space-y-2 rounded-lg border px-3 py-2">
+              <span className="text-xs font-medium text-muted-foreground">Cover letter</span>
+              <p className="text-xs text-muted-foreground">Sin cover letter todavía.</p>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={ensuring}
+                onClick={() => ensureThenStart(onStartCoverLetterGenerate)}
+              >
+                <Plus className="size-4" />
+                Generar cover letter
+              </Button>
+            </div>
+          )}
+
+          {screening &&
+            (activeRow ? (
+              <ScreeningSection
+                code={activeRow.code}
+                screening={screening}
+                onStartNew={onStartScreeningNew}
+                onEdit={onEditScreening}
+                onSuggest={onSuggestScreening}
+                container={container}
+              />
+            ) : (
+              <div className="space-y-3 rounded-lg border px-3 py-2">
+                <span className="text-xs font-medium text-muted-foreground">Preguntas</span>
+                <p className="text-sm text-muted-foreground">
+                  Ninguna pregunta registrada para esta aplicación.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={ensuring}
+                  onClick={() => ensureThenStart(onStartScreeningNew)}
+                >
+                  <Plus className="size-4" />
+                  Nueva
+                </Button>
+              </div>
+            ))}
+        </div>
+      )}
     </div>
   );
 }

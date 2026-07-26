@@ -37,15 +37,26 @@ description: How to build, run and drive cv-builder to verify a change end-to-en
   - `IconSelect` dropdowns (Canal, Foco…) are DS DropdownMenus: options are
     `getByRole("menuitemcheckbox", { name: ... })`, not `option`.
   - Toasts: `[data-sonner-toast]` filtered by text.
-  - Wizard steps: wait on `getByText("Paso N de 5")`.
+  - Wizard steps: wait on `getByText("Paso N de 4")`.
   - Generation fires a browser download — grab `page.waitForEvent("download")`
     before clicking Generar.
+  - Confirmar's optional cover letter/preguntas actions swap the wizard's own
+    body+footer for a takeover (own Cancelar/Guardar) — `getByRole("button",
+    { name: "Atrás" })` disappears while one is open; wait on the takeover's
+    own heading (e.g. `getByText("Nueva pregunta")`) instead of the step
+    counter.
 
 ## Flows worth driving
 
-- Wizard: card "Generar un CV" → step 1 empresa → step 2 opcionales (fork
-  "Guardar sin CV" lives here; canal Email + empty email disables both exits)
-  → 3 idioma/foco → 4 carta → 5 confirmar (code preview) → Generar.
+- Wizard: card "Nueva aplicación" → step 1 empresa → step 2 opcionales (fork
+  "Registrar sin CV" lives here; canal Email + empty email disables both
+  exits) → 3 idioma/foco → 4 confirmar (code preview + folder). Confirmar's
+  end has two optional cards, "Cover letter" and "Preguntas" — clicking their
+  button silently creates the Borrador row (reusing the code already shown in
+  the folder preview) then opens the same takeover the row detail drawer
+  uses; cancelling out of the cover letter form there does **not** create a
+  Drive doc or download (no `data/cvs/` cleanup needed) as long as you stop
+  before "Generar y entregar".
 - Pending flow: row shows muted FileClock in Seguimiento; drawer → card
   Entrega → "Generar CV" opens the deferred wizard at step 3 with the
   reserved code.
