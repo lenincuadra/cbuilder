@@ -7,6 +7,11 @@ data-driven, a [`architecture.md`](architecture.md). Este doc es la fuente de
 verdad del sistema de animación — pensado también para pasárselo a otra
 herramienta/IA que produzca los assets sin tocar data privada.
 
+Para la historia completa de cómo se llegó hasta acá — el plan original con
+mascota y Rive, los pivotes, cada ronda de feedback visual — ver
+[`animations-bitacora.md`](animations-bitacora.md). Ese doc es un registro
+cronológico sin filtrar; este es el estado actual.
+
 > Estado: **implementado (v1, reducido)**. Los dos componentes de escena
 > existen y están probados visualmente (ver §4). **Martillo en el yunque ya
 > está montado en la app real** — reemplaza el "Cargando registro…" de texto
