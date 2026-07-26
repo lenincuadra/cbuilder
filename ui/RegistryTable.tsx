@@ -26,6 +26,7 @@ import type { LinkSpec } from "@/core/spec/types";
 import { cn } from "@/lib/utils";
 import { ChannelIcon } from "@/ui/ChannelIcon";
 import { CodeCell } from "@/ui/CodeCell";
+import { HammerAnvil } from "@/ui/animations/HammerAnvil";
 import { RowDetailDrawer, type DetailTab } from "@/ui/detail/RowDetailDrawer";
 import { FocusIcon } from "@/ui/FocusIcon";
 import { SeguimientoCell } from "@/ui/detail/SeguimientoCell";
@@ -169,7 +170,10 @@ export function RegistryTable({
             {loading ? (
               <TableRow>
                 <TableCell colSpan={COLUMNS.length} className="h-24 text-center text-muted-foreground">
-                  Cargando registro…
+                  <div className="mx-auto w-32">
+                    <HammerAnvil active />
+                  </div>
+                  <p className="mt-1">Cargando registro…</p>
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (

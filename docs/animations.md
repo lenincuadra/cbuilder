@@ -8,10 +8,12 @@ verdad del sistema de animación — pensado también para pasárselo a otra
 herramienta/IA que produzca los assets sin tocar data privada.
 
 > Estado: **implementado (v1, reducido)**. Los dos componentes de escena
-> existen y están probados visualmente (ver §4), pero **todavía no están
-> montados en la app real** — falta el adaptador `core/registry` → `count` y
-> decidir dónde vive cada uno (§2/§3 "Dónde vive"). Decisiones de alcance ya
-> resueltas (ver §6); quedan solo valores tuneables.
+> existen y están probados visualmente (ver §4). **Martillo en el yunque ya
+> está montado en la app real** — reemplaza el "Cargando registro…" de texto
+> en `RegistryTable` (ver §3 "Dónde vive"). **Flecha a la diana todavía no**
+> — sigue faltando el adaptador `core/registry` → `count`/`funnelRanks` y
+> decidir dónde vive (§2 "Dónde vive"). Decisiones de alcance ya resueltas
+> (ver §6); quedan solo valores tuneables.
 
 ---
 
@@ -186,6 +188,28 @@ flecha sobre el yunque** — sin muñeco que lo sostenga, el martillo golpea sol
   con el **mismo objeto** pasando de una escena a la otra. Esto justifica el
   backbone compartido (§1).
 
+### Dónde vive
+
+**Primer (y por ahora único) uso real: `RegistryTable`** (2026-07-26) —
+reemplaza el `"Cargando registro…"` de texto puro que se mostraba mientras
+`useRegistry` hace el fetch inicial (`loading === true`, sin ninguna fila
+todavía). `<HammerAnvil active />` adentro de la celda, `w-32` (128px,
+respeta el aspect-ratio 156/91 del asset — mucho más angosto que la diana
+cuadrada, por eso encaja bien en una fila de tabla), con el texto original
+debajo a modo de caption. `active` no necesita atarse a nada más que
+`loading` mismo, porque la celda entera ya está condicionada a `loading`
+— no hace falta un `onDone` acá, la celda simplemente deja de existir
+cuando `loading` pasa a `false`.
+
+Esto **amplía el rol documentado arriba** ("loading state mientras el
+pipeline de IA genera el CV/carta") a cualquier loading ambient genérico sin
+dato conocido todavía — el fetch inicial de la tabla no es el pipeline de
+IA, pero es exactamente el mismo tipo de espera (indeterminada, sin score
+parcial que mostrar) que la escena ya estaba diseñada para cubrir.
+`ArrowToTarget` **no** es candidata para este spot: necesita un `count` real
+(es data-driven), que es precisamente lo que todavía no existe mientras se
+está cargando.
+
 ---
 
 ## 4. Implementación (v1, hecha)
@@ -206,6 +230,7 @@ abajo).
 | Escena "martillo en el yunque" | `ui/animations/HammerAnvil.tsx` |
 | Keyframes del martillo | `app/globals.css` (`cb-hammer-swing`, `cb-hammer-flash`) |
 | Harness de QA + playground de tuning (dev-only, no linkeado desde la app) | `app/dev/animations/page.tsx` |
+| Uso real en la app (loading de la tabla) | `ui/RegistryTable.tsx` (`<HammerAnvil active />`) |
 
 | Animación | Naturaleza | Cómo se resuelve |
 |---|---|---|
@@ -450,6 +475,31 @@ propósito no se tocaron `RING_BANDS` ni la fórmula de margen en sí — el
 pedido fue arreglar el caso extremo sin rediseñar la lógica general de
 posicionamiento.
 
+**Legend del modo funnel, en vez del array crudo.** `ranksSeed`/`funnelRanks`
+generan hasta ~150 números 0-4 — mostrarlos como `[0, 3, 2, 2, 1, 4, ...]` es
+ilegible más allá de un puñado. `FunnelRanksSummary`
+(`app/dev/animations/page.tsx`) los agrupa por hito y muestra un conteo con
+un punto de color por milestone — los colores salen directo de los fills de
+`ui/animations/assets/Diana.tsx` (`white`/`#333335`/`#30ABE2`/`#DF3C38`/
+`#DAA737`), así el punto de la leyenda es el mismo color que el anillo real.
+El array crudo sigue disponible, colapsado detrás de un `<details>`, para
+quien quiera revisar el mapeo exacto por flecha.
+
+**Sticky sin huecos: navbar de sección, no solo un div pegajoso.** La primera
+versión de "sticky" (commit anterior) usaba `lg:top-4` — dejaba un hueco de
+16px arriba del elemento pegado, y cuando scrolleabas, la primera fila de
+sliders se asomaba fingiendo un glitch en ese hueco (reportado con captura).
+Fix: el título de la sección (`<h2>`) se movió **adentro** de la barra
+pegajosa (antes vivía afuera, sin pegarse) junto con `count`/modo/Replay,
+todo a `lg:top-0` (sin hueco) con fondo opaco — así no hay ningún punto donde
+algo pueda asomarse por detrás. La columna de la animación se pega por
+separado, offseteada exactamente por la altura real de esa barra (medida con
+Playwright: 93px, no una estimación) para que quede justo debajo, sin
+superponerse ni dejar hueco propio. Ambos (`sticky`) viven dentro del mismo
+`<section>` que el resto del contenido de "Flecha a la diana", así que se
+despegan solos al scrollear más allá de esa sección — no hace falta lógica
+extra para que dejen de mostrarse al llegar a "Martillo en el yunque".
+
 ---
 
 ## 5. Motion tokens (valores de arranque, tuneables)
@@ -597,6 +647,24 @@ contador = ease-out.
     aterrizaje se multiplica por `min(1, 120 / arrowScalePct)` — sin efecto
     en o por debajo del tamaño ya verificado, se achica recién a partir de
     ahí. Detalle completo en §4.
+12. **Martillo en el yunque, primer uso real: loading de `RegistryTable`**
+    (2026-07-26) → hasta acá ninguna de las dos escenas estaba montada en la
+    app real, solo en el harness de dev. Pregunta del usuario ("¿esta
+    animación está aplicada en la app realmente?") llevó a reemplazar el
+    `"Cargando registro…"` de texto puro por `<HammerAnvil active />`. Se
+    eligió Martillo (no Flecha a la diana) porque calza exacto con el rol ya
+    documentado en §3 (loading ambient, sin dato todavía) y con su
+    aspect-ratio (156:91, angosto) — la diana es cuadrada y necesita un
+    `count` real, ninguno de los dos encaja en una fila de tabla mientras
+    todavía no hay filas. Detalle en §3 "Dónde vive".
+13. **Legend del funnel + sticky sin huecos** (2026-07-26) → dos ajustes más
+    de UI en el playground: el array crudo de `funnelRanks` se reemplaza por
+    una leyenda de conteos por hito con los colores reales de los anillos de
+    la diana; el sticky (#11) tenía un hueco de 16px donde se asomaba
+    contenido scrolleado por detrás — se convirtió en una navbar de sección
+    completa (título + controles) pegada a `top-0` sin hueco, con la columna
+    de la animación offseteada por la altura real medida (93px). Detalle en
+    §4.
 
 **Valores por defecto (tuneables, no bloquean):**
 

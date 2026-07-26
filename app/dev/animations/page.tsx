@@ -148,6 +148,46 @@ const CONTROLS: { key: ControlKey; label: string; hint: string; min: number; max
 ];
 const GROUPS = [...new Set(CONTROLS.map((c) => c.group))];
 
+/** Milestone metadata for the funnel-ranks legend below — label + swatch
+ * color lifted directly from the Diana artwork's own ring fills
+ * (ui/animations/assets/Diana.tsx), so the legend's dots actually match
+ * what's painted on the target. Order matches MILESTONE_KEYS / RING_BANDS:
+ * outermost ring first, bullseye last. */
+const RANK_META = [
+  { rank: 0, label: "sent", color: "#FFFFFF" },
+  { rank: 1, label: "responded", color: "#333335" },
+  { rank: 2, label: "interview", color: "#30ABE2" },
+  { rank: 3, label: "offer", color: "#DF3C38" },
+  { rank: 4, label: "referral", color: "#DAA737" },
+] as const;
+
+/** The raw `funnelRanks` array (one number 0-4 per arrow) is unreadable past
+ * a handful of arrows — this reads it back as a per-milestone count with a
+ * color swatch matching the diana's own ring colors, which is what's
+ * actually useful to eyeball ("did this shuffle give me a decent spread
+ * across all 5 rings?"). The raw array stays available (collapsed) for
+ * anyone who wants to check the exact per-arrow mapping. */
+function FunnelRanksSummary({ ranks }: { ranks: number[] }) {
+  return (
+    <div className="mt-3 space-y-1.5 text-xs">
+      <p className="font-medium text-muted-foreground">Distribución del embudo (fake, dev-only — {ranks.length} flechas)</p>
+      <ul className="space-y-0.5">
+        {RANK_META.map((m) => (
+          <li key={m.rank} className="flex items-center gap-2">
+            <span className="size-2.5 shrink-0 rounded-full ring-1 ring-border" style={{ backgroundColor: m.color }} />
+            <span className="flex-1 text-muted-foreground">{m.label}</span>
+            <span className="tabular-nums">{ranks.filter((r) => r === m.rank).length}</span>
+          </li>
+        ))}
+      </ul>
+      <details className="text-muted-foreground">
+        <summary className="cursor-pointer select-none">ver array crudo</summary>
+        <p className="mt-1 break-all">[{ranks.join(", ")}]</p>
+      </details>
+    </div>
+  );
+}
+
 /** localStorage key for saved tuning presets — dev-only, browser-local, never sent anywhere. */
 const PRESETS_STORAGE_KEY = "cbuilder:dev-animations:arrow-tuning-presets";
 
@@ -216,13 +256,64 @@ export default function AnimationsPreviewPage() {
 
   return (
     <TooltipProvider>
-      <main className="mx-auto max-w-5xl space-y-10 p-8">
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Flecha a la diana (data-driven)</h2>
+      <main className="mx-auto max-w-5xl p-8">
+        <section>
+          {/* Full navbar for this section, stuck flush at the viewport top
+              (no gap above it) with an opaque background — otherwise the
+              first slider row peeks through above it while scrolling. Scoped
+              to this <section>, so it un-sticks once you scroll past it
+              (right before the Martillo section). Fixed height regardless of
+              mode (the funnel-ranks detail lives with the animation below,
+              not here) so the animation's sticky offset below can rely on
+              one constant number. */}
+          <div className="sticky top-0 z-20 space-y-2 border-b border-border bg-background py-3">
+            <h2 className="text-lg font-semibold">Flecha a la diana (data-driven)</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <Tooltip>
+                <TooltipTrigger render={<Label htmlFor="count" className="cursor-default" />}>count</TooltipTrigger>
+                <TooltipContent>Cuántos CVs enviados simula la escena — determina cuántas flechas (o el número final del contador) se muestran.</TooltipContent>
+              </Tooltip>
+              <Input id="count" type="number" className="w-24" value={count} onChange={(e) => setCount(Number(e.target.value))} />
 
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-            {/* Sticky: stays in view while the sliders below scroll past. */}
-            <div className="w-72 shrink-0 lg:sticky lg:top-4 lg:self-start">
+              <Tooltip>
+                <TooltipTrigger render={<span className="cursor-default text-sm text-muted-foreground" />}>modo</TooltipTrigger>
+                <TooltipContent>
+                  Cómo se elige dónde cae cada flecha: random = posición aleatoria en toda la diana. funnel = según qué tan lejos llegó cada aplicación en
+                  el embudo (sent → responded → interview → offer → referral).
+                </TooltipContent>
+              </Tooltip>
+              <Select value={mode} onValueChange={(v) => setMode(v as ArrowLandingMode)}>
+                <SelectTrigger size="sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="random">random</SelectItem>
+                  <SelectItem value="funnel">funnel</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {mode === "funnel" && (
+                <Tooltip>
+                  <TooltipTrigger render={<Button variant="outline" size="sm" onClick={() => setRanksSeed((s) => s + 1)} />}>
+                    Shuffle ranks
+                  </TooltipTrigger>
+                  <TooltipContent>Genera un nuevo conjunto de hitos falsos (dev-only) para probar distintas formas del embudo en modo funnel.</TooltipContent>
+                </Tooltip>
+              )}
+
+              <Tooltip>
+                <TooltipTrigger render={<Button variant="outline" size="sm" onClick={() => setReplayKey((k) => k + 1)} />}>Replay</TooltipTrigger>
+                <TooltipContent>Vuelve a lanzar la escena desde cero con una nueva semilla aleatoria: nuevas posiciones y ángulos.</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-6 pt-6 lg:flex-row lg:items-start">
+            {/* Sticky, offset by the navbar's own rendered height (measured
+                93px — py-3 + h2 line + the controls row) so it sits just
+                below it with no gap and no overlap. Re-measure and update if
+                the navbar's content above ever changes height. */}
+            <div className="w-72 shrink-0 lg:sticky lg:top-[93px] lg:self-start">
               <ArrowToTarget
                 key={`${replayKey}-${mode}-${JSON.stringify(tuning)}`}
                 count={count}
@@ -231,58 +322,10 @@ export default function AnimationsPreviewPage() {
                 tuning={tuning}
                 onDone={() => console.log("arrow scene done")}
               />
+              {mode === "funnel" && <FunnelRanksSummary ranks={funnelRanks} />}
             </div>
 
             <div className="flex-1 space-y-4">
-              {/* Sticky too, same top offset as the animation, with an opaque
-                  background + bottom border so the slider list scrolling
-                  underneath doesn't bleed through visually. */}
-              <div className="space-y-2 lg:sticky lg:top-4 lg:z-10 lg:border-b lg:border-border lg:bg-background lg:pb-3">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Tooltip>
-                    <TooltipTrigger render={<Label htmlFor="count" className="cursor-default" />}>count</TooltipTrigger>
-                    <TooltipContent>Cuántos CVs enviados simula la escena — determina cuántas flechas (o el número final del contador) se muestran.</TooltipContent>
-                  </Tooltip>
-                  <Input id="count" type="number" className="w-24" value={count} onChange={(e) => setCount(Number(e.target.value))} />
-
-                  <Tooltip>
-                    <TooltipTrigger render={<span className="cursor-default text-sm text-muted-foreground" />}>modo</TooltipTrigger>
-                    <TooltipContent>
-                      Cómo se elige dónde cae cada flecha: random = posición aleatoria en toda la diana. funnel = según qué tan lejos llegó cada aplicación
-                      en el embudo (sent → responded → interview → offer → referral).
-                    </TooltipContent>
-                  </Tooltip>
-                  <Select value={mode} onValueChange={(v) => setMode(v as ArrowLandingMode)}>
-                    <SelectTrigger size="sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="random">random</SelectItem>
-                      <SelectItem value="funnel">funnel</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {mode === "funnel" && (
-                    <Tooltip>
-                      <TooltipTrigger render={<Button variant="outline" size="sm" onClick={() => setRanksSeed((s) => s + 1)} />}>
-                        Shuffle ranks
-                      </TooltipTrigger>
-                      <TooltipContent>Genera un nuevo conjunto de hitos falsos (dev-only) para probar distintas formas del embudo en modo funnel.</TooltipContent>
-                    </Tooltip>
-                  )}
-
-                  <Tooltip>
-                    <TooltipTrigger render={<Button variant="outline" size="sm" onClick={() => setReplayKey((k) => k + 1)} />}>Replay</TooltipTrigger>
-                    <TooltipContent>Vuelve a lanzar la escena desde cero con una nueva semilla aleatoria: nuevas posiciones y ángulos.</TooltipContent>
-                  </Tooltip>
-                </div>
-                {mode === "funnel" && (
-                  <p className="text-xs text-muted-foreground">
-                    ranks (fake, dev-only): [{funnelRanks.join(", ")}] — 0=sent(outer) .. 4=referral(bullseye)
-                  </p>
-                )}
-              </div>
-
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
@@ -360,7 +403,7 @@ export default function AnimationsPreviewPage() {
           </div>
         </section>
 
-        <section className="space-y-3">
+        <section className="mt-10 space-y-3">
           <h2 className="text-lg font-semibold">Martillo en el yunque (ambient / loading)</h2>
           <Button variant="outline" size="sm" onClick={() => setActive((a) => !a)}>
             {active ? "Detener" : "Activar"}
