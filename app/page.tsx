@@ -12,6 +12,7 @@ import {
   type GenerateCvInput,
   type PendingRowInput,
 } from "@/core/generateCv";
+import { funnelRanksFor } from "@/core/funnel";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { CV_FILENAME } from "@/core/zip";
 import { archiveDeliveryFiles, revealDelivery, type DeliveryFile } from "@/lib/archive";
@@ -63,6 +64,12 @@ export default function Home() {
   const archivados = rows.filter((row) => row.archived);
   const bucket = view === "archivado" ? archivados : vigentes;
   const visibleRows = bucket.filter(matchesStatus);
+
+  // For the "flecha a la diana" reveal (RegistryTable, right after loading):
+  // every CV ever sent, not just the current Vigentes/Archivado tab — scope
+  // "all" per docs/animations.md §2 ("toda flecha que voló alguna vez").
+  const sentRows = rows.filter((row) => !row.cvPending);
+  const sentFunnelRanks = funnelRanksFor(sentRows);
 
   // Counts reflect the current status filter, so a toggle shows what you'd see.
   const viewOptions: SegmentedOption<ArchiveView>[] = [
@@ -362,6 +369,8 @@ export default function Home() {
           <RegistryTable
             rows={visibleRows}
             loading={loading}
+            totalSentCount={sentRows.length}
+            sentFunnelRanks={sentFunnelRanks}
             onUpdate={handleUpdate}
             onDelete={handleDelete}
             onGenerateCv={setPendingTarget}

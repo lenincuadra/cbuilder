@@ -7,11 +7,22 @@ data-driven, a [`architecture.md`](architecture.md). Este doc es la fuente de
 verdad del sistema de animación — pensado también para pasárselo a otra
 herramienta/IA que produzca los assets sin tocar data privada.
 
+Para la historia completa de cómo se llegó hasta acá — el plan original con
+mascota y Rive, los pivotes, cada ronda de feedback visual — ver
+[`animations-bitacora.md`](animations-bitacora.md). Ese doc es un registro
+cronológico sin filtrar; este es el estado actual.
+
 > Estado: **implementado (v1, reducido)**. Los dos componentes de escena
-> existen y están probados visualmente (ver §4), pero **todavía no están
-> montados en la app real** — falta el adaptador `core/registry` → `count` y
-> decidir dónde vive cada uno (§2/§3 "Dónde vive"). Decisiones de alcance ya
-> resueltas (ver §6); quedan solo valores tuneables.
+> existen y están probados visualmente (ver §4). **Flecha a la diana ya está
+> montada en la app real** — `RegistryTable` la usa como única escena de
+> carga: quieta en `count=0` mientras el fetch real sigue en curso, animando
+> las flechas apenas llegan los datos reales (`funnelRanksFor` en
+> `core/funnel.ts`), sin cortar a ninguna otra animación en el medio (ver §2
+> "Dónde vive"). **Martillo en el yunque todavía no** — se probó ahí también
+> pero se sacó (ver §3 "Dónde vive"); sigue pendiente para su rol original
+> (loading del pipeline de IA). De acá en más son solo valores tuneables
+> (§6) y usos adicionales opcionales (splash de toda la app, on-demand en
+> otras vistas).
 
 ---
 
@@ -133,16 +144,46 @@ idle → lanzar → (en vuelo) → impacto
 
 ### Dónde vive
 
-- **Uso primario: el splash / intro de la app** (arranque). Ahí corre en rol
-  **intro**: automático al cargar, sin que el usuario lo pida.
-- **Reusable on-demand en otros lados** — "on-demand" = se dispara por una acción
-  del usuario (abrir una vista, tocar un botón), no automático. Ej.: una card de
-  stats que se abre a propósito, o una celebración al marcar un milestone.
+**Implementado: reveal en `RegistryTable`** (2026-07-26) — una sola instancia
+de `ArrowToTarget` cubre **toda** la espera, no solo el momento en que hay
+datos: mientras `useRegistry` todavía está haciendo el fetch real, la escena
+ya está montada con `count={0}` (diana quieta, sin flechas — el registro
+"idle" de siempre, gratis). En cuanto termina de cargar, el mismo componente
+recibe el `count`/`funnelRanks` reales (**todas** las aplicaciones enviadas
+alguna vez, scope `"all"`, no solo la tab Vigentes/Archivado activa) y las
+flechas vuelan — sin remount, sin cortar a otra animación en el medio. Al
+terminar (`onDone`, que solo se registra una vez hay datos reales — ver el
+gotcha abajo) da paso a la tabla real. Es una variante de rol **intro**
+acotada a esa sección, no al splash completo de la app. Ver
+`ui/RegistryTable.tsx` (la escena) y `app/page.tsx` (de dónde salen
+`totalSentCount`/`sentFunnelRanks`, calculados sobre las filas **sin**
+filtrar por tab).
 
-El mismo componente sirve para ambos porque el contrato (§1) ya lo contempla: en
-el splash se monta con `count` del scope `"all"` y arranca solo; on-demand se
-monta cuando el usuario abre la vista. La escena es la misma; cambia solo **quién
-la dispara**.
+**Por qué una sola instancia y no dos escenas distintas:** la primera versión
+mostraba el martillo mientras cargaba y recién montaba la flecha cuando
+llegaban los datos — un corte de una animación a otra que el usuario marcó
+como un glitch ("por un segundo se muestra el yunque antes de que aparezca
+la animación de la diana... si eso está definido, está mal"). `ArrowToTarget`
+ya soporta `count` creciendo en vivo sobre el mismo montaje sin remount (es
+el mecanismo que ya usan las andanadas/lluvia cuando `count` sube durante la
+propia animación — ver §4), así que pasar de `count=0` (mientras carga) a
+`count=N` (cuando hay datos) en la misma instancia no es un caso especial,
+es el camino normal del componente. El único cuidado real es `onDone`: se
+pasa `undefined` mientras `loading` es `true` (el "done" casi instantáneo de
+un `count=0` no debe interpretarse como "terminó el reveal" — dispararía la
+tabla real antes de tiempo, sin datos) y recién se registra la función real
+una vez que `loading` pasa a `false`.
+
+Quedan disponibles, sin implementar todavía:
+
+- **Splash / intro de toda la app** (no solo la tabla) al arrancar.
+- **Reusable on-demand en otros lados** — "on-demand" = se dispara por una
+  acción del usuario (abrir una vista, tocar un botón), no automático. Ej.:
+  una card de stats que se abre a propósito, o una celebración al marcar un
+  milestone.
+
+El mismo componente sirve para los tres casos porque el contrato (§1) ya lo
+contempla — cambia solo **quién la dispara** y con qué `count`/`funnelRanks`.
 
 ### Modo funnel — los 5 anillos son los 5 hitos (implementado)
 
@@ -162,11 +203,15 @@ Mapeo 1:1, de afuera hacia adentro:
 
 El componente no calcula esto — recibe `funnelRanks: number[]` (uno por
 flecha, mismo orden que el `count`) de un adaptador externo (regla del
-contrato, §1): `rows.filter(!cvPending).map(row => milestoneRank(row))`, con
-`milestoneRank` clampeado a `[0,4]`. `mode="random"` (default) mantiene el
-comportamiento anterior — posición uniforme dentro de toda la diana, sin leer
-data. Ambos modos conviven en `ArrowToTarget`; el adaptador real todavía no
-existe (mismo pendiente que el resto de §1 "Contrato").
+contrato, §1). **Implementado**: `funnelRanksFor(rows)` en `core/funnel.ts`
+— `rows.map(row => Math.max(0, milestoneRank(row)))`, clampeando el `-1`
+("sin hito todavía") de `milestoneRank` a `0`, porque el caller ya filtra a
+filas enviadas (`!cvPending`) antes de llamarlo, y eso mismo ya es el hito
+`sent`. El caller real es `app/page.tsx` (`sentRows`/`sentFunnelRanks`, sobre
+las filas sin filtrar por tab), pasado a `RegistryTable` → `ArrowToTarget`.
+`mode="random"` (default) mantiene el comportamiento anterior — posición
+uniforme dentro de toda la diana, sin leer data. Ambos modos conviven en
+`ArrowToTarget`.
 
 ---
 
@@ -185,6 +230,23 @@ flecha sobre el yunque** — sin muñeco que lo sostenga, el martillo golpea sol
   escena de la diana. Forjar → disparar → dar en el blanco es el arco completo,
   con el **mismo objeto** pasando de una escena a la otra. Esto justifica el
   backbone compartido (§1).
+
+### Dónde vive
+
+**Todavía no montado en la app real** (revertido, 2026-07-26). Se probó
+usarlo en `RegistryTable` para el hueco real sin datos mientras
+`useRegistry` hace el fetch inicial — pero eso significaba **dos escenas
+distintas en el mismo lugar**, con un corte de una a otra en cuanto
+llegaban los datos. El usuario lo marcó como un glitch visual, no como algo
+deliberado: *"por un segundo se muestra el yunque antes de que aparezca la
+animación de la diana... si eso está definido, está mal"*. Se sacó el
+martillo de ahí — ver §2 "Dónde vive" en Flecha a la diana para cómo quedó
+resuelto (una sola instancia de esa escena, quieta en `count=0` mientras
+carga, sin necesitar el martillo para nada).
+
+Sigue siendo la escena correcta, sin cambios en sí misma, para su rol
+original — loading ambient mientras el pipeline de IA genera el CV/carta —
+el día que se cablee ahí. Visible mientras tanto en `/dev/animations`.
 
 ---
 
@@ -205,7 +267,9 @@ abajo).
 | Escena "flecha a la diana" | `ui/animations/ArrowToTarget.tsx` |
 | Escena "martillo en el yunque" | `ui/animations/HammerAnvil.tsx` |
 | Keyframes del martillo | `app/globals.css` (`cb-hammer-swing`, `cb-hammer-flash`) |
-| Harness de QA (dev-only, no linkeado desde la app) | `app/dev/animations/page.tsx` |
+| Harness de QA + playground de tuning (dev-only, no linkeado desde la app) | `app/dev/animations/page.tsx` |
+| Uso real en la app (carga + reveal de la tabla) | `ui/RegistryTable.tsx` (`<ArrowToTarget>`, única escena — ver §2/§3 "Dónde vive") |
+| Adaptador `rows → count`/`funnelRanks` (scope "all") | `app/page.tsx` (`sentRows`/`sentFunnelRanks`) + `funnelRanksFor` en `core/funnel.ts` |
 
 | Animación | Naturaleza | Cómo se resuelve |
 |---|---|---|
@@ -224,37 +288,109 @@ custom property (los `%` de un keyframe no son variables). Terminaba viéndose
 deformaba encima la forma que ya estaba en los stops.
 
 **La solución fue sampleá la trayectoria en JS, no en CSS.** `buildFlightKeyframes`
-(`ArrowToTarget.tsx`) genera ~16 puntos de una parábola real por flecha:
+(`ArrowToTarget.tsx`) genera ~16 puntos de una parábola real por flecha, sobre
+un progreso `te = t^1.7` (no `t` crudo — ver "acelera y llega de golpe" abajo):
 
-- Horizontal: lineal (velocidad constante, como un proyectil real sin
-  arrastre).
-- Vertical: `h(t) = peak * (1 - distanciaAlPico²)` — la misma parábola de
-  antes/después del pico, solo que `peakAt` (dónde cae el pico en [0,1]) es
-  **por flecha**, cosa que un `@keyframes` no puede parametrizar.
+- Horizontal: lineal **en `te`** (no en tiempo real) — de ahí sale la
+  aceleración.
+- Vertical: `h(te) = peak * (1 - distanciaAlPico²)` sobre el mismo `te` — la
+  misma parábola de antes/después del pico, solo que `peakAt` (dónde cae el
+  pico en `te` ∈ [0,1]) es **por flecha**, cosa que un `@keyframes` no puede
+  parametrizar.
 - Rotación: la tangente real del camino en cada punto (diferencia finita
   entre puntos consecutivos), no un ángulo elegido a mano — la punta siempre
   apunta hacia donde se mueve.
 - El último frame fuerza rotación 0 así el ángulo visible final calza con
   `restRotation` (aplicado por el wrapper estático exterior).
+- **Contrarrotación:** el wrapper exterior aplica `rotate(restRotation)` sin
+  animar, desde el primer frame — no solo en el reposo final. Eso rota todo
+  el sistema de coordenadas local de la flecha durante *todo* el vuelo, no
+  solo la pose final. Sin corregir esto, cada flecha entraba rotada por un
+  ángulo distinto según el valor de `restRotation` de esa flecha — un camino
+  armado para "venir de la izquierda" terminaba entrando desde abajo/arriba/la
+  derecha según el caso. `buildFlightKeyframes` contrarrota el camino
+  sampleado por `-restRotation` antes de devolverlo, así el wrapper la vuelve
+  a rotar de vuelta a la forma real — el *approach* visual es el mismo
+  (viene de la izquierda) sin importar dónde cae. Esto era **el bug de fondo
+  del reporte "caen en espiral"**.
+
+**`restRotation` (el ángulo en el que queda clavada cada flecha) pasó por
+tres diseños.** Vale la pena dejar registradas las dos primeras vueltas, no
+solo la final: ambas parecían razonables y fallaban por motivos no obvios, y
+es fácil reintroducir cualquiera de los dos errores si se vuelve a tocar este
+código sin este contexto.
+
+1. **Tangente al anillo** (original) → cada flecha rota para quedar "apoyada"
+   contra la curva del anillo donde cae, así se lee como naturalmente
+   clavada. Funciona bien para una flecha aislada, pero la tangente varía
+   muchísimo según en qué punto del círculo cae cada flecha (casi horizontal
+   arriba/abajo del anillo, casi vertical a los costados). Como el vuelo real
+   de **todas** las flechas viene del mismo lado (§ arriba), flechas que
+   volaron idéntico terminaban clavadas en ángulos finales muy distintos
+   entre sí. Reporte del usuario, con captura de una flecha casi vertical al
+   lado de varias casi horizontales: "el punto de caída está bien, pero la
+   dirección de donde viene es rara, parece que salió desde abajo".
+2. **Mezcla de un ángulo fijo + el ángulo "real" de llegada de cada flecha**
+   (calculado con las mismas fórmulas del vuelo, evaluadas un sample antes de
+   aterrizar) → soluciona la inconsistencia del #1, pero el ángulo "real"
+   resultó ser una mala señal: por el ease-in del vuelo (`easeInPower`), el
+   *último* tramo antes de aterrizar es desproporcionadamente
+   empinado/vertical comparado con la dirección general del vuelo (que es
+   sobre todo horizontal — el rango de `ox`/`spawnOffset*` es 2-3 veces el de
+   `peak`/`arcHeight*`). Entonces aunque se mezclara 50/50 con un ángulo fijo
+   más bajo, las flechas seguían leyendo más paradas de lo que realmente
+   volaron — "se ven como que cayeron desde arriba aunque la trayectoria no
+   fue así".
+3. **Actual: un ángulo de reposo casi fijo (~horizontal) + jitter, sin física
+   de por medio** — `restAngleBaseDeg: 0` (flecha acostada, apuntando a la
+   derecha) y `restAngleJitterDeg: 14` (campos de `ArrowTuning`, ver §4 "el
+   prop de tuning y el playground"). Ajustado contra una foto de
+   referencia que trajo el usuario (flechas reales clavadas en una diana):
+   todas quedan cerca de la horizontal y casi paralelas entre sí, con
+   variación menor y no sistemática — ni tangente al anillo, ni atada al arco
+   de vuelo de cada flecha individual. El rango del jitter salió de medir los
+   ángulos de esas flechas en la foto (~-14° a +12° respecto a la
+   horizontal).
 
 Estos keyframes se pasan a `el.animate(keyframes, { duration, delay, easing:
 "linear", fill: "forwards" })` — `linear` porque el ritmo ya está en la
 densidad/valores de los puntos, no hace falta (ni conviene) otra curva de
 easing encima.
 
-**"Termina de golpe" (pedido explícito):** la física ya lo da gratis. Una
-caída bajo gravedad **acelera** — la velocidad vertical es máxima justo en el
-impacto, no mínima. Con `h(t)` así, la flecha llega a máxima velocidad y la
-animación simplemente termina ahí — no hay deceleration hacia el final que
-la haga "planear" hasta pararse.
+**"Acelera y llega de golpe" (pedido explícito):** dos mecanismos, uno físico
+y uno de timing. Físico: una caída bajo gravedad **acelera** — la velocidad
+vertical es máxima justo en el impacto, no mínima; con `h(te)` así, la
+flecha llega a máxima velocidad vertical y la animación simplemente termina
+ahí, sin deceleration hacia el final. Timing: el progreso `te = t^1.7`
+(`easeInPower` en `ArrowTuning`) además hace que la posición apenas cambie al
+principio del tiempo real y se mueva la mayor parte de la distancia sobre el
+final — un ease-in aplicado al *progreso*, no una curva de easing de WAAPI
+encima (que deformaría la parábola ya sampleada). `flightDurationMin`/`Max`
+se bajaron ~20% (253–360ms → 211–300ms) para la velocidad extra pedida.
 
 **Random real entre replays:** `buildShots` sigue siendo determinístico por
 índice (una flecha ya aterrizada no se reordena si `count` sube — misma
-escena, mismo montaje), pero ahora el seed incluye un `sessionSeed` generado
-una vez por montaje (`Math.random()`, seteado en un `useEffect` para no romper
-la hidratación SSR — ver gotcha abajo). Antes el seed dependía solo del
-índice, así que cada "Replay" (mismo `count`) producía exactamente el mismo
-arreglo — de ahí el reporte "no se siente random".
+escena, mismo montaje), y el seed incluye un `sessionSeed` generado una vez
+por montaje (`Math.random()`, seteado en un `useEffect` para no romper la
+hidratación SSR). Antes el seed dependía solo del índice, así que cada
+"Replay" (mismo `count`) producía exactamente el mismo arreglo — de ahí el
+reporte original "no se siente random".
+
+Esa primera solución tenía un bug residual: `sessionSeed` arrancaba en `0`
+(placeholder para el primer render SSR-safe) y `shots` se computaba —y
+**animaba**— con ese placeholder antes de que el `useEffect` lo re-sorteara.
+El efecto que agenda `el.animate(...)` marca cada flecha como "ya animada" en
+un `Set` indexado por `shot.id` (no por sus valores), así que cuando
+`sessionSeed` cambiaba al valor real un render después, ese mismo `id` ya
+estaba marcado — el efecto lo saltea y la animación real (con los valores
+random correctos, incluida la `restRotation` que usa la contrarrotación de
+arriba) **nunca se crea**. El wrapper estático sí se re-renderiza con los
+valores nuevos, así que el resultado era una flecha que aterriza en el lugar
+correcto pero vuela con la forma/rotación de un shot completamente distinto
+— la otra mitad del reporte "caen en espiral" / "no se siente random".
+Arreglado haciendo que `sessionSeed` arranque en `null` (no en `0`) y que
+`shots` sea `[]` mientras tanto: así el placeholder nunca llega a agendarse,
+y la única tanda de animaciones que se crea es la del seed real.
 
 **Gotcha de implementación (para no repetirlo):** con dos `useEffect`
 separados — uno que agenda animaciones (sin cleanup, para no cortar flechas
@@ -269,10 +405,22 @@ quedar en un estado inconsistente.
 
 ### Assets (SVG, sin arco, sin personaje)
 
-Los 4 objetos (**flecha, diana, yunque+fuego, martillo**) son ilustraciones ya
-hechas por el usuario en `assets/illustrations/*.svg` (no dibujadas a mano en
-código como se planteaba originalmente) — se copiaron a componentes React en
-`ui/animations/assets/`. Sin arco, sin cuerda, sin mascota.
+Los 4 objetos (**flecha, diana, yunque+fuego, martillo**) son ilustraciones
+generadas con **Quiver AI** (con referencias visuales) — no dibujadas a mano
+en código como se planteaba originalmente, y tampoco dibujadas a mano por el
+usuario. El paso de generación de arte del plan original (Quiver AI → Rive,
+ver `animations-bitacora.md`) sí se ejecutó tal cual estaba planeado; lo que
+se cortó después fue el rigging en Rive y el personaje/mascota. Se generó
+**el set completo planeado**, mascota incluida — solo estos 4 objetos
+entraron al proyecto (limpios/recortados) como `assets/illustrations/*.svg`,
+portados a componentes React en `ui/animations/assets/`. Sin arco, sin
+cuerda, sin mascota (en las escenas).
+
+El set completo tal como salió de Quiver, sin limpiar — incluida la mascota
+búho (4 variantes) que nunca se usó y el arco/bow que se generó pero se
+cortó antes de integrarse — vive en `assets/illustrations/originals/` a modo
+de archivo histórico. Ninguno de esos archivos tiene componente React ni se
+importa desde código.
 
 - La **flecha es el mismo asset** en las dos escenas (martillo en el yunque →
   flecha a la diana), como ya establece el backbone (§1).
@@ -285,6 +433,123 @@ código como se planteaba originalmente) — se copiaron a componentes React en
 - **Sin data adentro:** el componente recibe `count` (o `active`) por prop; el
   adaptador que lee las filas de `core/registry` todavía no existe — es el
   próximo paso para montar esto en la app real (splash/intro, §2 "Dónde vive").
+
+### `ArrowTuning` — el prop de tuning y el playground
+
+Todos los "feel knobs" del vuelo (duración, ease-in, offset de spawn, altura
+del arco, ángulo de reposo + jitter, tamaño de la flecha, tope de flechas
+dibujadas, radio máximo en modo random) viven en un solo tipo exportado,
+`ArrowTuning` (`ArrowToTarget.tsx`), con sus valores de producción en
+`DEFAULT_ARROW_TUNING`. `ArrowToTarget` acepta un prop opcional
+`tuning?: Partial<ArrowTuning>` que pisa cualquier subconjunto de esos
+valores — no pasar el prop reproduce exactamente el comportamiento de
+producción.
+
+`/dev/animations` expone un control (slider) por cada campo de `ArrowTuning`,
+agrupados en Timing / Trayectoria / Ángulo final / Tamaño-densidad, con botón
+de reset a los valores por defecto — pensado para iterar visualmente sobre el
+"feel" de la escena sin tocar código, y para reproducir escenarios (ej.
+`dianaVisualCap` bajo + `count` alto, o `arrowScalePct` extremo) al debuggear.
+Cualquier cambio de tuning fuerza un remount completo de `ArrowToTarget` (va
+en el `key`, junto con `replayKey` y `mode`) — necesario porque `shots` sólo
+se re-anima para ids no vistos antes (ver el comentario sobre `sessionSeed`
+más arriba); sin el remount, cambiar un slider cambiaría los valores pero no
+la animación ya agendada para esos mismos ids.
+
+`DEFAULT_ARROW_TUNING` tiene su propia historia documentada largo en el
+código (ángulo de reposo y altura del arco pasaron por varias iteraciones
+rechazadas — ver el comentario ahí, resumido también en §6 más abajo).
+
+**Layout:** la escena vive a la izquierda (columna fija, `w-72`) y todos los
+controles a la derecha (`count`/modo/Replay arriba, el panel de playground
+debajo) — `flex flex-col lg:flex-row` en `app/dev/animations/page.tsx`, así
+en pantallas angostas cae a una columna en vez de romperse.
+
+**Componentes:** el harness usa el design system (`components/ui/`) en vez
+de HTML plano — `Button`, `Input`, `Label`, `Select`, `Card`, `Separator`, y
+`Slider` (instalado vía `npx shadcn add slider` para esta tarea, no existía
+antes en el repo). El `Slider` generado envuelve `@base-ui/react/slider`;
+`onValueChange` para un slider de un solo valor entrega un `number` directo
+(no un evento) — por eso los handlers son `onValueChange={(v) => setTuning(t
+=> ({...t, [key]: v}))}`, distinto del `onChange={(e) =>
+...Number(e.target.value)}` que usa un `<input>` nativo.
+
+**Presets (guardar/cargar tuning):** además de `DEFAULT_ARROW_TUNING`, la
+página guarda combinaciones de `ArrowTuning` con nombre en
+`localStorage` (`cbuilder:dev-animations:arrow-tuning-presets`) — puramente
+client-side, dev-only, nunca viaja a ningún backend. Flujo: nombrás el
+preset actual y "Guardar preset actual" lo agrega al objeto persistido;
+aparece en una lista con botones "Cargar" (pisa el `tuning` activo entero) y
+"Borrar". Sobrevive a un refresh de página (motivo de que exista: "Reset a
+valores por defecto" descarta el tuning en curso, así que sin esto cualquier
+combinación que gustara se perdía). El estado de `presets` arranca en `null`
+y se hidrata en un `useEffect` (mismo patrón SSR-safe que `sessionSeed` en
+`ArrowToTarget` — `localStorage` no existe en el server).
+
+**Sticky mientras se scrollea:** con 14 sliders + presets, el panel de la
+derecha es más alto que la pantalla — sin esto, scrollear para ver los
+sliders de más abajo hace desaparecer la animación y la fila
+`count`/modo/Replay de arriba. Ambos bloques (la columna de la animación y la
+fila de controles principales) llevan `lg:sticky lg:top-4`, así quedan
+clavados arriba mientras el resto del panel (los sliders, dentro del `Card`)
+sigue scrolleando por debajo. La fila de controles principales además lleva
+`lg:bg-background lg:border-b` para que el contenido que scrollea por atrás
+no se vea transparentado. Solo aplica en `lg:` — en mobile todo cae a una
+columna (`flex-col`) y el sticky no aporta nada con tan poco espacio
+vertical.
+
+**Tooltips en cada control:** cada label de slider (y `count`/modo/Shuffle
+ranks/Replay) está envuelto en `Tooltip`/`TooltipTrigger` (design system),
+con una explicación en español simple de qué hace ese control si lo movés —
+ej. "Duración del vuelo, min (ms)": *"Cuánto tarda en volar la flecha más
+rápida del grupo. Bajarlo hace que esa flecha llegue antes."* El texto vive
+en el campo `hint` de cada entrada de `CONTROLS` en
+`app/dev/animations/page.tsx`. Para envolver un elemento que ya es
+interactivo por sí mismo (un `Button`, o el `Label` de `count`) sin anidar
+dos elementos interactivos, `TooltipTrigger` usa el prop `render` de
+base-ui — `<TooltipTrigger render={<Button ... />}>texto</TooltipTrigger>`
+hace que el trigger **sea** ese botón en vez de envolverlo en otro elemento
+extra.
+
+**Bug: la flecha se sale de la diana en tamaños grandes.** Los márgenes de
+`randomModeMaxRadiusPct` (modo random) y `RING_BANDS` (modo funnel) se
+ajustaron a ojo para `DEFAULT_ARROW_TUNING.arrowScalePct` (120%) — el único
+tamaño que existía antes de que `arrowScalePct` fuera un slider. Una vez que
+se puede subirlo hasta 250% desde el playground, la mitad del largo de la
+flecha crece por encima de ese margen y la punta se sale del borde blanco de
+la diana (reportado con captura al tope del slider). Fix acotado, en
+`landingSpot` (`ArrowToTarget.tsx`): el radio de aterrizaje se multiplica por
+`oversizeRadiusGuard(arrowScalePct) = min(1, 120 / arrowScalePct)` —
+`1` (sin efecto) para cualquier tamaño en o por debajo del que ya estaba
+verificado, y se va achicando el radio usable solo a partir de ahí. A
+propósito no se tocaron `RING_BANDS` ni la fórmula de margen en sí — el
+pedido fue arreglar el caso extremo sin rediseñar la lógica general de
+posicionamiento.
+
+**Legend del modo funnel, en vez del array crudo.** `ranksSeed`/`funnelRanks`
+generan hasta ~150 números 0-4 — mostrarlos como `[0, 3, 2, 2, 1, 4, ...]` es
+ilegible más allá de un puñado. `FunnelRanksSummary`
+(`app/dev/animations/page.tsx`) los agrupa por hito y muestra un conteo con
+un punto de color por milestone — los colores salen directo de los fills de
+`ui/animations/assets/Diana.tsx` (`white`/`#333335`/`#30ABE2`/`#DF3C38`/
+`#DAA737`), así el punto de la leyenda es el mismo color que el anillo real.
+El array crudo sigue disponible, colapsado detrás de un `<details>`, para
+quien quiera revisar el mapeo exacto por flecha.
+
+**Sticky sin huecos: navbar de sección, no solo un div pegajoso.** La primera
+versión de "sticky" (commit anterior) usaba `lg:top-4` — dejaba un hueco de
+16px arriba del elemento pegado, y cuando scrolleabas, la primera fila de
+sliders se asomaba fingiendo un glitch en ese hueco (reportado con captura).
+Fix: el título de la sección (`<h2>`) se movió **adentro** de la barra
+pegajosa (antes vivía afuera, sin pegarse) junto con `count`/modo/Replay,
+todo a `lg:top-0` (sin hueco) con fondo opaco — así no hay ningún punto donde
+algo pueda asomarse por detrás. La columna de la animación se pega por
+separado, offseteada exactamente por la altura real de esa barra (medida con
+Playwright: 93px, no una estimación) para que quede justo debajo, sin
+superponerse ni dejar hueco propio. Ambos (`sticky`) viven dentro del mismo
+`<section>` que el resto del contenido de "Flecha a la diana", así que se
+despegan solos al scrollear más allá de esa sección — no hace falta lógica
+extra para que dejen de mostrarse al llegar a "Martillo en el yunque".
 
 ---
 
@@ -302,11 +567,13 @@ Un solo lugar para las constantes de movimiento — todas las escenas las compar
 | `volleySize` | 4 | Flechas por tanda en andanadas |
 | `dianaVisualCap` | ~40 | Máximo de flechas clavadas dibujadas (el resto lo carga el contador) |
 | `hammerCycle` | ~1500 ms | Duración de un ciclo de golpe de martillo (loop) |
-| `flightDurationMin`/`Max` | 253–360 ms | Rango de duración del vuelo — cada flecha sortea un valor propio |
+| `flightDurationMin`/`Max` | 211–300 ms | Rango de duración del vuelo — cada flecha sortea un valor propio (~20% más rápido que el original 253–360) |
+| `easeInPower` | 1.7 | Exponente del ease-in de progreso (`te = t^1.7`) — acelera el vuelo y hace que "llegue de golpe". Campo de `ArrowTuning` (`ArrowToTarget.tsx`), no de `motionTokens.ts` — no es compartido entre escenas, y es tuneable en vivo desde el playground de `/dev/animations` (§4) junto con el resto de `ArrowTuning` |
 
 Easings: vuelo de la flecha = `linear` sobre una parábola ya sampleada en JS
-(§4 — el ritmo vive en los puntos, no en la curva de easing), golpe de
-martillo = ease-in (acelera hacia el impacto), tick del contador = ease-out.
+con progreso ease-in (§4 — el ritmo vive en los puntos, no en la curva de
+easing), golpe de martillo = ease-in (acelera hacia el impacto), tick del
+contador = ease-out.
 
 ---
 
@@ -340,6 +607,156 @@ martillo = ease-in (acelera hacia el impacto), tick del contador = ease-out.
    browser, no librería). Detalle técnico completo, incluido un gotcha de
    React Strict Mode a no repetir, en §4 "El vuelo de la flecha: por qué WAAPI
    y no `@keyframes`".
+6. **Fix: flechas "en espiral" / poco random + ajuste de sensación** (2026-07-26)
+   → dos bugs de fondo detrás del reporte "caen en espiral, no se siente
+   random": (1) el wrapper exterior aplica `rotate(restRotation)` sin animar
+   desde el primer frame, así que rotaba el sistema de coordenadas local de
+   la flecha durante todo el vuelo, no solo en el reposo — un camino armado
+   para "venir de la izquierda" terminaba entrando desde cualquier lado según
+   dónde caía esa flecha en el anillo; (2) `sessionSeed` arrancaba en un
+   placeholder (`0`) que llegaba a **animarse de verdad** antes de que el
+   `useEffect` lo re-sorteara, y el `Set` de "ya animada" (indexado por
+   `shot.id`, no por valores) bloqueaba que la animación real (con el seed
+   correcto) se creara — la flecha aterrizaba en el lugar correcto pero volaba
+   con la forma/rotación de un shot completamente distinto. Fixes: contrarrotar
+   el camino sampleado por `-restRotation` en `buildFlightKeyframes`, y hacer
+   que `sessionSeed`/`shots` arranquen en `null`/`[]` en vez de `0` para que el
+   placeholder nunca se agende. De paso, pedido explícito del usuario: vuelo
+   ~20% más rápido (`flightDurationMin`/`Max` bajan a 211–300ms) con un ease-in
+   de progreso (`te = t^1.7`) para que acelere y "llegue de golpe", y la flecha
+   dibujada ~20% más grande (24×88px → 29×106px — verificado que sigue sin
+   pisar el borde de la diana en ambos modos a `dianaVisualCap`). Detalle
+   técnico completo en §4.
+7. **Fix: ángulo de reposo, de tangente al anillo a casi-fijo/horizontal**
+   (2026-07-26) → con el fix anterior, el *vuelo* ya venía consistentemente
+   del mismo lado, pero el *ángulo final* (`restRotation`, tangente al punto
+   de aterrizaje) seguía sin relación con eso — variaba mucho según dónde
+   caía cada flecha en el anillo (casi horizontal arriba/abajo, casi vertical
+   a los costados). Reporte del usuario, con captura: "el punto de caída está
+   bien, pero la dirección de donde viene es rara, parece que salió desde
+   abajo […] deberían lucir que todas vienen de la izquierda, más o menos de
+   la misma dirección". Pasó por dos vueltas antes de resolverse: primero una
+   mezcla 50/50 entre el ángulo real de llegada de cada flecha y un ángulo
+   fijo de referencia (49°) — visualmente mejor, pero el usuario notó que
+   seguían leyendo "como caídas desde arriba" pese a que el vuelo real era
+   sobre todo horizontal (el ángulo "real" resultó ser una mala señal — ver
+   §4). Se resolvió con una foto de referencia (flechas reales clavadas en
+   una diana, casi horizontales y casi paralelas) que el usuario aportó
+   directamente: ángulo de reposo casi fijo (`restAngleBaseDeg: 0`) con
+   jitter ±14° (`restAngleJitterDeg`), sin ninguna relación con la física
+   del vuelo ni con el anillo — ver §4 "`restRotation` … pasó por tres
+   diseños" para el detalle completo y el razonamiento de por qué las dos
+   vueltas anteriores fallaban (documentado también como comentario largo en
+   `ArrowToTarget.tsx`, a pedido explícito del usuario, para no repetir el
+   mismo camino la próxima vez que se toque este código).
+8. **Fix: arco del vuelo demasiado alto (lob) → casi plano** (2026-07-26) →
+   con el ángulo de reposo ya casi horizontal (#7), el `peak` del vuelo
+   (45–110px) seguía generando un arco alto — la flecha subía bastante antes
+   de bajar, un lob más que un tiro directo, que además no calzaba con
+   aterrizar casi plana. Reporte del usuario con una captura anotada
+   (trayectoria alta marcada como incorrecta, trayectoria casi plana con
+   apenas una leve curva marcada como correcta). Se bajó el rango de `peak` a
+   10–25px — el vuelo entero queda casi horizontal, con solo un leve
+   arqueo, consistente de punta a punta con el ángulo de reposo.
+9. **Todos los "feel knobs" del vuelo pasan a un prop `tuning` + playground
+   en `/dev/animations`** (2026-07-26) → todas las constantes tocadas en la
+   sesión de fixes de #6-#8 (duración de vuelo, ease-in, offset de spawn,
+   altura/pico del arco, ángulo de reposo + jitter, tamaño de la flecha,
+   `dianaVisualCap`, radio máximo en modo random) se juntaron en un solo tipo
+   exportado `ArrowTuning` con defaults en `DEFAULT_ARROW_TUNING`, pisables
+   vía `tuning?: Partial<ArrowTuning>` en `ArrowToTarget`. El harness de dev
+   expone un slider por campo, agrupados, con reset a valores por defecto —
+   pedido explícito del usuario ("un playground agregando los controles para
+   manejar todo, incluyendo todos los cambios que hemos hecho en este chat")
+   para poder iterar visualmente sobre el feel sin volver a tocar código cada
+   vez. Ver §4 "`ArrowTuning` — el prop de tuning y el playground".
+10. **Playground: layout dos columnas, componentes del DS, presets
+    guardables** (2026-07-26) → tres pedidos explícitos del usuario sobre el
+    playground de #9: (1) animación a la izquierda, controles a la derecha
+    (antes todo apilado verticalmente); (2) usar los componentes del design
+    system en vez de `<input>`/`<select>`/`<button>` planos — se instaló
+    `Slider` vía `npx shadcn add slider` (no existía en el repo) y se
+    migraron los demás controles a `Button`/`Input`/`Label`/`Select`/`Card`/
+    `Separator`; (3) poder **guardar** combinaciones de tuning con nombre,
+    no solo tener el default — "si bien me gusta lo de valores por defecto,
+    podemos hacer algo para almacenar animaciones que me gusten? porque al
+    hacer reset los pierdo". Se agregaron presets con nombre persistidos en
+    `localStorage` (guardar/cargar/borrar), sobreviven a un refresh de
+    página; "Reset a valores por defecto" sigue sin tocarlos. Detalle
+    completo en §4, mismo subtítulo que #9.
+11. **Playground: sticky, tooltips, fix de flecha saliéndose del borde**
+    (2026-07-26) → tres pedidos más sobre el mismo playground: (1) la
+    animación y la fila de controles principales (`count`/modo/Replay) pasan
+    a `lg:sticky lg:top-4`, así no desaparecen al scrollear para ver los
+    sliders de más abajo (el panel ya no entra completo en pantalla con 14
+    controles + presets); (2) cada control lleva un tooltip (DS) con una
+    explicación en español simple de qué hace si lo movés; (3) bug
+    reportado con captura — al subir `arrowScalePct` al máximo (250%) la
+    punta de la flecha se sale del borde blanco de la diana, porque los
+    márgenes de radio se habían verificado solo al tamaño de producción
+    (120%). Fix acotado (no una re-derivación general): el radio de
+    aterrizaje se multiplica por `min(1, 120 / arrowScalePct)` — sin efecto
+    en o por debajo del tamaño ya verificado, se achica recién a partir de
+    ahí. Detalle completo en §4.
+12. **Martillo en el yunque, primer uso real: loading de `RegistryTable`**
+    (2026-07-26) → hasta acá ninguna de las dos escenas estaba montada en la
+    app real, solo en el harness de dev. Pregunta del usuario ("¿esta
+    animación está aplicada en la app realmente?") llevó a reemplazar el
+    `"Cargando registro…"` de texto puro por `<HammerAnvil active />`. Se
+    eligió Martillo (no Flecha a la diana) porque calza exacto con el rol ya
+    documentado en §3 (loading ambient, sin dato todavía) y con su
+    aspect-ratio (156:91, angosto) — la diana es cuadrada y necesita un
+    `count` real, ninguno de los dos encaja en una fila de tabla mientras
+    todavía no hay filas. Detalle en §3 "Dónde vive".
+13. **Legend del funnel + sticky sin huecos** (2026-07-26) → dos ajustes más
+    de UI en el playground: el array crudo de `funnelRanks` se reemplaza por
+    una leyenda de conteos por hito con los colores reales de los anillos de
+    la diana; el sticky (#11) tenía un hueco de 16px donde se asomaba
+    contenido scrolleado por detrás — se convirtió en una navbar de sección
+    completa (título + controles) pegada a `top-0` sin hueco, con la columna
+    de la animación offseteada por la altura real medida (93px). Detalle en
+    §4.
+14. **Flecha a la diana también montada, con datos reales — corrección de
+    rumbo sobre #12** (2026-07-26) → el usuario aclaró que el martillo (#12)
+    no era lo que tenía en mente: *"la idea es la diana y las flechas basado
+    en los datos de la tabla"*. Como la flecha necesita un `count` real que
+    no existe mientras el fetch sigue en curso, se resolvió con un reveal:
+    el martillo sigue cubriendo el hueco real sin datos (`loading`), pero
+    apenas llegan las filas de verdad se reproduce la escena de la flecha
+    **una sola vez**, en modo funnel, con el conteo y el rank de **todas**
+    las aplicaciones enviadas alguna vez (scope "all", no la tab activa) —
+    y al terminar (`onDone`) da paso a la tabla real. Esto implementó el
+    adaptador `rows → funnelRanks` que la spec ya pedía desde el plan
+    original y que hasta este punto no existía: `funnelRanksFor` (nuevo
+    export en `core/funnel.ts`, reutiliza el `milestoneRank` interno que ya
+    alimenta `computeFunnel`). Detalle en §2/§3 "Dónde vive".
+15. **Los assets "de más" del plan original entran al repo como archivo
+    histórico** (2026-07-26) → corrección sobre la bitácora: los 4 objetos
+    usados no fueron dibujados a mano por el usuario (como decía por error
+    la documentación) sino generados con Quiver AI, exactamente como
+    planeaba el plan original — ese paso sí se ejecutó completo, mascota
+    incluida, antes de que se decidiera no usar personaje. El set completo,
+    sin limpiar, se agregó a `assets/illustrations/originals/` (sin
+    componente React, sin uso en código) para dejar constancia de lo que
+    existió. Ver `animations-bitacora.md`.
+16. **Una sola escena para toda la carga de `RegistryTable`, no dos** —
+    Martillo se saca de ahí (2026-07-26) → el diseño de la decisión #14
+    (martillo mientras carga, flecha cuando hay datos) producía un corte de
+    una animación a otra apenas llegaban los datos — reportado como glitch:
+    *"por un segundo se muestra el yunque antes de que aparezca la
+    animación de la diana... si eso está definido, está mal"*. Se resolvió
+    con una sola instancia de `ArrowToTarget` cubriendo toda la espera:
+    `count={0}` (diana quieta, sin flechas — el registro "idle" que el
+    componente ya tenía) mientras `loading` es `true`, y el `count`/
+    `funnelRanks` reales apenas hay datos — sin remount, aprovechando que el
+    componente ya soporta `count` subiendo en vivo sobre el mismo montaje
+    (el mismo mecanismo de andanadas/lluvia). Cuidado no obvio: `onDone` se
+    deja en `undefined` mientras `loading` es `true`, porque el "done" casi
+    instantáneo de un `count=0` no debe interpretarse como que terminó el
+    reveal real. De paso, tamaño responsivo del contenedor de la escena
+    (`w-32 sm:w-52 lg:w-64` — 50% en mobile, ~80% en tablet, 100% en
+    desktop), pedido explícito para no verse sobredimensionada en pantallas
+    chicas. Detalle en §2/§3 "Dónde vive".
 
 **Valores por defecto (tuneables, no bloquean):**
 

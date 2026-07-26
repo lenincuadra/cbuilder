@@ -26,6 +26,7 @@ import type { LinkSpec } from "@/core/spec/types";
 import { cn } from "@/lib/utils";
 import { ChannelIcon } from "@/ui/ChannelIcon";
 import { CodeCell } from "@/ui/CodeCell";
+import { ArrowToTarget } from "@/ui/animations/ArrowToTarget";
 import { RowDetailDrawer, type DetailTab } from "@/ui/detail/RowDetailDrawer";
 import { FocusIcon } from "@/ui/FocusIcon";
 import { SeguimientoCell } from "@/ui/detail/SeguimientoCell";
@@ -71,6 +72,18 @@ const COLUMNS: Column[] = [
 export interface RegistryTableProps {
   rows: RegistryRow[];
   loading?: boolean;
+  /**
+   * Every CV ever sent — count + funnel rank per row (`docs/animations.md`
+   * §2 "Modo funnel"), computed by the caller from the *unfiltered* rows
+   * (not `rows` above, which is already scoped to the current
+   * Vigentes/Archivado tab). Feeds the "flecha a la diana" scene shown
+   * while `loading` is true (idle, no arrows yet) and animates in once
+   * real data lands — one continuous scene, not a swap between two
+   * different loading animations. Omit either to skip straight to the
+   * empty/rows state once loading finishes.
+   */
+  totalSentCount?: number;
+  sentFunnelRanks?: number[];
   onUpdate: (code: string, fields: EditableFields) => void | Promise<void>;
   onDelete: (code: string) => void | Promise<void>;
   /** Open the deferred-generation wizard for a pending row ("Generar CV"). */
@@ -95,6 +108,8 @@ function focusTooltip(focus: string, spec: LinkSpec | null): string {
 export function RegistryTable({
   rows,
   loading = false,
+  totalSentCount,
+  sentFunnelRanks,
   onUpdate,
   onDelete,
   onGenerateCv,
@@ -106,6 +121,16 @@ export function RegistryTable({
   const { spec } = useSpec();
   const [detailCode, setDetailCode] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  // Flips true once the arrow reveal finishes *with real data* — never
+  // again for this mount (loading never goes back to true after the
+  // initial fetch, see useRegistry.ts). While `loading` is still true, the
+  // same <ArrowToTarget> instance below just sits idle (count 0, no
+  // arrows) instead of swapping to a different loading animation — one
+  // continuous scene instead of a jarring cut from one animation to
+  // another. `totalSentCount` falsy (0, once loading is done) skips
+  // straight past this to the empty/rows state below.
+  const [revealDone, setRevealDone] = useState(false);
+  const showingReveal = !revealDone && (loading || (totalSentCount ?? 0) > 0);
   const [detailTab, setDetailTab] = useState<DetailTab>("detalles");
   const detailRow = detailCode ? (rows.find((row) => row.code === detailCode) ?? null) : null;
   const detailIndex = detailCode ? rows.findIndex((row) => row.code === detailCode) : -1;
@@ -135,41 +160,61 @@ export function RegistryTable({
   return (
     <>
       <div className="w-full overflow-x-auto rounded-lg border">
-        <Table className="w-full table-fixed max-[639px]:min-w-[720px]">
-          <TableHeader>
-            <TableRow>
-              {COLUMNS.map((column) => {
-                const Icon = column.icon;
-                return (
-                  <TableHead
-                    key={column.label}
-                    className={cn(
-                      "whitespace-nowrap",
-                      column.width,
-                      column.headClass ?? (Icon && "text-center"),
-                    )}
-                  >
-                    {Icon ? (
-                      <span
-                        className="inline-flex justify-center"
-                        title={column.label}
-                        aria-label={column.label}
-                      >
-                        <Icon className={cn("size-4", column.iconClass ?? "text-muted-foreground")} />
-                      </span>
-                    ) : (
-                      column.label
-                    )}
-                  </TableHead>
-                );
-              })}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
+        {/* The 720px min-width below exists so real columns don't get
+            crushed on narrow screens — it has nothing to do with the reveal
+            scene, whose only content is a centered animation. Forcing it
+            anyway made the diana sit off-center, requiring a horizontal
+            scroll to see something that doesn't need one: nothing else is
+            in the table at that point. */}
+        <Table className={cn("w-full table-fixed", !showingReveal && "max-[639px]:min-w-[720px]")}>
+          {/* No header while showing the reveal: there are no columns to
+              label yet (just a centered animation), and with the min-width
+              above dropped for that same reason, cramming whitespace-nowrap
+              headers into whatever width is left just ran their labels
+              together unreadably. */}
+          {!showingReveal && (
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={COLUMNS.length} className="h-24 text-center text-muted-foreground">
-                  Cargando registro…
+                {COLUMNS.map((column) => {
+                  const Icon = column.icon;
+                  return (
+                    <TableHead
+                      key={column.label}
+                      className={cn(
+                        "whitespace-nowrap",
+                        column.width,
+                        column.headClass ?? (Icon && "text-center"),
+                      )}
+                    >
+                      {Icon ? (
+                        <span
+                          className="inline-flex justify-center"
+                          title={column.label}
+                          aria-label={column.label}
+                        >
+                          <Icon className={cn("size-4", column.iconClass ?? "text-muted-foreground")} />
+                        </span>
+                      ) : (
+                        column.label
+                      )}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            </TableHeader>
+          )}
+          <TableBody>
+            {showingReveal ? (
+              <TableRow>
+                <TableCell colSpan={COLUMNS.length} className="py-8 text-center text-muted-foreground">
+                  <div className="mx-auto w-32 sm:w-52 lg:w-64">
+                    <ArrowToTarget
+                      count={loading ? 0 : (totalSentCount ?? 0)}
+                      mode="funnel"
+                      funnelRanks={loading ? undefined : sentFunnelRanks}
+                      onDone={loading ? undefined : () => setRevealDone(true)}
+                    />
+                  </div>
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
