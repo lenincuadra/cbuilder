@@ -150,7 +150,14 @@ function buildShots(count: number, mode: ArrowLandingMode, funnelRanks: number[]
     const delay = Math.round(groupIndex * groupGap + withinGroup * 18);
     const { x, y } = landingSpot(rand, i, mode, funnelRanks?.[i]);
     const ox = -Math.round(170 + rand(i + 0.1) * 110);
-    const peak = -Math.round(45 + rand(i + 0.6) * 65);
+    // Kept low relative to `ox` on purpose: this used to be 45-110 (a tall
+    // lob), which read fine in isolation but didn't match the near-flat
+    // resting angle above — the flight would arc way up then dive down
+    // steeply right before snapping to ~horizontal on landing. User
+    // feedback (annotated screenshot: a tall red arc marked wrong, a nearly
+    // flat green one marked right) — the whole flight should stay close to
+    // horizontal, just a gentle bow, not a lob.
+    const peak = -Math.round(10 + rand(i + 0.6) * 15);
     const peakAt = 0.32 + rand(i + 0.85) * 0.3;
     // See BASE_REST_ANGLE_DEG above for why this isn't derived from the
     // flight path or the landing ring.

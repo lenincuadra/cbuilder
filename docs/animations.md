@@ -455,6 +455,15 @@ contador = ease-out.
    vueltas anteriores fallaban (documentado también como comentario largo en
    `ArrowToTarget.tsx`, a pedido explícito del usuario, para no repetir el
    mismo camino la próxima vez que se toque este código).
+8. **Fix: arco del vuelo demasiado alto (lob) → casi plano** (2026-07-26) →
+   con el ángulo de reposo ya casi horizontal (#7), el `peak` del vuelo
+   (45–110px) seguía generando un arco alto — la flecha subía bastante antes
+   de bajar, un lob más que un tiro directo, que además no calzaba con
+   aterrizar casi plana. Reporte del usuario con una captura anotada
+   (trayectoria alta marcada como incorrecta, trayectoria casi plana con
+   apenas una leve curva marcada como correcta). Se bajó el rango de `peak` a
+   10–25px — el vuelo entero queda casi horizontal, con solo un leve
+   arqueo, consistente de punta a punta con el ángulo de reposo.
 
 **Valores por defecto (tuneables, no bloquean):**
 
