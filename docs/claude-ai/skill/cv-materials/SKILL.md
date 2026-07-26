@@ -22,8 +22,9 @@ Read both files before drafting.
 
 ## Inputs to collect (ask if missing)
 
-Company, role, language (EN/ES), and optionally: focus, contact name (`who`),
-posting context (requirements pasted from the job ad).
+Company, role, language (EN, ES, or Ambos — cover letter only, produces both
+clearly separated), and optionally: focus, contact name (`who`), posting
+context (requirements pasted from the job ad).
 
 ## Voice
 
@@ -34,16 +35,44 @@ toward a strong, specific first pass over a safe, generic one.
 
 ## Task: cover letter
 
-Write the BODY only (greeting through sign-off — the app adds the
-letterhead). Address `who` if given, else a generic professional greeting
-(never "To Whom It May Concern"). 3–4 short paragraphs: why this
-role/company, one or two strongest relevant proof points, brief close.
-Markdown only: paragraphs, line breaks, `- ` lists, **bold**, *italic*.
+Write the BODY only (greeting through sign-off). Address `who` if given,
+else a generic professional greeting (never "To Whom It May Concern").
+Write in the requested language; if Ambos, produce both, clearly separated.
+3–4 short paragraphs: why this role/company, one or two strongest relevant
+proof points, brief close. Markdown only: paragraphs, line breaks, `- `
+lists, **bold**, *italic*.
+
+### Deliverable: assemble the actual .docx
+
+Unlike the CV (real designed master + a tracking code checked against a
+private registry, neither available here), the cover letter has no master
+and no tracked links — just a programmatic letterhead + the body above.
+Produce a real `.docx` (use code execution / file creation if this chat
+supports it) instead of only returning plain text:
+
+- **Page**: US Letter (8.5×11in), margins 0.75in all sides. Font: Arial.
+- **Letterhead**, one paragraph each, in order:
+  1. "Lenin Cuadra" — bold, 26pt, `#111827`.
+  2. Subtitle — bold, 12pt, `#1A56DB`. EN: "Senior Product Designer  ·  AI
+     Adoption Lead". ES: "Senior Product Designer  ·  Líder de Adopción de
+     IA".
+  3. Contact — 9pt, `#6B7280`. EN: "hi@lenincuadra.com  ·  +549
+     351-376-6049". ES: "hola@lenincuadra.com  ·  +549 351-376-6049".
+  4. Date — 10pt, `#374151`, long form in the letter's language ("July 16,
+     2026" / "16 de julio de 2026"), today unless told otherwise, extra
+     spacing before/after.
+- **Body**: 10pt, `#374151`, ~1.15 line spacing, small paragraph spacing.
+  `- ` lines → bullet points ("•  ", indented). **bold**/*italic* preserved.
+- **Filename**: exactly `Lenin_Cuadra_Cover_Letter.docx`.
+
+If file creation isn't available here, fall back to plain text — the user
+pastes it into cbuilder's letter textarea, which renders the same markdown.
 
 ## Task: pre-screening answer
 
-Answer in the question's language. Plain text, no markdown, no greeting — as
-if typed into an application form. As short as the question warrants.
+Answer in the question's language (not necessarily the language used to
+describe company/role/focus). Plain text, no markdown, no greeting — as if
+typed into an application form. As short as the question warrants.
 
 ## Rules
 

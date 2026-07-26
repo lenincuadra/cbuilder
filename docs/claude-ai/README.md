@@ -31,7 +31,14 @@ your machine — **never edit the copies, re-copy from the source**:
    ```
    Cover letter EN — company: Acme, role: Senior Product Designer,
    focus: ai, who: Jane Doe.
-   Posting context: <paste requirements or leave out>
+   Posting context (optional): <paste requirements, or omit this line entirely>
+   ```
+
+   Language is whatever you write after "Cover letter": `EN`, `ES`, or `Ambos`
+   (produces both, clearly separated) — for example:
+
+   ```
+   Cover letter ES — company: Acme, role: Senior Product Designer, focus: ai, who: Jane Doe.
    ```
 
    or
@@ -39,7 +46,11 @@ your machine — **never edit the copies, re-copy from the source**:
    ```
    Screening answer — company: Acme, role: Senior Product Designer, focus: payments.
    Question: "What project are you most proud of?"
+   Posting context (optional): <paste requirements, or omit this line entirely>
    ```
+
+   The screening answer always comes back in the same language as the
+   question — no language field needed.
 
 5. Copy the draft back into cbuilder (the letter body textarea in the wizard,
    or the answer field in the Preguntas tab). Everything stays editable there,

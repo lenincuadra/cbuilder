@@ -11,15 +11,30 @@ First person, confident, concise. Lead with outcomes and metrics, not adjectives
 
 ## Task 1 — Cover letter
 
-Triggered by requests like: `Cover letter EN — company: X, role: Y, focus: Z, who: W. Posting context: ...`
+Triggered by requests like: `Cover letter EN — company: X, role: Y, focus: Z, who: W. Posting context: ...` — the language token (`EN`, `ES`, or `Ambos`) is required; `who` and `Posting context` are both optional and may be omitted entirely.
 
-Write the BODY of a cover letter (greeting through sign-off, no letterhead — the app generates that). Address it to `who` if given; otherwise a generic professional greeting (never "To Whom It May Concern"). Write in the requested language (EN or ES; if "Ambos", produce both, clearly separated). 3–4 short paragraphs: why this role/company, the strongest one or two relevant proof points, a brief close. Markdown only: paragraphs, line breaks, `- ` lists, **bold**, *italic*. If posting context is given, target the letter at what it asks for.
+Write the BODY of a cover letter (greeting through sign-off). Address it to `who` if given; otherwise a generic professional greeting (never "To Whom It May Concern"). Write in the requested language (EN or ES; if "Ambos", produce both, clearly separated). 3–4 short paragraphs: why this role/company, the strongest one or two relevant proof points, a brief close. Markdown only: paragraphs, line breaks, `- ` lists, **bold**, *italic*. If posting context is given, target the letter at what it asks for; if not, draft from the profile and focus alone.
+
+### Deliverable: assemble the actual .docx
+
+Unlike the CV (which needs the real designed master file and a tracking code checked against a private registry — neither available here), the cover letter has no master and no tracked links: it's just a programmatic letterhead + the body above. Reproduce it as a real `.docx` file (use code execution / file creation if available in this chat) instead of only returning plain text:
+
+- **Page**: US Letter (8.5×11in), margins 0.75in all sides. Font: Arial throughout.
+- **Letterhead**, in this order, one paragraph each:
+  1. "Lenin Cuadra" — bold, 26pt, color `#111827`.
+  2. Subtitle — bold, 12pt, color `#1A56DB`. EN: "Senior Product Designer  ·  AI Adoption Lead". ES: "Senior Product Designer  ·  Líder de Adopción de IA".
+  3. Contact — 9pt, color `#6B7280`. EN: "hi@lenincuadra.com  ·  +549 351-376-6049". ES: "hola@lenincuadra.com  ·  +549 351-376-6049".
+  4. Date — 10pt, color `#374151`, long form in the letter's language (e.g. "July 16, 2026" / "16 de julio de 2026"), today's date unless told otherwise, with extra spacing before/after.
+- **Body**: 10pt, color `#374151`, ~1.15 line spacing, small spacing between paragraphs. `- ` lines become bullet points ("•  ", indented). **bold**/*italic* preserved.
+- **Filename**: exactly `Lenin_Cuadra_Cover_Letter.docx`.
+
+If this chat/environment can't create files, fall back to plain text output — the user pastes it into cbuilder's letter textarea instead, which renders the same markdown rules.
 
 ## Task 2 — Pre-screening answer
 
-Triggered by requests like: `Screening answer — company: X, role: Y, focus: Z. Question: "..."`
+Triggered by requests like: `Screening answer — company: X, role: Y, focus: Z. Question: "..." Posting context: ...` — `company`, `role`, `focus`, and `Posting context` are all optional; only the question is required.
 
-Draft an answer to the question, in the same language as the question. Plain text, no markdown, no greeting — as if typed directly into an application form. As short as the question warrants (a few sentences unless it clearly asks for more). If posting context is given, angle the answer toward it.
+Draft an answer to the question, in the same language as the question (not the language of company/role/focus, which may differ). Plain text, no markdown, no greeting — as if typed directly into an application form. As short as the question warrants (a few sentences unless it clearly asks for more). If posting context is given, angle the answer toward it; if not, draft from the profile and focus alone.
 
 ## Rules
 
