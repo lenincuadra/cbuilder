@@ -7,26 +7,31 @@ data-driven, a [`architecture.md`](architecture.md). Este doc es la fuente de
 verdad del sistema de animación — pensado también para pasárselo a otra
 herramienta/IA que produzca los assets sin tocar data privada.
 
-> Estado: **plan v1**. Nada implementado todavía. Decisiones de alcance ya
+> Estado: **implementado (v1, reducido)**. Los dos componentes de escena
+> existen y están probados visualmente (ver §4), pero **todavía no están
+> montados en la app real** — falta el adaptador `core/registry` → `count` y
+> decidir dónde vive cada uno (§2/§3 "Dónde vive"). Decisiones de alcance ya
 > resueltas (ver §6); quedan solo valores tuneables.
 
 ---
 
-## 1. El backbone escalable — un mundo, muchas escenas
+## 1. El backbone — un objeto compartido, dos escenas
 
-La escalabilidad no está en el código: está en que **las dos animaciones
-comparten universo**. El arquero y el forjador son el **mismo muñeco** con
-distinta herramienta, y la **flecha es el mismo objeto**. Ese es el pago: un solo
-set de assets, muchas escenas.
+**Sin personaje.** Ninguna de las dos escenas tiene muñeco/mascota — son objetos
+animando solos: la flecha vuela sola hasta la diana; el martillo golpea solo
+sobre el yunque. Lo que las conecta es que **la flecha es el mismo asset** en las
+dos escenas: nace en el yunque (forjada) y termina en la diana (disparada). Ese
+es el pago compartido: un solo objeto viajando entre dos escenas, no dos mundos
+separados.
 
-**Principio rector: un personaje, muchos roles.** Toda animación futura debería
-recombinar el asset set antes que dibujar de cero.
+**Principio rector: un objeto, dos escenas.** Toda animación futura debería
+reusar la flecha antes que inventar un objeto nuevo.
 
 Tres piezas fijas que todo lo futuro reusa:
 
 | Pieza | Qué es | Por qué escala |
 |---|---|---|
-| **Asset set** | Un personaje (muñeco), la flecha, la diana, el fondo/yunque | Una escena nueva = recombinás estos, no dibujás de cero |
+| **Asset set** | La flecha, la diana, el yunque, el martillo | Sin mascota que dibujar: 4 formas simples que cualquier escena nueva recombina |
 | **Motion tokens** | Duraciones, easings y umbrales en un solo lugar (ver §5) | Todas las escenas se sienten coherentes y se tunean centralizado — el "DESIGN.md del movimiento" |
 | **Contrato** | La animación recibe **solo props**, nunca toca la DB | Un adaptador finito traduce datos→props; la animación es tonta y portable |
 
@@ -36,18 +41,19 @@ Clasificar toda animación futura en uno de estos tres roles (define cómo se
 dispara y qué la cierra):
 
 - **Data-driven** — refleja números reales. Se **auto-cronometra** (la cierra su
-  propio presupuesto de tiempo). → el arquero.
+  propio presupuesto de tiempo). → la flecha a la diana.
 - **Ambient / loading** — loop decorativo mientras algo carga. La cierra el
-  **evento real** (el pipeline termina), no el reloj. → el forjador.
-- **Intro / brand** — secuencia narrativa. Forjar → disparar → dar en el blanco,
-  como títulos. Reusa las dos escenas anteriores.
+  **evento real** (el pipeline termina), no el reloj. → el martillo en el yunque.
+- **Intro / brand** — secuencia narrativa. Martillo forja la flecha → la flecha
+  sale disparada → da en el blanco, como títulos. Reusa las dos escenas
+  anteriores.
 
 ### Contrato (para que lo que se construya afuera encaje)
 
 ```ts
 type Scene =
-  | { kind: "archer"; count: number; scope: "vigentes" | "all"; onDone?: () => void }
-  | { kind: "forger"; onDone: () => void }   // loop hasta que el pipeline real termina
+  | { kind: "arrow"; count: number; scope: "vigentes" | "all"; onDone?: () => void }
+  | { kind: "hammer"; onDone: () => void }   // loop hasta que el pipeline real termina
   | { kind: "intro" };
 ```
 
@@ -58,9 +64,10 @@ de la animación.
 
 ---
 
-## 2. Animación 1 — El arquero (data-driven)
+## 2. Animación 1 — Flecha a la diana (data-driven)
 
-Cada flecha lanzada = un CV enviado. El muñeco dispara a una diana.
+Cada flecha lanzada = un CV enviado. **Sin arco, sin muñeco**: la flecha se
+autolanza sola hacia la diana — solo el objeto viajando y clavándose.
 
 ### De dónde sale el conteo
 
@@ -72,8 +79,8 @@ El alcance por defecto es **`"all"`** → `!cvPending`, incluidas archivadas y
 rechazadas: "toda flecha que voló alguna vez". Un CV enviado y luego archivado
 **igual fue una flecha lanzada**, así que es lo más fiel a la metáfora. El prop
 `scope` se mantiene para instancias acotadas: `"vigentes"` → `!archived &&
-!cvPending` filtra a la búsqueda activa (útil si algún día se incrusta el arquero
-dentro de la vista Vigentes).
+!cvPending` filtra a la búsqueda activa (útil si algún día se incrusta esta
+escena dentro de la vista Vigentes).
 
 ### El problema central: duración acotada, pero reflejar que se lanzaron todas
 
@@ -90,9 +97,9 @@ En vez de 1 flecha = 1 CV siempre, cambia el **lenguaje visual** según la escal
 
 | N (CVs enviados) | Registro | Qué se ve |
 |---|---|---|
-| 0 | Idle | Muñeco quieto, respirando, carcaj vacío (empty state) |
+| 0 | Idle | Diana vacía, sin flechas clavadas (empty state) |
 | 1–8 | **Literal 1:1** | Cada CV = un tiro apuntado, escalonado. Las flechas se clavan y quedan. Termina con N flechas visibles. Caso "héroe", satisfactorio |
-| 9–30 | **Andanadas** | Ráfagas de 3–5 flechas por tensada. Comprimido pero aún "contable". La diana se llena en racimo |
+| 9–30 | **Andanadas** | Ráfagas de 3–5 flechas por tanda. Comprimido pero aún "contable". La diana se llena en racimo |
 | 31+ | **Lluvia + contador** | Una o dos barridas de "lluvia de flechas". La diana se vuelve alfiletero (tope visual de flechas clavadas) y un **número tickea hasta el N real** ("187 flechas"). El número carga la exactitud que el dibujo ya no puede |
 
 **Qué es un umbral acá:** el número de CVs en el que la animación *cambia de
@@ -118,10 +125,10 @@ gap = clamp(T_budget / f(N), gap_min, gap_max)   // f sublineal (log o √N)
 ### Máquina de estados
 
 ```
-idle → tensar → soltar → (en vuelo) → impacto
-                  └──────── repetir hasta agotar presupuesto/conteo ────────┘
-                                                        ↓
-                                     asentado (diana con N + contador) → reposo
+idle → lanzar → (en vuelo) → impacto
+         └──────── repetir hasta agotar presupuesto/conteo ────────┘
+                                               ↓
+                            asentado (diana con N + contador) → reposo
 ```
 
 ### Dónde vive
@@ -137,144 +144,147 @@ el splash se monta con `count` del scope `"all"` y arranca solo; on-demand se
 monta cuando el usuario abre la vista. La escena es la misma; cambia solo **quién
 la dispara**.
 
-### Extensión opcional (post-v1)
+### Modo funnel — los 5 anillos son los 5 hitos (implementado)
 
-Colorear las flechas por el estado del funnel que ya vive en el modelo
-(`status`, `milestones`): rechazado = flecha que cae/erra, activo = clavada,
-oferta = en el centro/bullseye. Enlaza la animación con el embudo AARRR real. **No
-va en la v1** — se anota como camino futuro.
+En vez de posición aleatoria, `mode="funnel"` ubica cada flecha en el anillo
+que corresponde a **cuán lejos llegó esa aplicación en el funnel** — enlaza la
+animación con el embudo AARRR real (`MILESTONE_KEYS` en
+`core/registry/types.ts`: `sent → responded → interview → offer → referral`).
+Mapeo 1:1, de afuera hacia adentro:
+
+| Anillo | Hito | `funnelRanks[i]` |
+|---|---|---|
+| Blanco (borde) | `sent` (todas — es el piso: ya están en el scope "CVs enviados") | 0 |
+| Gris oscuro | `responded` | 1 |
+| Azul | `interview` | 2 |
+| Rojo | `offer` | 3 |
+| Dorado (bullseye) | `referral` | 4 |
+
+El componente no calcula esto — recibe `funnelRanks: number[]` (uno por
+flecha, mismo orden que el `count`) de un adaptador externo (regla del
+contrato, §1): `rows.filter(!cvPending).map(row => milestoneRank(row))`, con
+`milestoneRank` clampeado a `[0,4]`. `mode="random"` (default) mantiene el
+comportamiento anterior — posición uniforme dentro de toda la diana, sin leer
+data. Ambos modos conviven en `ArrowToTarget`; el adaptador real todavía no
+existe (mismo pendiente que el resto de §1 "Contrato").
 
 ---
 
-## 3. Animación 2 — El forjador (ambient / loading)
+## 3. Animación 2 — Martillo en el yunque (ambient / loading)
 
-El cbuilder haciendo un CV, pero en lugar de escribir **forja la flecha**.
+El cbuilder generando el CV, representado como forja: **el martillo golpea la
+flecha sobre el yunque** — sin muñeco que lo sostenga, el martillo golpea solo.
 
 - **Rol:** loading state mientras el pipeline de IA genera el CV/carta. Es un
   **loop**, no data-driven — lo cierra el pipeline real (`onDone`), no el reloj.
-- **Beats:** calienta y martilla la punta → forja el astil → emplumado → flecha
-  "lista" (brilla y se enfría) → al carcaj. Loopea sin costura si la generación
-  tarda más que un ciclo.
+- **Beats (un solo beat en loop):** el martillo golpea la flecha sobre el yunque
+  — cada golpe es un flash/chispazo en el punto de impacto. Sin etapas de
+  calentar punta / forjar astil / emplumar.
 - **El puente narrativo (por esto comparten assets):** al terminar, la flecha
-  forjada **sale volando** y se convierte en la flecha que el arquero dispara.
-  Forjar → disparar → dar en el blanco es el arco completo, con el **mismo objeto**
-  pasando de una escena a la otra. Esto justifica todo el backbone compartido.
+  forjada **sale volando** y se convierte en la flecha que se autolanza en la
+  escena de la diana. Forjar → disparar → dar en el blanco es el arco completo,
+  con el **mismo objeto** pasando de una escena a la otra. Esto justifica el
+  backbone compartido (§1).
 
 ---
 
-## 4. Notas de implementación / handoff a otra IA
+## 4. Implementación (v1, hecha)
 
-Distinción técnica que **cambia qué herramienta conviene** en cada una:
+**Sin herramienta externa, sin dependencia nueva.** No hay Rive, no hay
+Lottie, no hay Quiver, no hay Framer Motion/GSAP — solo React/Next/Tailwind
+(ya estaban en el stack) más la **Web Animations API** (`el.animate(...)`),
+que es una API nativa del browser, no una librería. El martillo (un loop fijo
+simple) sigue siendo CSS puro; la flecha pasó de CSS a WAAPI (ver por qué
+abajo).
 
-| Animación | Naturaleza | Formato viable |
+| Pieza | Dónde vive |
+|---|---|
+| Assets SVG (React) | `ui/animations/assets/{Arrow,Diana,Hammer,AnvilFire}.tsx` |
+| Motion tokens + registros | `ui/animations/motionTokens.ts` |
+| Hook de accesibilidad | `ui/animations/usePrefersReducedMotion.ts` |
+| Escena "flecha a la diana" | `ui/animations/ArrowToTarget.tsx` |
+| Escena "martillo en el yunque" | `ui/animations/HammerAnvil.tsx` |
+| Keyframes del martillo | `app/globals.css` (`cb-hammer-swing`, `cb-hammer-flash`) |
+| Harness de QA (dev-only, no linkeado desde la app) | `app/dev/animations/page.tsx` |
+
+| Animación | Naturaleza | Cómo se resuelve |
 |---|---|---|
-| **Forjador** | Loop sin datos | **Fácil** — Lottie/GIF pre-renderizado. Cualquier tool sirve |
-| **Arquero** | `count` varía en runtime | **Necesita motor param-driven** — NO puede ser video/GIF fijo. Lottie con *segments* + control de velocidad/repeticiones, o (más flexible para la lógica por registros) rig SVG animado con GSAP/Framer Motion |
+| **Martillo en el yunque** | Loop sin datos | `.cb-hammer-swing`/`.cb-hammer-flash` en loop infinito, con los porcentajes del `@keyframes` compartiendo línea de tiempo (el flash pulsa justo en el punto de contacto, ~75%). `active` (prop) controla si el loop corre |
+| **Flecha a la diana** | `count` varía en runtime | `buildShots(...)` arma todas las flechas de una vez (posición final, offset de spawn, timing de pico, `delay`); cada una se anima con `el.animate(keyframes, opts)` (Web Animations API), con los keyframes sampleados de una parábola real en JS (ver abajo). Un solo `requestAnimationFrame` deriva el contador visible a partir del tiempo transcurrido; no hay `setTimeout` encadenados |
 
-Si el arquero se produce en otra IA, pedir el **rig + los estados** (§2 máquina de
-estados), no un clip cerrado.
+### El vuelo de la flecha: por qué WAAPI y no `@keyframes`
 
-### Herramientas recomendadas
+Dos rondas de `@keyframes` con `--custom-properties` (una con un solo pico
+hardcodeado, otra con 3 variantes `lob`/`punch`/`loft` de 5-6 stops) seguían
+sin verse naturales — el usuario lo marcó dos veces. La razón de fondo: un
+`@keyframes` de CSS es una forma **fija**, tenés que elegir de antemano
+cuántos stops y en qué % — no podés parametrizar *dónde* pica el arco por
+custom property (los `%` de un keyframe no son variables). Terminaba viéndose
+"quebrado" en vez de curvo, y el timing-function global (`ease-in-out`)
+deformaba encima la forma que ya estaba en los stops.
 
-| Rol | Herramienta | Por qué |
-|---|---|---|
-| **Arquero** (data-driven) | **Rive** (rive.app) | Es literalmente su modelo: una *state machine* dentro del `.riv` con un **number input** que la app setea en runtime → la animación reacciona sola. El `count` entra como ese input y maneja los registros/andanadas. Runtime de React limpio, corre a ~60fps, archivos 10–15× más chicos que Lottie. En 2026 es el estándar para animación atada a datos/lógica |
-| **Forjador** (loop ambient) | **Lottie** (diseñado en After Effects → export por LottieFiles) | Es un loop sin datos; Lottie brilla justo ahí. También sirve un GIF/APNG o un Rive simple si ya se paga la curva de Rive |
-| **El pegamento (código)** | **Claude / Claude Code** | Lo mejor donde encaja Claude: el **adaptador** que lee las filas → `count`, la integración del `.riv`/Lottie en Next.js, el fallback de `prefers-reduced-motion`, y la lógica de umbrales si se hace 100% en código (SVG + Framer Motion / GSAP). No es la mejor opción para **dibujar** el personaje/arte — eso lo hace mejor Rive o un ilustrador |
+**La solución fue sampleá la trayectoria en JS, no en CSS.** `buildFlightKeyframes`
+(`ArrowToTarget.tsx`) genera ~16 puntos de una parábola real por flecha:
 
-**Camino sugerido:** el arte se genera como SVG editable con **Quiver AI** y se
-riggea en Rive (ver "Generación de assets" abajo). El forjador puede salir de un
-export Lottie de ese personaje; el arquero se arma en Rive con la state machine +
-number input. Claude cablea ambos al Next.js y escribe el adaptador de datos. Así
-un solo set de arte alimenta las dos escenas (principio §1).
+- Horizontal: lineal (velocidad constante, como un proyectil real sin
+  arrastre).
+- Vertical: `h(t) = peak * (1 - distanciaAlPico²)` — la misma parábola de
+  antes/después del pico, solo que `peakAt` (dónde cae el pico en [0,1]) es
+  **por flecha**, cosa que un `@keyframes` no puede parametrizar.
+- Rotación: la tangente real del camino en cada punto (diferencia finita
+  entre puntos consecutivos), no un ángulo elegido a mano — la punta siempre
+  apunta hacia donde se mueve.
+- El último frame fuerza rotación 0 así el ángulo visible final calza con
+  `restRotation` (aplicado por el wrapper estático exterior).
 
-### Generación de assets (Quiver AI → Rive)
+Estos keyframes se pasan a `el.animate(keyframes, { duration, delay, easing:
+"linear", fill: "forwards" })` — `linear` porque el ritmo ya está en la
+densidad/valores de los puntos, no hace falta (ni conviene) otra curva de
+easing encima.
 
-Quiver AI (modelo *Arrow*) genera **SVG vectorial editable** desde texto/imagen;
-Rive **importa SVG** como paths editables. Regla de rol: Quiver solo para el **arte
-estático**; **toda la animación, el rig y la state machine van en Rive** (la
-animación CSS de Quiver no hace la lógica data-driven del `count`).
+**"Termina de golpe" (pedido explícito):** la física ya lo da gratis. Una
+caída bajo gravedad **acelera** — la velocidad vertical es máxima justo en el
+impacto, no mínima. Con `h(t)` así, la flecha llega a máxima velocidad y la
+animación simplemente termina ahí — no hay deceleration hacia el final que
+la haga "planear" hasta pararse.
 
-Se genera **un personaje neutro + los props sueltos** — las poses (tensar, martillar)
-se arman rigueando en Rive, no se prompteán. Tres claves para que el SVG sea
-rig-eable: (1) generar el personaje **primero** y adjuntarlo como **imagen de
-referencia** en el resto → estilo/paleta consistentes; (2) la flecha se genera **una
-vez** (viaja del forjador al arquero); (3) pedir siempre **partes en grupos con
-nombre** (un SVG aplanado no se riggea).
+**Random real entre replays:** `buildShots` sigue siendo determinístico por
+índice (una flecha ya aterrizada no se reordena si `count` sube — misma
+escena, mismo montaje), pero ahora el seed incluye un `sessionSeed` generado
+una vez por montaje (`Math.random()`, seteado en un `useEffect` para no romper
+la hidratación SSR — ver gotcha abajo). Antes el seed dependía solo del
+índice, así que cada "Replay" (mismo `count`) producía exactamente el mismo
+arreglo — de ahí el reporte "no se siente random".
 
-Si el personaje sale genérico: adjuntá a su propio prompt una **imagen de
-referencia** (una silueta/estilo de búho que te guste — no un personaje con
-copyright, solo guía de estilo) y sumá 1–2 rasgos distintivos concretos (paleta,
-forma de las orejas, anteojos). La referencia manda sobre el texto para look y
-silueta.
+**Gotcha de implementación (para no repetirlo):** con dos `useEffect`
+separados — uno que agenda animaciones (sin cleanup, para no cortar flechas
+ya en vuelo cuando `count` sube) y otro solo-para-desmontaje que cancela todo
+— **React Strict Mode** (dev) duplica el ciclo mount→cleanup→remount de
+*todos* los efectos, incluidos los de deps `[]`, en el mismo commit inicial.
+Eso cancelaba las animaciones recién creadas sin des-marcarlas del set de
+"ya animadas", dejándolas fantasma (creadas, canceladas, nunca recreadas). El
+fix: el cleanup de desmontaje limpia *ambos* refs (las animaciones y el set de
+IDs) juntos, así el remount inmediato de Strict Mode se autocorrige en vez de
+quedar en un estado inconsistente.
 
-Prompts (uno por asset, en orden; el bloque de estilo va tal cual al inicio de cada
-uno):
+### Assets (SVG, sin arco, sin personaje)
 
-```
-1. CHARACTER
-Flat vector mascot art, clean geometric shapes, minimal detail, bold even line
-weight, limited flat palette (2–3 base colors + 1 accent), side or three-quarter
-view, transparent background, no text, no gradients. A friendly humanoid owl
-mascot for a tool called "cbuilder": large round expressive eyes, small curved
-beak, two ear tufts, rounded feathered body, small work apron, standing on two
-taloned feet. Humanoid feathered arms ending in small hands that can hold tools.
-Neutral standing pose, arms slightly bent and away from the body. Output every
-part as a separate NAMED group: head, ear-tufts, torso, upper-arm-front,
-forearm-front, hand-front, upper-arm-back, forearm-back, hand-back, thigh, shin,
-taloned-foot. Both arms fully drawn and separated so it can be rigged. Centered.
+Los 4 objetos (**flecha, diana, yunque+fuego, martillo**) son ilustraciones ya
+hechas por el usuario en `assets/illustrations/*.svg` (no dibujadas a mano en
+código como se planteaba originalmente) — se copiaron a componentes React en
+`ui/animations/assets/`. Sin arco, sin cuerda, sin mascota.
 
-2. ARROW  (attach CHARACTER as style reference)
-<style block> One simple stylized arrow, horizontal, pointing right: triangular
-head, straight shaft, two-feather fletching. Three separate NAMED groups:
-arrowhead, shaft, fletching. Readable at small size.
-
-3. BOW  (attach CHARACTER as reference)
-<style block> A simple recurve bow with string, vertical, front-on, sized for the
-mascot to hold. Separate NAMED groups: bow-limb, string.
-
-4. TARGET / DIANA  (attach CHARACTER as reference)
-<style block> A classic archery target: concentric rings with a bullseye center,
-on a simple stand, front view. Clean face so arrows can be placed on top later.
-Separate NAMED groups: rings, bullseye, stand.
-
-5. ANVIL  (attach CHARACTER as reference)
-<style block> A small blacksmith anvil, side view, chunky and simple. Optional
-small forge flame as a separate NAMED group. Groups: anvil, fire.
-
-6. HAMMER  (attach CHARACTER as reference)
-<style block> A simple blacksmith hammer, side view, sized for the mascot to hold.
-Separate NAMED groups: hammer-head, handle.
-```
-
-`<style block>` = las dos primeras oraciones del prompt 1 (de "Flat vector mascot
-art…" hasta "…no gradients."), pegadas al inicio de cada prompt. No se escribe la
-etiqueta literal.
-
-**Checklist antes de importar a Rive** (por cada SVG):
-
-- Fondo **transparente** (sin `<rect>` blanco detrás) y **sin `<text>`** colgado
-  (Quiver a veces hornea los nombres de los grupos como rótulos).
-- Cada parte es un **grupo/path con nombre**, no un path aplanado; paths cerrados
-  (rellenan bien).
-- Personaje: las piezas deben **solaparse en las articulaciones** (hombro/codo/
-  cadera). Vienen despiezadas con huecos; si no solapan, al doblar se ven cortes.
-- Arco: verificar que la **cuerda** sea un elemento aparte y tirable. Si no lo es,
-  se dibuja en Rive — conviene igual: la cuerda tiene que **deformarse** al tensar.
-- **Vista del personaje**: si salió de frente y la pose de arquero (tensar de
-  costado) no lee bien, se rota el torso en Rive antes de regenerar en 3/4.
-- **Escala relativa**: al ensamblar, dimensionar props respecto del búho (arco ≈
-  alto del torso, martillo más chico).
-
-> Alternativa sin herramienta de diseño: si preferís no salir del código, Claude
-> puede generar el arquero como componente React (SVG + Framer Motion/GSAP) con
-> toda la lógica de §2. Da más control y cero dependencias nuevas, a costa de un
-> arte más geométrico/simple que el de una tool dedicada.
-
-- **Reduced motion:** ambas necesitan fallback estático (`prefers-reduced-motion`)
-  — la diana con N flechas + el número, sin movimiento.
-- **Sin data adentro:** el asset recibe `count` por prop; el adaptador que lee las
-  filas vive fuera del componente (ver §1 contrato).
+- La **flecha es el mismo asset** en las dos escenas (martillo en el yunque →
+  flecha a la diana), como ya establece el backbone (§1).
+- Sin personaje no hay rig: el único pivot que hace falta es el del **martillo**
+  (`transform-origin` cerca de la base del mango) para el swing arriba/abajo.
+- El `hammer.svg` viene dibujado ya en diagonal (mid-swing); el `@keyframes`
+  rota desde ahí, no arranca en 0°.
+- **Reduced motion:** ambas leen `prefers-reduced-motion` y saltan a su estado
+  final sin animar (diana con N flechas + contador; martillo/yunque quietos).
+- **Sin data adentro:** el componente recibe `count` (o `active`) por prop; el
+  adaptador que lee las filas de `core/registry` todavía no existe — es el
+  próximo paso para montar esto en la app real (splash/intro, §2 "Dónde vive").
 
 ---
 
@@ -284,17 +294,19 @@ Un solo lugar para las constantes de movimiento — todas las escenas las compar
 
 | Token | Valor inicial | Qué controla |
 |---|---|---|
-| `T_max` | ~3000 ms | Presupuesto total del arquero, independiente de N |
+| `T_max` | ~3000 ms | Presupuesto total de la escena de la flecha, independiente de N |
 | `gap_max` | ~500 ms | Gap entre flechas con N chico (tiros apuntados) |
 | `gap_min` | ~60 ms | Piso del gap en barrage (nunca 0 → flechas discretas) |
 | `T1` (literal→andanada) | 8 | Fin del registro 1:1 |
 | `T2` (andanada→barrage) | 30 | Fin del registro de andanadas |
-| `volleySize` | 3–5 | Flechas por tensada en andanadas |
+| `volleySize` | 4 | Flechas por tanda en andanadas |
 | `dianaVisualCap` | ~40 | Máximo de flechas clavadas dibujadas (el resto lo carga el contador) |
-| `forgerCycle` | ~1500 ms | Duración de un ciclo de forja (loop) |
+| `hammerCycle` | ~1500 ms | Duración de un ciclo de golpe de martillo (loop) |
+| `flightDurationMin`/`Max` | 253–360 ms | Rango de duración del vuelo — cada flecha sortea un valor propio |
 
-Easings sugeridos: tensar = ease-in (tensión que sube), soltar = ease-out rápido,
-vuelo = cubic-bezier de parábola, tick del contador = ease-out.
+Easings: vuelo de la flecha = `linear` sobre una parábola ya sampleada en JS
+(§4 — el ritmo vive en los puntos, no en la curva de easing), golpe de
+martillo = ease-in (acelera hacia el impacto), tick del contador = ease-out.
 
 ---
 
@@ -305,9 +317,29 @@ vuelo = cubic-bezier de parábola, tick del contador = ease-out.
 1. **Alcance del conteo** → **`"all"`** (`!cvPending`, incluye archivadas): "toda
    flecha que voló". El prop `scope` deja `"vigentes"` disponible para instancias
    acotadas.
-2. **Dónde vive el arquero** → **splash / intro** como uso primario (automático al
-   cargar), **reusable on-demand** en otros lados (celebración de milestone, card
-   de stats). Mismo componente, cambia quién lo dispara (§2 "Dónde vive").
+2. **Dónde vive la escena de la flecha** → **splash / intro** como uso primario
+   (automático al cargar), **reusable on-demand** en otros lados (celebración de
+   milestone, card de stats). Mismo componente, cambia quién lo dispara (§2
+   "Dónde vive").
+3. **Concepto reducido: solo objetos, sin herramienta externa** (2026-07-25) →
+   sin arco (la flecha se autolanza) y **sin personaje/mascota en ninguna
+   escena** — son objetos animando (flecha, martillo, diana, yunque). El
+   martillo baja a un solo beat en loop (golpea la flecha en el yunque). Ambas
+   escenas se construyen con **SVG + CSS puro**, sin Rive/Lottie/Quiver ni Framer
+   Motion/GSAP — cero dependencia nueva y cero curva de aprendizaje de una tool
+   de rig manual. Detalle y razón completa en `decisions.md`.
+4. **Modo funnel** (2026-07-26) → se agrega `mode="funnel"`: la posición
+   dentro de la diana deja de ser solo estética y pasa a representar el hito
+   real del funnel de cada aplicación (§2 "Modo funnel"). `mode="random"`
+   sigue disponible como default.
+5. **Vuelo de la flecha: de `@keyframes` CSS a Web Animations API**
+   (2026-07-26) → dos rondas de `@keyframes` (una con pico fijo, otra con 3
+   variantes `lob`/`punch`/`loft`) seguían sin verse naturales. Se reemplazan
+   por una parábola real sampleada en JS por flecha y reproducida con
+   `el.animate(...)` — sigue siendo "sin dependencia nueva" (WAAPI es API de
+   browser, no librería). Detalle técnico completo, incluido un gotcha de
+   React Strict Mode a no repetir, en §4 "El vuelo de la flecha: por qué WAAPI
+   y no `@keyframes`".
 
 **Valores por defecto (tuneables, no bloquean):**
 

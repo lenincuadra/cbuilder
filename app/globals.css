@@ -142,3 +142,64 @@
     color-scheme: dark;
   }
 }
+
+/* Animation scenes (docs/animations.md). The arrow flight is driven by the
+   Web Animations API from ArrowToTarget.tsx (a real per-shot parabola sampled
+   in JS, not a fixed CSS curve) — no CSS keyframes for it here. The hammer
+   loop is simple enough to stay pure CSS. */
+/* The Hammer asset's native (unrotated) art IS the strike/contact pose — it's
+   drawn already mid-swing. Negative rotation lifts it up and back around the
+   grip (see HammerAnvil's transform-origin), so most of the loop is "raised",
+   with a quick dip down to 0deg for the actual strike. */
+@keyframes cb-hammer-swing {
+  0%,
+  55% {
+    transform: rotate(-28deg);
+  }
+  70% {
+    transform: rotate(6deg);
+  }
+  76% {
+    transform: rotate(0deg);
+  }
+  88% {
+    transform: rotate(-14deg);
+  }
+  100% {
+    transform: rotate(-28deg);
+  }
+}
+
+/* Synced to cb-hammer-swing's timeline (same cycle length): a brief pulse
+   right as the hammer makes contact (~75%), invisible the rest of the loop. */
+@keyframes cb-hammer-flash {
+  0%,
+  71%,
+  100% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(0.6);
+  }
+  90% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+.cb-hammer-swing {
+  animation: cb-hammer-swing var(--cycle, 1500ms) ease-in-out infinite;
+}
+
+.cb-hammer-flash {
+  animation: cb-hammer-flash var(--cycle, 1500ms) ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cb-hammer-swing,
+  .cb-hammer-flash {
+    animation: none !important;
+  }
+}
