@@ -475,16 +475,18 @@ El pedido que dio lugar a este mismo documento. Cuatro puntos:
 
 - **El personaje-búho del plan original sí se generó** — vía Quiver AI, con
   referencias visuales, siguiendo los prompts del plan de 2026-07-19 — pero
-  nunca se importó al proyecto. Existe fuera del repo, junto con otros
-  assets del set completo que se generó y no se terminó usando (se redujo el
-  alcance de qué se **integraba**, no de qué se **generaba**). Si hace falta
-  para referencia o para retomar el personaje más adelante, están
-  disponibles para agregar al repo.
+  nunca se integró a ninguna escena (se redujo el alcance de qué se
+  **integraba**, no de qué se **generaba**). Los archivos crudos, tal como
+  salieron de Quiver (incluidas 4 variantes distintas del personaje que se
+  probaron), se agregaron después al repo como archivo histórico en
+  `assets/illustrations/originals/` — sin componente React, sin uso en
+  código, solo para dejar constancia de lo que existió.
 - **`assets/illustrations/arc.svg` existe y no se usa.** Se generó (vía
-  Quiver AI) como parte del mismo lote de ilustraciones traído al proyecto
-  en el commit `51adb27`, pero el arco ya había sido recortado de la escena
-  un día antes. Es el único de los assets "de más" que sí llegó a copiarse
-  al repo — el resto (mascota incluida) quedó afuera.
+  Quiver AI) y se limpió/recortó para el lote de ilustraciones traído al
+  proyecto en el commit `51adb27`, pero el arco ya había sido cortado de la
+  escena un día antes — quedó copiado igual, sin componente React. Su
+  versión cruda (sin limpiar) está en `assets/illustrations/originals/`
+  junto con el resto de lo generado y no usado.
 - **El bug de "no se siente random" apareció dos veces, por causas
   relacionadas pero distintas.** La primera vez (commit `51adb27`) el
   problema era que no existía ningún `sessionSeed` — el seed dependía solo del

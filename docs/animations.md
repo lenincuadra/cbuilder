@@ -378,10 +378,15 @@ usuario. El paso de generación de arte del plan original (Quiver AI → Rive,
 ver `animations-bitacora.md`) sí se ejecutó tal cual estaba planeado; lo que
 se cortó después fue el rigging en Rive y el personaje/mascota. Se generó
 **el set completo planeado**, mascota incluida — solo estos 4 objetos
-entraron al proyecto una vez reducido el alcance; el resto quedó generado
-pero fuera del repo. Traídos a `assets/illustrations/*.svg` y portados a
-componentes React en `ui/animations/assets/`. Sin arco, sin cuerda, sin
-mascota (en el proyecto).
+entraron al proyecto (limpios/recortados) como `assets/illustrations/*.svg`,
+portados a componentes React en `ui/animations/assets/`. Sin arco, sin
+cuerda, sin mascota (en las escenas).
+
+El set completo tal como salió de Quiver, sin limpiar — incluida la mascota
+búho (4 variantes) que nunca se usó y el arco/bow que se generó pero se
+cortó antes de integrarse — vive en `assets/illustrations/originals/` a modo
+de archivo histórico. Ninguno de esos archivos tiene componente React ni se
+importa desde código.
 
 - La **flecha es el mismo asset** en las dos escenas (martillo en el yunque →
   flecha a la diana), como ya establece el backbone (§1).
