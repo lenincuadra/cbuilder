@@ -582,6 +582,109 @@ reduzcamos el tamaño total de la animación a un 80% y hasta 50% máximo
 chica, dentro del mismo scroll horizontal que ya tenía la tabla en esos
 anchos (comportamiento previo de la tabla, no algo nuevo de este cambio).
 
+### Ronda 10 — El reveal no necesitaba scroll, y lo estaba forzando
+
+Chequeo rápido de responsive sobre la ronda 9: en mobile, mientras se
+mostraba el reveal (diana quieta o animando), aparecía scroll horizontal en
+la tabla — pero el reveal es una sola celda con una sola animación centrada,
+nada que justifique scrollear para verla completa. El pedido del usuario fue
+puntual: *"tiene que estar siempre centrado al viewport del contenedor, es
+scroleable la tabla y eso está bien, pero al momento de cargar el scroll es
+completamente innecesario porque lo único que contiene es la animación."*
+
+La causa: `RegistryTable` fuerza `min-w-[720px]` por debajo de 640px para
+que las columnas reales (Código, Foco, Empresa, Rol...) no se aplasten en
+pantallas angostas. Ese mínimo se aplicaba también durante el reveal, que no
+tiene columnas — nada que aplastar, pero el ancho mínimo empujaba igual la
+diana fuera del centro del viewport visible, exigiendo scrollear para verla
+completa. El header de columnas (`<TableHeader>`) también se seguía
+renderizando durante el reveal, y sin el `min-width` sus labels con
+`whitespace-nowrap` se apretujaban entre sí, ilegibles.
+
+Fix: tanto el `min-width` como el `<TableHeader>` pasan a condicionales
+sobre el mismo booleano `showingReveal` que ya decidía qué mostrar en el
+body de la tabla — sin `min-width` y sin header mientras se muestra el
+reveal, ambos vuelven en cuanto hay filas reales que mostrar.
+
+Un detalle de la verificación, no del fix en sí: el primer intento de medir
+"¿hay scroll?" con Playwright dio un falso negativo — la query apuntaba a
+`.overflow-x-auto`, que en el DOM matcheaba el div **externo** (el que
+`RegistryTable.tsx` envuelve alrededor de `<Table>`, que resultó ser
+redundante e inerte) en vez del contenedor **interno** que el propio
+componente `Table` de shadcn ya arma (`[data-slot="table-container"]`, con
+su propio `overflow-x-auto`) y que es el que efectivamente scrollea. Se
+descubrió leyendo `components/ui/table.tsx` directamente en vez de seguir
+adivinando. Corregida la query, la verificación confirmó lo esperado: sin
+scroll durante carga/reveal a 375px, scroll de vuelta apenas renderizan
+filas reales.
+
+### Ronda 11 — Las flechas se pintan del color que tocaron
+
+Con la escena data-driven ya asentada en la tabla real, el siguiente pedido
+fue sobre lo que comunica visualmente el color de cada flecha. Punto de
+partida: una captura de la leyenda de colores del embudo (sent blanco,
+responded gris oscuro, interview azul, offer rojo, referral dorado) y el
+pedido en cadena:
+
+> ahora. podemos hacer la flecha base gris claro? y cuando toquen la
+> superficie se pinten del color que tocaron? debería seguir esa misma
+> lógica de colores. habría que definir exactamente como pintarse cada
+> flecha, si bien el color base es el de la leyenda, tiene tonos y luces y
+> el borde de la flecha, elige la más apropiada para cada color y luego
+> vamos verificando color por color.
+>
+> la lógica de todo esto es que al ver todas las flechas en la diana los
+> colores de las flechas comuniquen tu proceso visualmente
+
+Hasta este punto toda flecha usaba el mismo naranja/marrón decorativo
+(`Arrow.tsx`), heredado del asset original de Quiver, sin relación alguna
+con dónde caía — el color no comunicaba nada del funnel, solo el `ringIndex`
+de posición ya lo hacía (indirectamente, vía qué tan cerca del centro
+aterrizaba).
+
+Implementación en tres piezas:
+
+1. **`Arrow.tsx` gana un prop `palette`** (fill / fillLight / fillDark /
+   shaftFill / line — un color por cada parte pintada del dibujo: plumas,
+   punta con sus dos facetas, asta, y el borde compartido), con default =
+   los mismos 5 valores hex que ya tenía hardcodeados. El uso decorativo en
+   `HammerAnvil` no pasa `palette`, así que queda pixel-idéntico a como
+   estaba.
+2. **Dos familias de paleta en `ArrowToTarget.tsx`**: `UNPAINTED_ARROW_PALETTE`
+   (un gris claro único, para toda flecha en vuelo, sin importar destino) y
+   `RING_ARROW_PALETTES` (5 paletas, una por anillo, `fill` calcado del
+   propio anillo pintado en `Diana.tsx`). Los tonos de luz/sombra/asta/borde
+   de cada paleta de anillo se eligieron a mano, no con una fórmula de
+   aclarar/oscurecer aplicada parejo — probado que un tinte plano se veía
+   sucio en algunos colores (el blanco necesitaba un off-white para que la
+   faceta de brillo siguiera siendo visible contra él; el anillo casi negro
+   necesitaba mucho más levante en `fillLight` o esa faceta directamente
+   desaparecía).
+3. **`ringIndex` por flecha, para los dos modos.** En `mode="funnel"` ya
+   existía la banda (el `funnelRank` clampeado); en `mode="random"` no había
+   ese dato, así que se agregó `ringIndexForRadius`, que ubica el radio de
+   aterrizaje contra las mismas `RING_BANDS` que ya definían las bandas de
+   funnel — el anillo físico dibujado es el mismo objeto en ambos modos, así
+   que "el color que tocó" también aplica en modo random sin necesitar datos
+   de funnel detrás.
+
+El disparo del color usa el resultado de `anim.finished` (la promesa nativa
+de Web Animations API que resuelve cuando termina esa animación puntual) —
+no el conteo agregado que ya se usaba para el contador de texto — así cada
+flecha cambia de color exactamente cuando *ella* aterriza, no cuando aterriza
+la última del grupo. El cambio de color no es un salto: las paths llevan
+`transition-colors` (300ms) para que se lea como "se moja" del color del
+anillo en vez de teletransportarse a él.
+
+Verificado visualmente en `/dev/animations`, en ambos modos y con
+`prefers-reduced-motion` activado (que salta directo al color de aterrizaje,
+sin fase gris intermedia, porque tampoco hay vuelo que mostrar): las flechas
+en vuelo se ven todas del mismo gris, y al aterrizar cada una toma el color
+de su anillo — de un vistazo a la diana llena se puede leer la distribución
+del embudo por color, sin necesitar la leyenda de texto al lado. Primer
+pase, no cerrado: el propio pedido preveía revisar "color por color" contra
+el arte real en una vuelta futura.
+
 ---
 
 ## Notas sueltas que no encajan en la cronología pero valen la pena dejar anotadas

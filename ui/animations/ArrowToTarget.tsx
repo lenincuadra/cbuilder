@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Arrow } from "./assets/Arrow";
+import { Arrow, type ArrowPalette } from "./assets/Arrow";
 import { Diana } from "./assets/Diana";
 import { motionTokens, registerFor, gapForEvents } from "./motionTokens";
 import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
@@ -11,6 +11,12 @@ type ArrowShot = {
   /** Landing position, % of the container box. */
   x: number;
   y: number;
+  /** Which ring band it lands in (0 = outer/white/sent … 4 = gold bullseye/
+   * referral) — see RING_BANDS. Drives the "landed" paint color, in both
+   * funnel mode (where it's just the funnel rank) and random mode (derived
+   * from the landing radius, since the physical rings are the same target
+   * regardless of mode). */
+  ringIndex: number;
   /** Final stuck angle, deg. */
   restRotation: number;
   /** Horizontal spawn offset, px (always negative — arrows come from the left). */
@@ -191,6 +197,60 @@ const RING_BANDS = [
   { min: 0, max: 6.4 }, // gold bullseye — referral
 ] as const;
 
+/**
+ * "Raw" arrow, in flight — light gray, the same for every shot regardless of
+ * where it's headed, so the outcome color only shows up once it actually
+ * lands. Feathers/head/shaft all use this one flat gray family: the point is
+ * an unpainted arrow, not a themed one.
+ */
+const UNPAINTED_ARROW_PALETTE: ArrowPalette = {
+  fill: "#C7C9CC",
+  fillLight: "#E2E3E5",
+  fillDark: "#A6A8AC",
+  shaftFill: "#B3B5B8",
+  line: "#5B5D61",
+};
+
+/**
+ * "Landed" palettes, one per ring in RING_BANDS/MILESTONE_KEYS order —
+ * "the arrow gets painted the color it touched" (docs/animations.md §2). Each
+ * `fill` matches that ring's own paint in `assets/Diana.tsx` exactly, so an
+ * arrow visually belongs to the ring it's stuck in; the other four fields
+ * are hand-picked per color rather than algorithmically lightened/darkened —
+ * a flat tint/shade reads muddy on some of these hues (the white ring in
+ * particular needs an off-white the highlight facet can still stand out
+ * against, and the near-black ring needs real lift on `fillLight` or its
+ * highlight facet disappears). Treat these as a first pass, not final —
+ * verify color by color against the actual artwork before assuming one is
+ * right.
+ */
+const RING_ARROW_PALETTES: ArrowPalette[] = [
+  // 0 — sent (outer white ring)
+  { fill: "#F2F1EC", fillLight: "#FFFFFF", fillDark: "#D6D4C9", shaftFill: "#C7C5BB", line: "#8A8578" },
+  // 1 — responded (dark ring)
+  { fill: "#4B4B4E", fillLight: "#6E6E72", fillDark: "#232325", shaftFill: "#3A3A3D", line: "#141414" },
+  // 2 — interview (blue ring)
+  { fill: "#30ABE2", fillLight: "#6FC6ED", fillDark: "#1C7DA8", shaftFill: "#2489B8", line: "#0F4C66" },
+  // 3 — offer (red ring)
+  { fill: "#DF3C38", fillLight: "#EE6F63", fillDark: "#A8231F", shaftFill: "#B92E29", line: "#5C120F" },
+  // 4 — referral (gold bullseye)
+  { fill: "#DAA737", fillLight: "#EFC868", fillDark: "#A8791F", shaftFill: "#C1922B", line: "#5C4310" },
+];
+
+/** Which RING_BANDS index a given landing radius physically falls in —
+ * shared by both modes: funnel mode already knows its band via funnelRank,
+ * but random mode only ever computes a radius, and the target's rings are
+ * the same physical circles either way. Checked innermost-out since bands
+ * are listed outer-first; radii past the outermost band (possible in the
+ * dev playground, where `randomModeMaxRadiusPct` can go well past 22) fall
+ * back to the outer ring rather than going unmatched. */
+function ringIndexForRadius(radius: number): number {
+  for (let i = RING_BANDS.length - 1; i >= 0; i--) {
+    if (radius <= RING_BANDS[i].max) return i;
+  }
+  return 0;
+}
+
 export type ArrowLandingMode = "random" | "funnel";
 
 // RING_BANDS and randomModeMaxRadiusPct's margins were tuned/verified
@@ -219,17 +279,21 @@ function landingSpot(
 ) {
   const theta = rand(i) * Math.PI * 2;
   let radius: number;
+  let ringIndex: number;
   if (mode === "funnel") {
-    const band = RING_BANDS[Math.min(RING_BANDS.length - 1, Math.max(0, funnelRank ?? 0))];
+    ringIndex = Math.min(RING_BANDS.length - 1, Math.max(0, funnelRank ?? 0));
+    const band = RING_BANDS[ringIndex];
     radius = band.min + Math.sqrt(rand(i + 0.5)) * (band.max - band.min);
   } else {
     radius = 3 + Math.sqrt(rand(i + 0.5)) * randomModeMaxRadiusPct;
+    ringIndex = ringIndexForRadius(radius);
   }
   radius *= oversizeRadiusGuard(arrowScalePct);
   return {
     x: RING_CENTER_X + Math.cos(theta) * radius,
     y: RING_CENTER_Y + Math.sin(theta) * radius,
     theta,
+    ringIndex,
   };
 }
 
@@ -248,7 +312,7 @@ function buildShots(count: number, mode: ArrowLandingMode, funnelRanks: number[]
     const groupIndex = Math.floor(i / groupSize);
     const withinGroup = i % groupSize;
     const delay = Math.round(groupIndex * groupGap + withinGroup * 18);
-    const { x, y } = landingSpot(rand, i, mode, funnelRanks?.[i], tuning.randomModeMaxRadiusPct, tuning.arrowScalePct);
+    const { x, y, ringIndex } = landingSpot(rand, i, mode, funnelRanks?.[i], tuning.randomModeMaxRadiusPct, tuning.arrowScalePct);
     const ox = -Math.round(tuning.spawnOffsetMinPx + rand(i + 0.1) * (tuning.spawnOffsetMaxPx - tuning.spawnOffsetMinPx));
     const peak = -Math.round(tuning.arcHeightMinPx + rand(i + 0.6) * (tuning.arcHeightMaxPx - tuning.arcHeightMinPx));
     const peakAt = tuning.arcPeakAtMin + rand(i + 0.85) * (tuning.arcPeakAtMax - tuning.arcPeakAtMin);
@@ -260,6 +324,7 @@ function buildShots(count: number, mode: ArrowLandingMode, funnelRanks: number[]
       id: i,
       x,
       y,
+      ringIndex,
       restRotation: tuning.restAngleBaseDeg + jitter,
       ox,
       peak,
@@ -407,6 +472,12 @@ export function ArrowToTarget({
   const containerRef = useRef<HTMLDivElement>(null);
   const animatedIds = useRef<Set<number>>(new Set());
   const animations = useRef<Animation[]>([]);
+  // Which shots have actually touched down — separate from `animatedIds`
+  // (which just tracks "already scheduled", set synchronously below): this
+  // one flips per-shot, asynchronously, exactly when that shot's own flight
+  // finishes, so the "unpainted" -> "landed" color swap (see the two
+  // palettes above) happens arrow by arrow instead of all at once.
+  const [landedIds, setLandedIds] = useState<ReadonlySet<number>>(() => new Set());
 
   // Play each shot's flight exactly once via the Web Animations API — no new
   // dependency, just the native browser API, but it lets the arc be sampled
@@ -429,6 +500,13 @@ export function ArrowToTarget({
         fill: "forwards",
       });
       animations.current.push(anim);
+      // Rejects (AbortError) if the unmount cleanup below cancels it first —
+      // that's expected, not an error, so it's swallowed rather than logged.
+      anim.finished
+        .then(() => {
+          setLandedIds((prev) => (prev.has(shot.id) ? prev : new Set(prev).add(shot.id)));
+        })
+        .catch(() => {});
     }
   }, [shots, reducedMotion]);
 
@@ -505,21 +583,31 @@ export function ArrowToTarget({
     <div className={className}>
       <div className="relative aspect-square w-full" ref={containerRef}>
         <Diana className="h-full w-full" />
-        {shots.map((shot) => (
-          <div
-            key={shot.id}
-            className="absolute"
-            style={{
-              left: `${shot.x}%`,
-              top: `${shot.y}%`,
-              transform: `translate(-50%, -50%) rotate(${shot.restRotation}deg)`,
-            }}
-          >
-            <div data-shot-id={shot.id} style={reducedMotion ? undefined : { opacity: 0 }}>
-              <Arrow style={{ width: arrowWidthPx, height: arrowHeightPx }} />
+        {shots.map((shot) => {
+          // Reduced motion skips the flight entirely (arrows just appear),
+          // so there's nothing to "arrive" — go straight to the landed
+          // color instead of sitting gray forever.
+          const landed = reducedMotion || landedIds.has(shot.id);
+          return (
+            <div
+              key={shot.id}
+              className="absolute"
+              style={{
+                left: `${shot.x}%`,
+                top: `${shot.y}%`,
+                transform: `translate(-50%, -50%) rotate(${shot.restRotation}deg)`,
+              }}
+            >
+              <div data-shot-id={shot.id} style={reducedMotion ? undefined : { opacity: 0 }}>
+                <Arrow
+                  palette={landed ? RING_ARROW_PALETTES[shot.ringIndex] : UNPAINTED_ARROW_PALETTE}
+                  className="[&_path]:transition-colors [&_path]:duration-300"
+                  style={{ width: arrowWidthPx, height: arrowHeightPx }}
+                />
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <p className="mt-2 text-center text-sm text-muted-foreground">
         {displayCount} CV{displayCount === 1 ? "" : "s"} enviado{displayCount === 1 ? "" : "s"}

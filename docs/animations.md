@@ -185,6 +185,48 @@ Quedan disponibles, sin implementar todavía:
 El mismo componente sirve para los tres casos porque el contrato (§1) ya lo
 contempla — cambia solo **quién la dispara** y con qué `count`/`funnelRanks`.
 
+### Color por anillo — "se pintan del color que tocaron" (implementado)
+
+Cada flecha nace **gris claro** (paleta `UNPAINTED_ARROW_PALETTE`,
+`ArrowToTarget.tsx`) — el mismo gris para todas, sin importar a qué anillo
+apunta, así el color todavía no revela nada mientras está en vuelo. Recién
+al aterrizar (cuando termina su propio `el.animate(...)`, vía
+`anim.finished`) se "pinta" del color del anillo que tocó —
+`RING_ARROW_PALETTES[shot.ringIndex]`, un array de 5 paletas en el mismo
+orden que `RING_BANDS`/`MILESTONE_KEYS`. El swap de color usa una transición
+CSS corta (`transition-colors`, 300ms) en vez de un salto abrupto — se lee
+como que el impacto "moja" a la flecha del color del anillo.
+
+`shot.ringIndex` se calcula en `landingSpot` para **ambos** modos, no solo
+funnel: en `mode="funnel"` es directamente el `funnelRank` clampeado (ya se
+usaba para elegir la banda de radio); en `mode="random"` no hay rank, así
+que se deriva del radio de aterrizaje contra los mismos `RING_BANDS`
+(`ringIndexForRadius`) — el anillo físico es el mismo objeto dibujado en
+ambos modos, así que "el color que tocó" aplica igual de bien sin depender
+de si hay datos de funnel detrás.
+
+**Paletas por anillo** — cada `fill` matiza exacto con el propio anillo
+pintado en `assets/Diana.tsx` (blanco / `#333335` / `#30ABE2` / `#DF3C38` /
+`#DAA737`), así una flecha "pertenece" visualmente al anillo donde quedó. Los
+otros campos (`fillLight`/`fillDark`/facetas del asta y del borde) están
+elegidos a mano por color, no derivados con una fórmula de aclarar/oscurecer
+genérica — un tinte plano se veía sucio en algunos tonos (el anillo blanco
+necesitaba un off-white contra el que la faceta de brillo siguiera
+distinguiéndose; el anillo casi negro necesitaba bastante más luz en
+`fillLight` o esa faceta desaparecía). Primer pase, no definitivo — a
+verificar color por color contra el arte real antes de asumir que quedó
+bien.
+
+El componente `Arrow` (`assets/Arrow.tsx`) pasó de colores hardcodeados a un
+prop `palette?: ArrowPalette` (fill/fillLight/fillDark/shaftFill/line), con
+default = exactamente los mismos valores que tenía antes
+(`DEFAULT_ARROW_PALETTE`) — así el uso decorativo en `HammerAnvil` (que no
+pasa `palette`) queda visualmente idéntico, sin tocarlo.
+
+**Reduced motion:** sin vuelo que mostrar, la flecha aparece directamente en
+su color de aterrizaje (no se ve la fase gris) — mismo criterio que ya
+aplicaba el resto de la escena en este modo.
+
 ### Modo funnel — los 5 anillos son los 5 hitos (implementado)
 
 En vez de posición aleatoria, `mode="funnel"` ubica cada flecha en el anillo
@@ -757,6 +799,41 @@ contador = ease-out.
     (`w-32 sm:w-52 lg:w-64` — 50% en mobile, ~80% en tablet, 100% en
     desktop), pedido explícito para no verse sobredimensionada en pantallas
     chicas. Detalle en §2/§3 "Dónde vive".
+
+17. **Fix: el reveal forzaba scroll horizontal que no hacía falta** (2026-07-26)
+    → la tabla lleva un `min-w-[720px]` por debajo de 640px para que las
+    columnas reales no se aplasten — pero ese mínimo también se aplicaba
+    durante el reveal (`showingReveal`), cuya única celda es una animación
+    centrada, nada que aplastar. Efecto: en mobile la diana quedaba
+    descentrada y hacía falta scrollear para verla completa, un scroll que
+    no tenía ningún motivo de ser en ese momento (pedido del usuario: *"tiene
+    que estar siempre centrado al viewport del contenedor, es scroleable la
+    tabla y eso está bien, pero al momento de cargar el scroll es
+    completamente innecesario porque lo único que contiene es la
+    animación"*). Fix: tanto el `min-width` como el `<TableHeader>` (nada que
+    rotular sin columnas) pasan a condicionales sobre `showingReveal`.
+    Verificado a 375px: sin scroll durante carga/reveal, y el scroll vuelve
+    solo una vez que rendericen filas reales (`[data-slot="table-container"]`,
+    el wrapper propio de `Table` de shadcn — no el `div.overflow-x-auto`
+    externo y redundante en `RegistryTable.tsx`, que fue la primera fuente
+    de una verificación en falso).
+18. **Las flechas se pintan del color del anillo que tocaron** (2026-07-26) →
+    hasta acá todas las flechas usaban el mismo naranja/marrón decorativo sin
+    relación con dónde caían. Pedido del usuario, con la leyenda de colores
+    del funnel como referencia: *"la flecha base gris claro? y cuando toquen
+    la superficie se pinten del color que tocaron? […] la lógica de todo
+    esto es que al ver todas las flechas en la diana los colores de las
+    flechas comuniquen tu proceso visualmente"*. Se agregó un prop
+    `palette` a `Arrow` (default = los colores originales, sin cambios para
+    `HammerAnvil`), una paleta gris única para el vuelo
+    (`UNPAINTED_ARROW_PALETTE`) y 5 paletas — una por anillo, `fill` calcado
+    del propio anillo en `Diana.tsx` — que se aplican recién cuando el vuelo
+    de esa flecha termina (`anim.finished`), con una transición corta en vez
+    de un salto. `ringIndex` se calcula para los dos modos (funnel: del
+    `funnelRank`; random: del radio de aterrizaje contra `RING_BANDS`), así
+    el color aplica igual sin depender de si hay datos de funnel. Detalle
+    completo, incluida la razón de elegir cada tono a mano en vez de una
+    fórmula, en §2 "Color por anillo".
 
 **Valores por defecto (tuneables, no bloquean):**
 
