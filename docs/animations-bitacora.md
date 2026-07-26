@@ -539,6 +539,49 @@ capturar el instante exacto de cada fase: martillo durante el fetch
 retrasado artificialmente → flechas volando en modo funnel con la
 distribución real de su embudo → tabla real asentada.
 
+### Ronda 9 — El martillo se va: una sola escena para toda la espera
+
+La ronda 8 duró poco. Apenas se vio en uso real, el diseño "martillo mientras
+carga, flecha cuando hay datos" mostró su problema: un corte visible de una
+animación a otra justo en el momento en que llegaban los datos. El reporte
+del usuario fue directo: *"por un segundo se muestra el yunke antes de que
+aparezca la animación de la diana, podemos quitar eso? si eso está definido,
+esta mal."* — y la instrucción de reemplazo, igual de directa: *"dejemos la
+misma diana, y mientras no carga nada pues no se lanzan flechas."*
+
+La solución no fue "esconder mejor" el corte — fue darse cuenta de que
+`ArrowToTarget` ya tenía todo lo necesario para no necesitarlo. El componente
+ya soporta `count` subiendo en vivo sobre el mismo montaje sin perder las
+flechas ya aterrizadas (es el mecanismo, ya documentado, que usan las
+andanadas/lluvia cuando `count` sigue subiendo durante la propia animación).
+Pasar de `count=0` a `count=N` en la misma instancia no era un caso nuevo a
+programar — era el camino que el componente ya sabía andar. Con `count=0` la
+escena ya cae sola en su registro "idle" (diana quieta, sin flechas, "0 CVs
+enviados"), que es exactamente el estado que hacía falta para el hueco real
+sin datos.
+
+El único detalle no obvio: con `count=0`, el efecto interno que dispara
+`onDone` se completa casi al instante (no hay nada que animar). Si el
+`onDone` real (el que le da paso a la tabla) estuviera siempre conectado,
+se dispararía de inmediato **mientras todavía se está cargando**, mostrando
+la tabla vacía antes de tiempo. Se resolvió pasando `onDone={undefined}`
+mientras `loading` es `true`, y recién conectando la función real una vez
+que hay datos — así el "done" del `count=0` no cuenta para nada, y el único
+"done" que importa es el de la animación real con las flechas de verdad.
+
+Con esto, el martillo queda completamente afuera de `RegistryTable` — vuelve
+a ser, por ahora, una escena que solo vive en el harness de dev, a la espera
+de su rol original (loading del pipeline de IA).
+
+**Segundo pedido, sobre tamaño responsivo:** *"en resoluciones responsive,
+reduzcamos el tamaño total de la animación a un 80% y hasta 50% máximo
+(dependiendo del tamaño)."* El contenedor de la escena, antes un ancho fijo
+(`w-64`, 256px) sin importar la pantalla, pasa a `w-32 sm:w-52 lg:w-64` —
+50% en pantallas chicas, ~80% en medianas, 100% en desktop. Verificado en
+1200px y 375px de ancho: en mobile la diana se ve considerablemente más
+chica, dentro del mismo scroll horizontal que ya tenía la tabla en esos
+anchos (comportamiento previo de la tabla, no algo nuevo de este cambio).
+
 ---
 
 ## Notas sueltas que no encajan en la cronología pero valen la pena dejar anotadas

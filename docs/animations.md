@@ -12,14 +12,17 @@ mascota y Rive, los pivotes, cada ronda de feedback visual — ver
 [`animations-bitacora.md`](animations-bitacora.md). Ese doc es un registro
 cronológico sin filtrar; este es el estado actual.
 
-> Estado: **implementado (v1, reducido) y montado en la app real**. Los dos
-> componentes de escena existen, están probados visualmente (ver §4) **y
-> ambos corren en `RegistryTable`**: el martillo cubre el hueco real sin
-> datos (`loading === true`), la flecha hace un reveal único con datos
-> reales (`funnelRanksFor` en `core/funnel.ts`) apenas terminan de llegar
-> (ver §2/§3 "Dónde vive"). Ese era el único pendiente que quedaba — de acá
-> en más son solo valores tuneables (§6) y usos adicionales opcionales
-> (splash de toda la app, on-demand en otras vistas).
+> Estado: **implementado (v1, reducido)**. Los dos componentes de escena
+> existen y están probados visualmente (ver §4). **Flecha a la diana ya está
+> montada en la app real** — `RegistryTable` la usa como única escena de
+> carga: quieta en `count=0` mientras el fetch real sigue en curso, animando
+> las flechas apenas llegan los datos reales (`funnelRanksFor` en
+> `core/funnel.ts`), sin cortar a ninguna otra animación en el medio (ver §2
+> "Dónde vive"). **Martillo en el yunque todavía no** — se probó ahí también
+> pero se sacó (ver §3 "Dónde vive"); sigue pendiente para su rol original
+> (loading del pipeline de IA). De acá en más son solo valores tuneables
+> (§6) y usos adicionales opcionales (splash de toda la app, on-demand en
+> otras vistas).
 
 ---
 
@@ -141,17 +144,35 @@ idle → lanzar → (en vuelo) → impacto
 
 ### Dónde vive
 
-**Implementado: reveal en `RegistryTable`** (2026-07-26) — la primera vez que
-`useRegistry` termina de cargar (real, no simulado) todas las filas, en vez de
-pasar directo a la tabla se reproduce esta escena una sola vez, en modo
-`funnel`, con `count`/`funnelRanks` calculados de **todas** las aplicaciones
-enviadas alguna vez (scope `"all"`, no solo la tab Vigentes/Archivado que esté
-activa). Al terminar (`onDone`) da paso a la tabla real. Es una variante de rol
-**intro** acotada a esa sección, no al splash completo de la app — arranca
-sola, sin que el usuario la pida, apenas hay datos reales para mostrar. Ver
+**Implementado: reveal en `RegistryTable`** (2026-07-26) — una sola instancia
+de `ArrowToTarget` cubre **toda** la espera, no solo el momento en que hay
+datos: mientras `useRegistry` todavía está haciendo el fetch real, la escena
+ya está montada con `count={0}` (diana quieta, sin flechas — el registro
+"idle" de siempre, gratis). En cuanto termina de cargar, el mismo componente
+recibe el `count`/`funnelRanks` reales (**todas** las aplicaciones enviadas
+alguna vez, scope `"all"`, no solo la tab Vigentes/Archivado activa) y las
+flechas vuelan — sin remount, sin cortar a otra animación en el medio. Al
+terminar (`onDone`, que solo se registra una vez hay datos reales — ver el
+gotcha abajo) da paso a la tabla real. Es una variante de rol **intro**
+acotada a esa sección, no al splash completo de la app. Ver
 `ui/RegistryTable.tsx` (la escena) y `app/page.tsx` (de dónde salen
 `totalSentCount`/`sentFunnelRanks`, calculados sobre las filas **sin**
 filtrar por tab).
+
+**Por qué una sola instancia y no dos escenas distintas:** la primera versión
+mostraba el martillo mientras cargaba y recién montaba la flecha cuando
+llegaban los datos — un corte de una animación a otra que el usuario marcó
+como un glitch ("por un segundo se muestra el yunque antes de que aparezca
+la animación de la diana... si eso está definido, está mal"). `ArrowToTarget`
+ya soporta `count` creciendo en vivo sobre el mismo montaje sin remount (es
+el mecanismo que ya usan las andanadas/lluvia cuando `count` sube durante la
+propia animación — ver §4), así que pasar de `count=0` (mientras carga) a
+`count=N` (cuando hay datos) en la misma instancia no es un caso especial,
+es el camino normal del componente. El único cuidado real es `onDone`: se
+pasa `undefined` mientras `loading` es `true` (el "done" casi instantáneo de
+un `count=0` no debe interpretarse como "terminó el reveal" — dispararía la
+tabla real antes de tiempo, sin datos) y recién se registra la función real
+una vez que `loading` pasa a `false`.
 
 Quedan disponibles, sin implementar todavía:
 
@@ -212,29 +233,20 @@ flecha sobre el yunque** — sin muñeco que lo sostenga, el martillo golpea sol
 
 ### Dónde vive
 
-**`RegistryTable`, acotado al hueco real sin datos** (2026-07-26) — reemplaza
-el `"Cargando registro…"` de texto puro que se mostraba mientras `useRegistry`
-hace el fetch inicial (`loading === true`, sin ninguna fila todavía).
-`<HammerAnvil active />` adentro de la celda, `w-32` (128px, respeta el
-aspect-ratio 156/91 del asset — mucho más angosto que la diana cuadrada, por
-eso encaja bien en una fila de tabla), con el texto original debajo a modo de
-caption. `active` no necesita atarse a nada más que `loading` mismo, porque
-la celda entera ya está condicionada a `loading` — no hace falta un `onDone`
-acá, la celda simplemente deja de existir cuando `loading` pasa a `false`.
+**Todavía no montado en la app real** (revertido, 2026-07-26). Se probó
+usarlo en `RegistryTable` para el hueco real sin datos mientras
+`useRegistry` hace el fetch inicial — pero eso significaba **dos escenas
+distintas en el mismo lugar**, con un corte de una a otra en cuanto
+llegaban los datos. El usuario lo marcó como un glitch visual, no como algo
+deliberado: *"por un segundo se muestra el yunque antes de que aparezca la
+animación de la diana... si eso está definido, está mal"*. Se sacó el
+martillo de ahí — ver §2 "Dónde vive" en Flecha a la diana para cómo quedó
+resuelto (una sola instancia de esa escena, quieta en `count=0` mientras
+carga, sin necesitar el martillo para nada).
 
-Esto **amplía el rol documentado arriba** ("loading state mientras el
-pipeline de IA genera el CV/carta") a cualquier loading ambient genérico sin
-dato conocido todavía — el fetch inicial de la tabla no es el pipeline de
-IA, pero es exactamente el mismo tipo de espera (indeterminada, sin score
-parcial que mostrar) que la escena ya estaba diseñada para cubrir.
-
-**Solo cubre ese hueco puntual**, no toda la espera de la tabla: apenas
-`loading` pasa a `false` (hay datos reales), el martillo le pasa la posta a
-**Flecha a la diana** — que sí es candidata una vez que el `count` real
-existe — para el reveal (ver §2 "Dónde vive"). En la práctica el hueco que
-cubre el martillo suele ser muy breve (el fetch local es rápido), pero sigue
-siendo el estado correcto para ese instante puntual en el que literalmente no
-hay ningún número que mostrar todavía.
+Sigue siendo la escena correcta, sin cambios en sí misma, para su rol
+original — loading ambient mientras el pipeline de IA genera el CV/carta —
+el día que se cablee ahí. Visible mientras tanto en `/dev/animations`.
 
 ---
 
@@ -256,7 +268,7 @@ abajo).
 | Escena "martillo en el yunque" | `ui/animations/HammerAnvil.tsx` |
 | Keyframes del martillo | `app/globals.css` (`cb-hammer-swing`, `cb-hammer-flash`) |
 | Harness de QA + playground de tuning (dev-only, no linkeado desde la app) | `app/dev/animations/page.tsx` |
-| Uso real en la app (loading + reveal de la tabla) | `ui/RegistryTable.tsx` (ambas escenas) |
+| Uso real en la app (carga + reveal de la tabla) | `ui/RegistryTable.tsx` (`<ArrowToTarget>`, única escena — ver §2/§3 "Dónde vive") |
 | Adaptador `rows → count`/`funnelRanks` (scope "all") | `app/page.tsx` (`sentRows`/`sentFunnelRanks`) + `funnelRanksFor` en `core/funnel.ts` |
 
 | Animación | Naturaleza | Cómo se resuelve |
@@ -727,6 +739,24 @@ contador = ease-out.
     sin limpiar, se agregó a `assets/illustrations/originals/` (sin
     componente React, sin uso en código) para dejar constancia de lo que
     existió. Ver `animations-bitacora.md`.
+16. **Una sola escena para toda la carga de `RegistryTable`, no dos** —
+    Martillo se saca de ahí (2026-07-26) → el diseño de la decisión #14
+    (martillo mientras carga, flecha cuando hay datos) producía un corte de
+    una animación a otra apenas llegaban los datos — reportado como glitch:
+    *"por un segundo se muestra el yunque antes de que aparezca la
+    animación de la diana... si eso está definido, está mal"*. Se resolvió
+    con una sola instancia de `ArrowToTarget` cubriendo toda la espera:
+    `count={0}` (diana quieta, sin flechas — el registro "idle" que el
+    componente ya tenía) mientras `loading` es `true`, y el `count`/
+    `funnelRanks` reales apenas hay datos — sin remount, aprovechando que el
+    componente ya soporta `count` subiendo en vivo sobre el mismo montaje
+    (el mismo mecanismo de andanadas/lluvia). Cuidado no obvio: `onDone` se
+    deja en `undefined` mientras `loading` es `true`, porque el "done" casi
+    instantáneo de un `count=0` no debe interpretarse como que terminó el
+    reveal real. De paso, tamaño responsivo del contenedor de la escena
+    (`w-32 sm:w-52 lg:w-64` — 50% en mobile, ~80% en tablet, 100% en
+    desktop), pedido explícito para no verse sobredimensionada en pantallas
+    chicas. Detalle en §2/§3 "Dónde vive".
 
 **Valores por defecto (tuneables, no bloquean):**
 

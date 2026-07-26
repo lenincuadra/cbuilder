@@ -27,7 +27,6 @@ import { cn } from "@/lib/utils";
 import { ChannelIcon } from "@/ui/ChannelIcon";
 import { CodeCell } from "@/ui/CodeCell";
 import { ArrowToTarget } from "@/ui/animations/ArrowToTarget";
-import { HammerAnvil } from "@/ui/animations/HammerAnvil";
 import { RowDetailDrawer, type DetailTab } from "@/ui/detail/RowDetailDrawer";
 import { FocusIcon } from "@/ui/FocusIcon";
 import { SeguimientoCell } from "@/ui/detail/SeguimientoCell";
@@ -77,9 +76,10 @@ export interface RegistryTableProps {
    * Every CV ever sent — count + funnel rank per row (`docs/animations.md`
    * §2 "Modo funnel"), computed by the caller from the *unfiltered* rows
    * (not `rows` above, which is already scoped to the current
-   * Vigentes/Archivado tab). Drives the one-time "flecha a la diana" reveal
-   * that plays right after real data loads, replacing the martillo loading
-   * loop. Omit either to skip the reveal and go straight to the
+   * Vigentes/Archivado tab). Feeds the "flecha a la diana" scene shown
+   * while `loading` is true (idle, no arrows yet) and animates in once
+   * real data lands — one continuous scene, not a swap between two
+   * different loading animations. Omit either to skip straight to the
    * empty/rows state once loading finishes.
    */
   totalSentCount?: number;
@@ -121,9 +121,13 @@ export function RegistryTable({
   const { spec } = useSpec();
   const [detailCode, setDetailCode] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  // Plays once, right after `loading` first turns false — never again for
-  // this mount (loading never goes back to true after the initial fetch,
-  // see useRegistry.ts). `totalSentCount` falsy (0 or omitted) skips
+  // Flips true once the arrow reveal finishes *with real data* — never
+  // again for this mount (loading never goes back to true after the
+  // initial fetch, see useRegistry.ts). While `loading` is still true, the
+  // same <ArrowToTarget> instance below just sits idle (count 0, no
+  // arrows) instead of swapping to a different loading animation — one
+  // continuous scene instead of a jarring cut from one animation to
+  // another. `totalSentCount` falsy (0, once loading is done) skips
   // straight past this to the empty/rows state below.
   const [revealDone, setRevealDone] = useState(false);
   const [detailTab, setDetailTab] = useState<DetailTab>("detalles");
@@ -186,24 +190,15 @@ export function RegistryTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={COLUMNS.length} className="h-24 text-center text-muted-foreground">
-                  <div className="mx-auto w-32">
-                    <HammerAnvil active />
-                  </div>
-                  <p className="mt-1">Cargando registro…</p>
-                </TableCell>
-              </TableRow>
-            ) : !revealDone && totalSentCount ? (
+            {!revealDone && (loading || (totalSentCount ?? 0) > 0) ? (
               <TableRow>
                 <TableCell colSpan={COLUMNS.length} className="py-8 text-center text-muted-foreground">
-                  <div className="mx-auto w-64">
+                  <div className="mx-auto w-32 sm:w-52 lg:w-64">
                     <ArrowToTarget
-                      count={totalSentCount}
+                      count={loading ? 0 : (totalSentCount ?? 0)}
                       mode="funnel"
-                      funnelRanks={sentFunnelRanks}
-                      onDone={() => setRevealDone(true)}
+                      funnelRanks={loading ? undefined : sentFunnelRanks}
+                      onDone={loading ? undefined : () => setRevealDone(true)}
                     />
                   </div>
                 </TableCell>
