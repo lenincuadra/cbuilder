@@ -233,6 +233,10 @@ const RING_BANDS = [
  * look at the impact, not a "feel" knob worth exposing as a slider. */
 const PAINT_REVEAL_PAUSE_MS = 450;
 
+/** How long to keep the scene up *after* it paints before `onDone` fires —
+ * see the `grandTotal` comment below for why this has to exist at all. */
+const POST_PAINT_HOLD_MS = 700;
+
 /**
  * "Raw" arrow, in flight — light gray, the same for every shot regardless of
  * where it's headed, so the outcome color only shows up once it actually
@@ -607,7 +611,15 @@ export function ArrowToTarget({
     }
 
     const tickDuration = 500;
-    const grandTotal = totalFlightDuration + (count > visualCount ? tickDuration : 0);
+    // Has to cover the paint reveal too (pause + a hold to actually see the
+    // painted result), not just the flight — `onDone` firing the moment the
+    // last arrow lands, gray, was cutting the scene away before the color
+    // swap ever got on screen: callers that unmount on `onDone` (RegistryTable)
+    // would swap to the real table right as arrows landed, so the paint
+    // effect's own timer (scheduled for totalFlightDuration + PAINT_REVEAL_PAUSE_MS)
+    // never got a chance to render before its container was gone.
+    const grandTotal =
+      totalFlightDuration + PAINT_REVEAL_PAUSE_MS + POST_PAINT_HOLD_MS + (count > visualCount ? tickDuration : 0);
     const start = performance.now();
     let raf = 0;
     let fired = false;
