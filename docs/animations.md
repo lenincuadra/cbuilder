@@ -205,7 +205,7 @@ abajo).
 | Escena "flecha a la diana" | `ui/animations/ArrowToTarget.tsx` |
 | Escena "martillo en el yunque" | `ui/animations/HammerAnvil.tsx` |
 | Keyframes del martillo | `app/globals.css` (`cb-hammer-swing`, `cb-hammer-flash`) |
-| Harness de QA (dev-only, no linkeado desde la app) | `app/dev/animations/page.tsx` |
+| Harness de QA + playground de tuning (dev-only, no linkeado desde la app) | `app/dev/animations/page.tsx` |
 
 | Animación | Naturaleza | Cómo se resuelve |
 |---|---|---|
@@ -269,17 +269,18 @@ código sin este contexto.
 2. **Mezcla de un ángulo fijo + el ángulo "real" de llegada de cada flecha**
    (calculado con las mismas fórmulas del vuelo, evaluadas un sample antes de
    aterrizar) → soluciona la inconsistencia del #1, pero el ángulo "real"
-   resultó ser una mala señal: por el ease-in del vuelo
-   (`FLIGHT_EASE_IN_POWER`), el *último* tramo antes de aterrizar es
-   desproporcionadamente empinado/vertical comparado con la dirección
-   general del vuelo (que es sobre todo horizontal — el rango de `ox` es 2-3
-   veces el de `peak`). Entonces aunque se mezclara 50/50 con un ángulo fijo
+   resultó ser una mala señal: por el ease-in del vuelo (`easeInPower`), el
+   *último* tramo antes de aterrizar es desproporcionadamente
+   empinado/vertical comparado con la dirección general del vuelo (que es
+   sobre todo horizontal — el rango de `ox`/`spawnOffset*` es 2-3 veces el de
+   `peak`/`arcHeight*`). Entonces aunque se mezclara 50/50 con un ángulo fijo
    más bajo, las flechas seguían leyendo más paradas de lo que realmente
    volaron — "se ven como que cayeron desde arriba aunque la trayectoria no
    fue así".
 3. **Actual: un ángulo de reposo casi fijo (~horizontal) + jitter, sin física
-   de por medio** — `BASE_REST_ANGLE_DEG = 0` (flecha acostada, apuntando a
-   la derecha) y `REST_ANGLE_JITTER_DEG = 14`. Ajustado contra una foto de
+   de por medio** — `restAngleBaseDeg: 0` (flecha acostada, apuntando a la
+   derecha) y `restAngleJitterDeg: 14` (campos de `ArrowTuning`, ver §4 "el
+   prop de tuning y el playground"). Ajustado contra una foto de
    referencia que trajo el usuario (flechas reales clavadas en una diana):
    todas quedan cerca de la horizontal y casi paralelas entre sí, con
    variación menor y no sistemática — ni tangente al anillo, ni atada al arco
@@ -297,7 +298,7 @@ y uno de timing. Físico: una caída bajo gravedad **acelera** — la velocidad
 vertical es máxima justo en el impacto, no mínima; con `h(te)` así, la
 flecha llega a máxima velocidad vertical y la animación simplemente termina
 ahí, sin deceleration hacia el final. Timing: el progreso `te = t^1.7`
-(`FLIGHT_EASE_IN_POWER`) además hace que la posición apenas cambie al
+(`easeInPower` en `ArrowTuning`) además hace que la posición apenas cambie al
 principio del tiempo real y se mueva la mayor parte de la distancia sobre el
 final — un ease-in aplicado al *progreso*, no una curva de easing de WAAPI
 encima (que deformaría la parábola ya sampleada). `flightDurationMin`/`Max`
@@ -357,6 +358,32 @@ código como se planteaba originalmente) — se copiaron a componentes React en
   adaptador que lee las filas de `core/registry` todavía no existe — es el
   próximo paso para montar esto en la app real (splash/intro, §2 "Dónde vive").
 
+### `ArrowTuning` — el prop de tuning y el playground
+
+Todos los "feel knobs" del vuelo (duración, ease-in, offset de spawn, altura
+del arco, ángulo de reposo + jitter, tamaño de la flecha, tope de flechas
+dibujadas, radio máximo en modo random) viven en un solo tipo exportado,
+`ArrowTuning` (`ArrowToTarget.tsx`), con sus valores de producción en
+`DEFAULT_ARROW_TUNING`. `ArrowToTarget` acepta un prop opcional
+`tuning?: Partial<ArrowTuning>` que pisa cualquier subconjunto de esos
+valores — no pasar el prop reproduce exactamente el comportamiento de
+producción.
+
+`/dev/animations` expone un control (slider) por cada campo de `ArrowTuning`,
+agrupados en Timing / Trayectoria / Ángulo final / Tamaño-densidad, con botón
+de reset a los valores por defecto — pensado para iterar visualmente sobre el
+"feel" de la escena sin tocar código, y para reproducir escenarios (ej.
+`dianaVisualCap` bajo + `count` alto, o `arrowScalePct` extremo) al debuggear.
+Cualquier cambio de tuning fuerza un remount completo de `ArrowToTarget` (va
+en el `key`, junto con `replayKey` y `mode`) — necesario porque `shots` sólo
+se re-anima para ids no vistos antes (ver el comentario sobre `sessionSeed`
+más arriba); sin el remount, cambiar un slider cambiaría los valores pero no
+la animación ya agendada para esos mismos ids.
+
+`DEFAULT_ARROW_TUNING` tiene su propia historia documentada largo en el
+código (ángulo de reposo y altura del arco pasaron por varias iteraciones
+rechazadas — ver el comentario ahí, resumido también en §6 más abajo).
+
 ---
 
 ## 5. Motion tokens (valores de arranque, tuneables)
@@ -374,7 +401,7 @@ Un solo lugar para las constantes de movimiento — todas las escenas las compar
 | `dianaVisualCap` | ~40 | Máximo de flechas clavadas dibujadas (el resto lo carga el contador) |
 | `hammerCycle` | ~1500 ms | Duración de un ciclo de golpe de martillo (loop) |
 | `flightDurationMin`/`Max` | 211–300 ms | Rango de duración del vuelo — cada flecha sortea un valor propio (~20% más rápido que el original 253–360) |
-| `FLIGHT_EASE_IN_POWER` | 1.7 | Exponente del ease-in de progreso (`te = t^1.7`, en `ArrowToTarget.tsx`, no en `motionTokens.ts` — es interno al sampler, no una constante compartida entre escenas) — acelera el vuelo y hace que "llegue de golpe" |
+| `easeInPower` | 1.7 | Exponente del ease-in de progreso (`te = t^1.7`) — acelera el vuelo y hace que "llegue de golpe". Campo de `ArrowTuning` (`ArrowToTarget.tsx`), no de `motionTokens.ts` — no es compartido entre escenas, y es tuneable en vivo desde el playground de `/dev/animations` (§4) junto con el resto de `ArrowTuning` |
 
 Easings: vuelo de la flecha = `linear` sobre una parábola ya sampleada en JS
 con progreso ease-in (§4 — el ritmo vive en los puntos, no en la curva de
@@ -448,8 +475,8 @@ contador = ease-out.
    sobre todo horizontal (el ángulo "real" resultó ser una mala señal — ver
    §4). Se resolvió con una foto de referencia (flechas reales clavadas en
    una diana, casi horizontales y casi paralelas) que el usuario aportó
-   directamente: ángulo de reposo casi fijo (`BASE_REST_ANGLE_DEG = 0`) con
-   jitter ±14° (`REST_ANGLE_JITTER_DEG`), sin ninguna relación con la física
+   directamente: ángulo de reposo casi fijo (`restAngleBaseDeg: 0`) con
+   jitter ±14° (`restAngleJitterDeg`), sin ninguna relación con la física
    del vuelo ni con el anillo — ver §4 "`restRotation` … pasó por tres
    diseños" para el detalle completo y el razonamiento de por qué las dos
    vueltas anteriores fallaban (documentado también como comentario largo en
@@ -464,6 +491,18 @@ contador = ease-out.
    apenas una leve curva marcada como correcta). Se bajó el rango de `peak` a
    10–25px — el vuelo entero queda casi horizontal, con solo un leve
    arqueo, consistente de punta a punta con el ángulo de reposo.
+9. **Todos los "feel knobs" del vuelo pasan a un prop `tuning` + playground
+   en `/dev/animations`** (2026-07-26) → todas las constantes tocadas en la
+   sesión de fixes de #6-#8 (duración de vuelo, ease-in, offset de spawn,
+   altura/pico del arco, ángulo de reposo + jitter, tamaño de la flecha,
+   `dianaVisualCap`, radio máximo en modo random) se juntaron en un solo tipo
+   exportado `ArrowTuning` con defaults en `DEFAULT_ARROW_TUNING`, pisables
+   vía `tuning?: Partial<ArrowTuning>` en `ArrowToTarget`. El harness de dev
+   expone un slider por campo, agrupados, con reset a valores por defecto —
+   pedido explícito del usuario ("un playground agregando los controles para
+   manejar todo, incluyendo todos los cambios que hemos hecho en este chat")
+   para poder iterar visualmente sobre el feel sin volver a tocar código cada
+   vez. Ver §4 "`ArrowTuning` — el prop de tuning y el playground".
 
 **Valores por defecto (tuneables, no bloquean):**
 

@@ -21,6 +21,9 @@ type ArrowShot = {
   peakAt: number;
   delay: number;
   flightMs: number;
+  /** Copied from ArrowTuning.easeInPower at build time, so buildFlightKeyframes
+   * doesn't need the whole tuning object threaded through separately. */
+  easeInPower: number;
 };
 
 /** Per-index pseudo-random, offset by a per-mount session seed: stable across
@@ -38,47 +41,134 @@ function seededRandom(seed: number) {
 const RING_CENTER_X = 50;
 const RING_CENTER_Y = 38;
 
-// Progress is warped through this power before it drives position, in the
-// real sampled path in buildFlightKeyframes below.
-const FLIGHT_EASE_IN_POWER = 1.7;
+// The Arrow asset's own native size (its SVG viewBox rendered 1:1), before
+// ArrowTuning.arrowScalePct scales it.
+const ARROW_BASE_WIDTH_PX = 88;
+const ARROW_BASE_HEIGHT_PX = 24;
 
 /**
- * `restRotation` (the angle an arrow is left stuck at, in screen deg — 0 =
- * flat/pointing right, 90 = pointing straight down) went through three
- * designs before landing here. Worth keeping this history: the "obvious"
- * options both looked wrong for non-obvious reasons, and it's easy to
- * reintroduce either mistake while touching this code later.
+ * Every tunable "feel" knob for this scene, gathered in one place so
+ * `/dev/animations` can expose a live control for each of them (see that
+ * page for the actual playground UI). Passing no `tuning` prop at all to
+ * `ArrowToTarget` reproduces `DEFAULT_ARROW_TUNING` below exactly — these
+ * *are* the production values, not separate defaults.
  *
- * 1. **Tangent to the ring** (original): rotate each arrow to lie flush
+ * Several of these went through multiple iterations that each looked
+ * reasonable and turned out wrong for non-obvious reasons — see the long
+ * comment on `DEFAULT_ARROW_TUNING` for the full history before changing a
+ * default, so a "fix" doesn't silently reintroduce a previously-rejected
+ * look.
+ */
+export type ArrowTuning = {
+  /** Range for a single arrow's flight time, ms — each shot picks its own
+   * value so a batch doesn't move in lockstep. */
+  flightDurationMinMs: number;
+  flightDurationMaxMs: number;
+  /** Flight progress (0-1) is warped through `t ** easeInPower` before it
+   * drives position. 1 = linear/constant speed; >1 = starts slow and
+   * accelerates, arriving at full speed and simply stopping on landing. */
+  easeInPower: number;
+  /** Horizontal spawn offset range, px — arrows always spawn this far to
+   * the left of their landing point, in world space (see the
+   * counter-rotation note on buildFlightKeyframes for why "world space"
+   * matters, not local/rotated space). */
+  spawnOffsetMinPx: number;
+  spawnOffsetMaxPx: number;
+  /** How high the flight arcs above a straight line from spawn to landing, px. */
+  arcHeightMinPx: number;
+  arcHeightMaxPx: number;
+  /** Where in [0,1] of (eased) progress the arc peaks — off-center so arcs
+   * aren't all symmetric humps. */
+  arcPeakAtMin: number;
+  arcPeakAtMax: number;
+  /** The angle (screen deg — 0 = flat/pointing right, 90 = pointing
+   * straight down) an arrow is left stuck at, before jitter. */
+  restAngleBaseDeg: number;
+  /** Random +/- range added to restAngleBaseDeg per arrow, so they don't
+   * all look like identical clones. */
+  restAngleJitterDeg: number;
+  /** Rendered arrow size, as % of the source asset's native size
+   * (ARROW_BASE_WIDTH_PX x ARROW_BASE_HEIGHT_PX). */
+  arrowScalePct: number;
+  /** Max arrows actually drawn stuck in the target; past this the count
+   * text ticks up on its own instead of drawing more arrows. */
+  dianaVisualCap: number;
+  /** Max landing radius in "random" mode, % of the container box — keeps
+   * arrow tips inside the diana's outer edge. */
+  randomModeMaxRadiusPct: number;
+};
+
+/**
+ * Production defaults. Three of these fields (`restAngleBaseDeg` /
+ * `restAngleJitterDeg`, and `arcHeightMinPx` / `arcHeightMaxPx`) carry real
+ * design history worth reading before touching them again:
+ *
+ * **Rest angle** went through three designs:
+ * 1. *Tangent to the ring* (original) — rotate each arrow to lie flush
  *    against the curve of whatever ring it lands on. Reads fine for any
  *    *one* arrow in isolation, but the tangent angle swings wildly with
  *    landing position — near-horizontal at the top/bottom of the ring,
  *    near-vertical at the sides. Since every arrow's actual flight comes
- *    from the same side (see `ox`), arrows landing at different clock
+ *    from the same side (`spawnOffset*`), arrows landing at different clock
  *    positions ended up stuck at wildly different angles despite having
  *    flown in identically — reported as "the landing point is right, but it
- *    looks like this one fell from below" (screenshot of a near-vertical
- *    arrow, next to several near-horizontal ones).
- * 2. **Blend of a fixed angle and each shot's own "real" arrival angle**
- *    (computed from the flight path's direction one sample before landing):
- *    fixes #1's inconsistency, but the "real" angle turned out to be a bad
- *    signal — thanks to the ease-in (`FLIGHT_EASE_IN_POWER`), the *last*
- *    sample before landing is disproportionately steep/vertical compared to
- *    the flight's overall direction (which is mostly horizontal — `ox`'s
- *    range is 2-3x `peak`'s). So even blended 50/50 with a flat-ish fixed
- *    angle, arrows still read as steeper than they actually flew — "looks
- *    like it fell from above even though the trajectory wasn't like that".
- * 3. **Current: a single near-flat rest angle, plus jitter, full stop** —
- *    no per-shot physics involved. Matched to a reference photo the user
+ *    looks like this one fell from below" (screenshot: one near-vertical
+ *    arrow next to several near-horizontal ones).
+ * 2. *Blend of a fixed angle and each shot's own "real" arrival angle*
+ *    (computed from the flight path's direction one sample before landing)
+ *    — fixes #1's inconsistency, but the "real" angle turned out to be a
+ *    bad signal: thanks to the ease-in (`easeInPower`), the *last* sample
+ *    before landing is disproportionately steep/vertical compared to the
+ *    flight's overall direction (which is mostly horizontal —
+ *    `spawnOffset*`'s range is several times `arcHeight*`'s). So even
+ *    blended 50/50 with a flat-ish fixed angle, arrows still read as
+ *    steeper than they actually flew — "looks like it fell from above even
+ *    though the trajectory wasn't like that".
+ * 3. *Current: a single near-flat rest angle, plus jitter, full stop* — no
+ *    per-shot physics involved. Matched to a reference photo the user
  *    provided of real arrows stuck in a target: all of them lie close to
  *    horizontal and close to parallel to each other, with only minor,
- *    non-systematic variation — not tangent to the target's rings, not
- *    tracking each arrow's individual flight arc. `REST_ANGLE_JITTER_DEG`
- *    was reverse-engineered off that same photo (arrows in it measured
- *    roughly -14deg to +12deg off horizontal).
+ *    non-systematic variation. `restAngleJitterDeg: 14` was
+ *    reverse-engineered off that same photo (arrows in it measured roughly
+ *    -14deg to +12deg off horizontal).
+ *
+ * **Arc height** was originally 45-110 (a visible lob — the arrow rises
+ * well above the flight line before diving down). Once the rest angle above
+ * went near-flat, that tall arc no longer matched: the flight would swoop
+ * up and dive steeply right before snapping flat on landing. Dropped to
+ * 10-25 after user feedback with an annotated screenshot (a tall arc marked
+ * wrong, a nearly flat one with just a gentle bow marked right) — the whole
+ * flight should read as close to horizontal end to end, not just the final
+ * pose.
+ *
+ * `randomModeMaxRadiusPct: 19` — an arrow centered at radius R has endpoints
+ * up to R + halfLength from center in the worst case (an arrow oriented
+ * radially, pointing straight out — which does happen now that the rest
+ * angle is ~fixed/near-horizontal rather than tangent to the ring, for
+ * arrows landing near the left/right of the ring). 19 leaves enough margin
+ * for the arrow's half-length at its current (enlarged) size — verified
+ * visually at `dianaVisualCap` in both random and funnel modes (funnel's
+ * outer band tops out at radius 22, the tighter case, and was checked too)
+ * rather than re-derived algebraically, since the true bulge depends on the
+ * angle between each arrow's near-fixed rest angle and its own landing
+ * position's radial direction, which isn't a single clean formula any more.
  */
-const BASE_REST_ANGLE_DEG = 0;
-const REST_ANGLE_JITTER_DEG = 14;
+export const DEFAULT_ARROW_TUNING: ArrowTuning = {
+  flightDurationMinMs: motionTokens.flightDurationMin,
+  flightDurationMaxMs: motionTokens.flightDurationMax,
+  easeInPower: 1.7,
+  spawnOffsetMinPx: 170,
+  spawnOffsetMaxPx: 280,
+  arcHeightMinPx: 10,
+  arcHeightMaxPx: 25,
+  arcPeakAtMin: 0.32,
+  arcPeakAtMax: 0.62,
+  restAngleBaseDeg: 0,
+  restAngleJitterDeg: 14,
+  arrowScalePct: 120,
+  dianaVisualCap: motionTokens.dianaVisualCap,
+  randomModeMaxRadiusPct: 19,
+};
 
 /**
  * The 5 rings, outermost first, as {min,max} radius (% of the container box)
@@ -86,14 +176,13 @@ const REST_ANGLE_JITTER_DEG = 14;
  * one funnel milestone (see MILESTONE_KEYS in core/registry/types.ts): an
  * arrow lands in the band for how far that application got, sent-only stays
  * on the outer white ring, referral lands in the gold bullseye.
+ *
+ * Not part of ArrowTuning/the playground: these are tied to the Diana
+ * artwork's actual painted rings (scaled ~71% of their true radius so even
+ * the outermost band leaves room for an arrow's half-length before it pokes
+ * past the diana's edge — see randomModeMaxRadiusPct above for the same
+ * margin reasoning), not a "feel" knob worth exposing as a slider.
  */
-// Scaled to ~71% of the rings' true radius (27-31/21-27/etc.) so even the
-// outermost band leaves room for an arrow's half-length before it pokes past
-// the diana's edge — see RANDOM_MODE_MAX_RADIUS below for the full
-// explanation. Order/spacing is preserved; only the absolute radius shrinks,
-// so bands stay visually distinct without exactly hugging their ring's true
-// paint (a deliberate trade-off: inside-the-diana beats pixel-perfect ring
-// alignment).
 const RING_BANDS = [
   { min: 19.2, max: 22 }, // white — sent (baseline: every arrow shown got at least this far)
   { min: 14.9, max: 19.2 }, // dark — responded
@@ -101,30 +190,17 @@ const RING_BANDS = [
   { min: 6.4, max: 10.7 }, // red — offer
   { min: 0, max: 6.4 }, // gold bullseye — referral
 ] as const;
-// An arrow centered at radius R has endpoints up to R + halfLength from
-// center (worst case: an arrow oriented radially, pointing straight out —
-// since the rest angle is now ~fixed/near-horizontal (see
-// BASE_REST_ANGLE_DEG) rather than tangent to the ring, that worst case does
-// happen for arrows landing near the left/right of the ring). 19 leaves
-// enough margin for the arrow's half-length at its current (enlarged) size —
-// verified visually at `dianaVisualCap` in both random and funnel modes
-// (funnel's outer band, RING_BANDS[0].max = 22, is the tighter case and was
-// checked too) rather than re-derived algebraically, since the true bulge
-// depends on the angle between each arrow's near-fixed rest angle and its
-// own landing position's radial direction, which isn't a single clean
-// formula any more.
-const RANDOM_MODE_MAX_RADIUS = 19;
 
 export type ArrowLandingMode = "random" | "funnel";
 
-function landingSpot(rand: (i: number) => number, i: number, mode: ArrowLandingMode, funnelRank?: number) {
+function landingSpot(rand: (i: number) => number, i: number, mode: ArrowLandingMode, funnelRank: number | undefined, randomModeMaxRadiusPct: number) {
   const theta = rand(i) * Math.PI * 2;
   let radius: number;
   if (mode === "funnel") {
     const band = RING_BANDS[Math.min(RING_BANDS.length - 1, Math.max(0, funnelRank ?? 0))];
     radius = band.min + Math.sqrt(rand(i + 0.5)) * (band.max - band.min);
   } else {
-    radius = 3 + Math.sqrt(rand(i + 0.5)) * RANDOM_MODE_MAX_RADIUS;
+    radius = 3 + Math.sqrt(rand(i + 0.5)) * randomModeMaxRadiusPct;
   }
   return {
     x: RING_CENTER_X + Math.cos(theta) * radius,
@@ -133,8 +209,8 @@ function landingSpot(rand: (i: number) => number, i: number, mode: ArrowLandingM
   };
 }
 
-function buildShots(count: number, mode: ArrowLandingMode, funnelRanks: number[] | undefined, sessionSeed: number): ArrowShot[] {
-  const visualCount = Math.min(count, motionTokens.dianaVisualCap);
+function buildShots(count: number, mode: ArrowLandingMode, funnelRanks: number[] | undefined, sessionSeed: number, tuning: ArrowTuning): ArrowShot[] {
+  const visualCount = Math.min(count, tuning.dianaVisualCap);
   if (visualCount <= 0) return [];
   const register = registerFor(count);
   const rand = (i: number) => seededRandom(i + sessionSeed);
@@ -148,31 +224,25 @@ function buildShots(count: number, mode: ArrowLandingMode, funnelRanks: number[]
     const groupIndex = Math.floor(i / groupSize);
     const withinGroup = i % groupSize;
     const delay = Math.round(groupIndex * groupGap + withinGroup * 18);
-    const { x, y } = landingSpot(rand, i, mode, funnelRanks?.[i]);
-    const ox = -Math.round(170 + rand(i + 0.1) * 110);
-    // Kept low relative to `ox` on purpose: this used to be 45-110 (a tall
-    // lob), which read fine in isolation but didn't match the near-flat
-    // resting angle above — the flight would arc way up then dive down
-    // steeply right before snapping to ~horizontal on landing. User
-    // feedback (annotated screenshot: a tall red arc marked wrong, a nearly
-    // flat green one marked right) — the whole flight should stay close to
-    // horizontal, just a gentle bow, not a lob.
-    const peak = -Math.round(10 + rand(i + 0.6) * 15);
-    const peakAt = 0.32 + rand(i + 0.85) * 0.3;
-    // See BASE_REST_ANGLE_DEG above for why this isn't derived from the
-    // flight path or the landing ring.
-    const jitter = -REST_ANGLE_JITTER_DEG + rand(i + 0.25) * (2 * REST_ANGLE_JITTER_DEG);
+    const { x, y } = landingSpot(rand, i, mode, funnelRanks?.[i], tuning.randomModeMaxRadiusPct);
+    const ox = -Math.round(tuning.spawnOffsetMinPx + rand(i + 0.1) * (tuning.spawnOffsetMaxPx - tuning.spawnOffsetMinPx));
+    const peak = -Math.round(tuning.arcHeightMinPx + rand(i + 0.6) * (tuning.arcHeightMaxPx - tuning.arcHeightMinPx));
+    const peakAt = tuning.arcPeakAtMin + rand(i + 0.85) * (tuning.arcPeakAtMax - tuning.arcPeakAtMin);
+    // See the history on DEFAULT_ARROW_TUNING for why this isn't derived
+    // from the flight path or the landing ring.
+    const jitter = -tuning.restAngleJitterDeg + rand(i + 0.25) * (2 * tuning.restAngleJitterDeg);
 
     shots.push({
       id: i,
       x,
       y,
-      restRotation: BASE_REST_ANGLE_DEG + jitter,
+      restRotation: tuning.restAngleBaseDeg + jitter,
       ox,
       peak,
       peakAt,
       delay,
-      flightMs: Math.round(motionTokens.flightDurationMin + rand(i + 0.15) * (motionTokens.flightDurationMax - motionTokens.flightDurationMin)),
+      flightMs: Math.round(tuning.flightDurationMinMs + rand(i + 0.15) * (tuning.flightDurationMaxMs - tuning.flightDurationMinMs)),
+      easeInPower: tuning.easeInPower,
     });
   }
   return shots;
@@ -209,7 +279,7 @@ function buildFlightKeyframes(shot: ArrowShot): Keyframe[] {
   const sin = Math.sin(restRad);
   const points = Array.from({ length: samples }, (_, k) => {
     const t = k / (samples - 1);
-    const te = Math.pow(t, FLIGHT_EASE_IN_POWER);
+    const te = Math.pow(t, shot.easeInPower);
     const worldX = shot.ox * (1 - te);
     const distFromPeak = te < shot.peakAt ? (shot.peakAt - te) / shot.peakAt : (te - shot.peakAt) / (1 - shot.peakAt);
     const worldH = shot.peak * (1 - distFromPeak * distFromPeak);
@@ -237,21 +307,30 @@ function buildFlightKeyframes(shot: ArrowShot): Keyframe[] {
  * arrow (same order/length as the count that produced it), each 0-4 indexing
  * MILESTONE_KEYS (sent/responded/interview/offer/referral); computed by the
  * caller's adapter, never read from `core/registry` in here.
+ *
+ * `tuning` overrides any subset of DEFAULT_ARROW_TUNING — omit it entirely
+ * for production behavior. It exists so `/dev/animations` can expose live
+ * controls for every "feel" knob without duplicating this component; pass a
+ * stable object (e.g. from useState, not a fresh literal every render) if
+ * you use it, since it flows into a useMemo dependency.
  */
 export function ArrowToTarget({
   count,
   mode = "random",
   funnelRanks,
+  tuning,
   onDone,
   className,
 }: {
   count: number;
   mode?: ArrowLandingMode;
   funnelRanks?: number[];
+  tuning?: Partial<ArrowTuning>;
   onDone?: () => void;
   className?: string;
 }) {
   const reducedMotion = usePrefersReducedMotion();
+  const resolvedTuning = useMemo<ArrowTuning>(() => ({ ...DEFAULT_ARROW_TUNING, ...tuning }), [tuning]);
   // SSR-safe: `null` on the first pass so server and client render the same
   // (arrow-less) markup, then rerolls client-side right after mount. Stable
   // across later re-renders of the same mount (a growing `count` doesn't
@@ -278,7 +357,10 @@ export function ArrowToTarget({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSessionSeed(Math.random() * 10000);
   }, []);
-  const shots = useMemo(() => (sessionSeed === null ? [] : buildShots(count, mode, funnelRanks, sessionSeed)), [count, mode, funnelRanks, sessionSeed]);
+  const shots = useMemo(
+    () => (sessionSeed === null ? [] : buildShots(count, mode, funnelRanks, sessionSeed, resolvedTuning)),
+    [count, mode, funnelRanks, sessionSeed, resolvedTuning],
+  );
   const visualCount = shots.length;
   const totalFlightDuration = shots.length ? Math.max(...shots.map((s) => s.delay + s.flightMs)) : 0;
 
@@ -392,6 +474,9 @@ export function ArrowToTarget({
     // on screen.
   }, [count, reducedMotion, shots, totalFlightDuration, visualCount]);
 
+  const arrowWidthPx = Math.round(ARROW_BASE_WIDTH_PX * (resolvedTuning.arrowScalePct / 100));
+  const arrowHeightPx = Math.round(ARROW_BASE_HEIGHT_PX * (resolvedTuning.arrowScalePct / 100));
+
   return (
     <div className={className}>
       <div className="relative aspect-square w-full" ref={containerRef}>
@@ -407,7 +492,7 @@ export function ArrowToTarget({
             }}
           >
             <div data-shot-id={shot.id} style={reducedMotion ? undefined : { opacity: 0 }}>
-              <Arrow className="h-[29px] w-[106px]" />
+              <Arrow style={{ width: arrowWidthPx, height: arrowHeightPx }} />
             </div>
           </div>
         ))}
