@@ -469,6 +469,76 @@ El pedido que dio lugar a este mismo documento. Cuatro puntos:
    mientras se está cargando.
 4. Este documento.
 
+### Ronda 8 — Correcciones, los assets que faltaban, y la flecha entra a la app de verdad
+
+Después de publicado este documento, el usuario corrigió dos cosas de la
+crónica arriba y pidió una tercera:
+
+**Corrección 1 — provenance de los assets.** El documento decía que los 4
+objetos usados (flecha, diana, yunque+fuego, martillo) eran "ilustraciones
+que el propio usuario hizo". Eso estaba mal: *"los dibujos no fueron
+generados a mano, fueron generados por Quiver con referencias visuales"* —
+exactamente el paso de generación de arte que el plan original de 07-19 ya
+tenía prompteado, y que sí se ejecutó tal cual, mascota incluida. Se corrigió
+tanto acá como en `animations.md`.
+
+**Corrección 2 — el búho sí existe.** El documento también decía "el
+personaje-búho... nunca se dibujó". Tampoco: *"el buho y otros assets si se
+dibujaron, pero no están en el proyecto (si quieres las agrego)"* — es decir,
+se generó el set completo planeado (4 variantes de personaje incluidas), pero
+nunca se integró a ninguna escena. El usuario los guardó en
+`assets/illustrations/originals/` (archivos crudos de Quiver, sin limpiar) y
+se agregaron al repo como archivo histórico — sin componente React, sin uso
+en código.
+
+**El pedido nuevo — la flecha real, no el martillo.** Sobre la integración de
+la ronda 7 (punto 3 arriba): *"el loading que te dije no muestra la diana y
+la flecha, muestra el yunke. la idea es la diana y las flechas basado en los
+datos de la tabla. haz preguntas si hace falta."* — el usuario no quería el
+martillo ahí, quería la escena de la flecha, con datos reales de la tabla.
+
+Como la flecha es data-driven y necesita un `count` real que literalmente no
+existe mientras el fetch sigue en curso, se preguntó (con `AskUserQuestion`,
+como se pidió) para resolver la tensión entre "datos reales" y "todavía no
+hay datos":
+
+1. **¿Cuándo se ve?** — reveal único al terminar de cargar (elegido) vs.
+   coexistir en paralelo con la tabla en otro lado.
+2. **¿Modo?** — funnel, posición = etapa real del embudo (elegido) vs.
+   random, solo importa el número.
+3. **¿Alcance?** — todas las aplicaciones enviadas alguna vez, incluidas
+   archivadas (elegido, además ya era el default de la spec) vs. solo
+   vigentes.
+4. **¿Qué se ve durante el fetch real, antes de tener filas?** — esta
+   pregunta no se entendió en la primera pasada ("no entiendo esta
+   pregunta"); se reformuló con un ejemplo concreto (el instante puntual,
+   generalmente menos de medio segundo, entre pedirle los datos al server y
+   recibirlos) y se resolvió con el default recomendado sin insistir más,
+   dado lo acotado del detalle: el martillo sigue cubriendo ese hueco
+   puntual, la flecha toma la posta apenas hay datos.
+
+Con las cuatro respuestas, se implementó el adaptador que la spec pedía desde
+el plan original y que hasta ese momento no existía: `funnelRanksFor(rows)`,
+un nuevo export en `core/funnel.ts` que reusa el `milestoneRank` privado que
+ya alimentaba `computeFunnel` (el cálculo agregado que usa `FunnelCard`) —
+clampeado a `[0,4]`, porque el caller ya filtra a filas enviadas antes de
+llamarlo. El caller es `app/page.tsx`: ahí vive el `rows` **sin** filtrar por
+la tab Vigentes/Archivado (el que le llega a `RegistryTable` como prop `rows`
+sí está filtrado por tab, para la tabla en sí — dos conjuntos de datos
+distintos, con el mismo nombre corto en la cabeza si no se presta atención).
+`RegistryTable` gana un estado `revealDone`, arranca en `false`, y una
+tercera rama en el render (entre `loading` y la tabla/empty state) muestra
+`<ArrowToTarget mode="funnel" .../>` hasta que su propio `onDone` la marca
+`true` — de ahí en más, esa misma sesión de la página nunca vuelve a mostrar
+el reveal (`loading` tampoco vuelve a `true` después de la carga inicial, así
+que no hace falta lógica extra para "solo una vez").
+
+Verificado contra datos reales del usuario (su registro real, 25 filas, no
+datos de prueba inventados) interceptando el fetch con Playwright para poder
+capturar el instante exacto de cada fase: martillo durante el fetch
+retrasado artificialmente → flechas volando en modo funnel con la
+distribución real de su embudo → tabla real asentada.
+
 ---
 
 ## Notas sueltas que no encajan en la cronología pero valen la pena dejar anotadas

@@ -12,13 +12,14 @@ mascota y Rive, los pivotes, cada ronda de feedback visual — ver
 [`animations-bitacora.md`](animations-bitacora.md). Ese doc es un registro
 cronológico sin filtrar; este es el estado actual.
 
-> Estado: **implementado (v1, reducido)**. Los dos componentes de escena
-> existen y están probados visualmente (ver §4). **Martillo en el yunque ya
-> está montado en la app real** — reemplaza el "Cargando registro…" de texto
-> en `RegistryTable` (ver §3 "Dónde vive"). **Flecha a la diana todavía no**
-> — sigue faltando el adaptador `core/registry` → `count`/`funnelRanks` y
-> decidir dónde vive (§2 "Dónde vive"). Decisiones de alcance ya resueltas
-> (ver §6); quedan solo valores tuneables.
+> Estado: **implementado (v1, reducido) y montado en la app real**. Los dos
+> componentes de escena existen, están probados visualmente (ver §4) **y
+> ambos corren en `RegistryTable`**: el martillo cubre el hueco real sin
+> datos (`loading === true`), la flecha hace un reveal único con datos
+> reales (`funnelRanksFor` en `core/funnel.ts`) apenas terminan de llegar
+> (ver §2/§3 "Dónde vive"). Ese era el único pendiente que quedaba — de acá
+> en más son solo valores tuneables (§6) y usos adicionales opcionales
+> (splash de toda la app, on-demand en otras vistas).
 
 ---
 
@@ -140,16 +141,28 @@ idle → lanzar → (en vuelo) → impacto
 
 ### Dónde vive
 
-- **Uso primario: el splash / intro de la app** (arranque). Ahí corre en rol
-  **intro**: automático al cargar, sin que el usuario lo pida.
-- **Reusable on-demand en otros lados** — "on-demand" = se dispara por una acción
-  del usuario (abrir una vista, tocar un botón), no automático. Ej.: una card de
-  stats que se abre a propósito, o una celebración al marcar un milestone.
+**Implementado: reveal en `RegistryTable`** (2026-07-26) — la primera vez que
+`useRegistry` termina de cargar (real, no simulado) todas las filas, en vez de
+pasar directo a la tabla se reproduce esta escena una sola vez, en modo
+`funnel`, con `count`/`funnelRanks` calculados de **todas** las aplicaciones
+enviadas alguna vez (scope `"all"`, no solo la tab Vigentes/Archivado que esté
+activa). Al terminar (`onDone`) da paso a la tabla real. Es una variante de rol
+**intro** acotada a esa sección, no al splash completo de la app — arranca
+sola, sin que el usuario la pida, apenas hay datos reales para mostrar. Ver
+`ui/RegistryTable.tsx` (la escena) y `app/page.tsx` (de dónde salen
+`totalSentCount`/`sentFunnelRanks`, calculados sobre las filas **sin**
+filtrar por tab).
 
-El mismo componente sirve para ambos porque el contrato (§1) ya lo contempla: en
-el splash se monta con `count` del scope `"all"` y arranca solo; on-demand se
-monta cuando el usuario abre la vista. La escena es la misma; cambia solo **quién
-la dispara**.
+Quedan disponibles, sin implementar todavía:
+
+- **Splash / intro de toda la app** (no solo la tabla) al arrancar.
+- **Reusable on-demand en otros lados** — "on-demand" = se dispara por una
+  acción del usuario (abrir una vista, tocar un botón), no automático. Ej.:
+  una card de stats que se abre a propósito, o una celebración al marcar un
+  milestone.
+
+El mismo componente sirve para los tres casos porque el contrato (§1) ya lo
+contempla — cambia solo **quién la dispara** y con qué `count`/`funnelRanks`.
 
 ### Modo funnel — los 5 anillos son los 5 hitos (implementado)
 
@@ -169,11 +182,15 @@ Mapeo 1:1, de afuera hacia adentro:
 
 El componente no calcula esto — recibe `funnelRanks: number[]` (uno por
 flecha, mismo orden que el `count`) de un adaptador externo (regla del
-contrato, §1): `rows.filter(!cvPending).map(row => milestoneRank(row))`, con
-`milestoneRank` clampeado a `[0,4]`. `mode="random"` (default) mantiene el
-comportamiento anterior — posición uniforme dentro de toda la diana, sin leer
-data. Ambos modos conviven en `ArrowToTarget`; el adaptador real todavía no
-existe (mismo pendiente que el resto de §1 "Contrato").
+contrato, §1). **Implementado**: `funnelRanksFor(rows)` en `core/funnel.ts`
+— `rows.map(row => Math.max(0, milestoneRank(row)))`, clampeando el `-1`
+("sin hito todavía") de `milestoneRank` a `0`, porque el caller ya filtra a
+filas enviadas (`!cvPending`) antes de llamarlo, y eso mismo ya es el hito
+`sent`. El caller real es `app/page.tsx` (`sentRows`/`sentFunnelRanks`, sobre
+las filas sin filtrar por tab), pasado a `RegistryTable` → `ArrowToTarget`.
+`mode="random"` (default) mantiene el comportamiento anterior — posición
+uniforme dentro de toda la diana, sin leer data. Ambos modos conviven en
+`ArrowToTarget`.
 
 ---
 
@@ -195,25 +212,29 @@ flecha sobre el yunque** — sin muñeco que lo sostenga, el martillo golpea sol
 
 ### Dónde vive
 
-**Primer (y por ahora único) uso real: `RegistryTable`** (2026-07-26) —
-reemplaza el `"Cargando registro…"` de texto puro que se mostraba mientras
-`useRegistry` hace el fetch inicial (`loading === true`, sin ninguna fila
-todavía). `<HammerAnvil active />` adentro de la celda, `w-32` (128px,
-respeta el aspect-ratio 156/91 del asset — mucho más angosto que la diana
-cuadrada, por eso encaja bien en una fila de tabla), con el texto original
-debajo a modo de caption. `active` no necesita atarse a nada más que
-`loading` mismo, porque la celda entera ya está condicionada a `loading`
-— no hace falta un `onDone` acá, la celda simplemente deja de existir
-cuando `loading` pasa a `false`.
+**`RegistryTable`, acotado al hueco real sin datos** (2026-07-26) — reemplaza
+el `"Cargando registro…"` de texto puro que se mostraba mientras `useRegistry`
+hace el fetch inicial (`loading === true`, sin ninguna fila todavía).
+`<HammerAnvil active />` adentro de la celda, `w-32` (128px, respeta el
+aspect-ratio 156/91 del asset — mucho más angosto que la diana cuadrada, por
+eso encaja bien en una fila de tabla), con el texto original debajo a modo de
+caption. `active` no necesita atarse a nada más que `loading` mismo, porque
+la celda entera ya está condicionada a `loading` — no hace falta un `onDone`
+acá, la celda simplemente deja de existir cuando `loading` pasa a `false`.
 
 Esto **amplía el rol documentado arriba** ("loading state mientras el
 pipeline de IA genera el CV/carta") a cualquier loading ambient genérico sin
 dato conocido todavía — el fetch inicial de la tabla no es el pipeline de
 IA, pero es exactamente el mismo tipo de espera (indeterminada, sin score
 parcial que mostrar) que la escena ya estaba diseñada para cubrir.
-`ArrowToTarget` **no** es candidata para este spot: necesita un `count` real
-(es data-driven), que es precisamente lo que todavía no existe mientras se
-está cargando.
+
+**Solo cubre ese hueco puntual**, no toda la espera de la tabla: apenas
+`loading` pasa a `false` (hay datos reales), el martillo le pasa la posta a
+**Flecha a la diana** — que sí es candidata una vez que el `count` real
+existe — para el reveal (ver §2 "Dónde vive"). En la práctica el hueco que
+cubre el martillo suele ser muy breve (el fetch local es rápido), pero sigue
+siendo el estado correcto para ese instante puntual en el que literalmente no
+hay ningún número que mostrar todavía.
 
 ---
 
@@ -235,7 +256,8 @@ abajo).
 | Escena "martillo en el yunque" | `ui/animations/HammerAnvil.tsx` |
 | Keyframes del martillo | `app/globals.css` (`cb-hammer-swing`, `cb-hammer-flash`) |
 | Harness de QA + playground de tuning (dev-only, no linkeado desde la app) | `app/dev/animations/page.tsx` |
-| Uso real en la app (loading de la tabla) | `ui/RegistryTable.tsx` (`<HammerAnvil active />`) |
+| Uso real en la app (loading + reveal de la tabla) | `ui/RegistryTable.tsx` (ambas escenas) |
+| Adaptador `rows → count`/`funnelRanks` (scope "all") | `app/page.tsx` (`sentRows`/`sentFunnelRanks`) + `funnelRanksFor` en `core/funnel.ts` |
 
 | Animación | Naturaleza | Cómo se resuelve |
 |---|---|---|
@@ -682,6 +704,29 @@ contador = ease-out.
     completa (título + controles) pegada a `top-0` sin hueco, con la columna
     de la animación offseteada por la altura real medida (93px). Detalle en
     §4.
+14. **Flecha a la diana también montada, con datos reales — corrección de
+    rumbo sobre #12** (2026-07-26) → el usuario aclaró que el martillo (#12)
+    no era lo que tenía en mente: *"la idea es la diana y las flechas basado
+    en los datos de la tabla"*. Como la flecha necesita un `count` real que
+    no existe mientras el fetch sigue en curso, se resolvió con un reveal:
+    el martillo sigue cubriendo el hueco real sin datos (`loading`), pero
+    apenas llegan las filas de verdad se reproduce la escena de la flecha
+    **una sola vez**, en modo funnel, con el conteo y el rank de **todas**
+    las aplicaciones enviadas alguna vez (scope "all", no la tab activa) —
+    y al terminar (`onDone`) da paso a la tabla real. Esto implementó el
+    adaptador `rows → funnelRanks` que la spec ya pedía desde el plan
+    original y que hasta este punto no existía: `funnelRanksFor` (nuevo
+    export en `core/funnel.ts`, reutiliza el `milestoneRank` interno que ya
+    alimenta `computeFunnel`). Detalle en §2/§3 "Dónde vive".
+15. **Los assets "de más" del plan original entran al repo como archivo
+    histórico** (2026-07-26) → corrección sobre la bitácora: los 4 objetos
+    usados no fueron dibujados a mano por el usuario (como decía por error
+    la documentación) sino generados con Quiver AI, exactamente como
+    planeaba el plan original — ese paso sí se ejecutó completo, mascota
+    incluida, antes de que se decidiera no usar personaje. El set completo,
+    sin limpiar, se agregó a `assets/illustrations/originals/` (sin
+    componente React, sin uso en código) para dejar constancia de lo que
+    existió. Ver `animations-bitacora.md`.
 
 **Valores por defecto (tuneables, no bloquean):**
 

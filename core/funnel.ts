@@ -132,6 +132,18 @@ function milestoneRank(row: RegistryRow): number {
 }
 
 /**
+ * `funnelRanks` for the "flecha a la diana" animation in `mode="funnel"`
+ * (docs/animations.md §2 "Modo funnel") — one rank 0-4 per row, same
+ * order/length as `rows`. Clamps `milestoneRank`'s -1 ("no milestone yet")
+ * up to 0: the caller is expected to already have scoped `rows` to sent CVs
+ * (`!cvPending`), which is itself the `sent` milestone (rank 0), so nothing
+ * in-scope should actually read as "less than sent".
+ */
+export function funnelRanksFor(rows: readonly RegistryRow[]): number[] {
+  return rows.map((row) => Math.max(0, milestoneRank(row)));
+}
+
+/**
  * Whether the row reached the funnel stage at `index` (0 = Awareness).
  * Milestones map to stages 1..5 (`sent`→Acquisition … `referral`→Referral), so
  * stage `i` is reached when `milestoneRank >= i - 1`.
