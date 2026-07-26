@@ -410,6 +410,46 @@ combinación que gustara se perdía). El estado de `presets` arranca en `null`
 y se hidrata en un `useEffect` (mismo patrón SSR-safe que `sessionSeed` en
 `ArrowToTarget` — `localStorage` no existe en el server).
 
+**Sticky mientras se scrollea:** con 14 sliders + presets, el panel de la
+derecha es más alto que la pantalla — sin esto, scrollear para ver los
+sliders de más abajo hace desaparecer la animación y la fila
+`count`/modo/Replay de arriba. Ambos bloques (la columna de la animación y la
+fila de controles principales) llevan `lg:sticky lg:top-4`, así quedan
+clavados arriba mientras el resto del panel (los sliders, dentro del `Card`)
+sigue scrolleando por debajo. La fila de controles principales además lleva
+`lg:bg-background lg:border-b` para que el contenido que scrollea por atrás
+no se vea transparentado. Solo aplica en `lg:` — en mobile todo cae a una
+columna (`flex-col`) y el sticky no aporta nada con tan poco espacio
+vertical.
+
+**Tooltips en cada control:** cada label de slider (y `count`/modo/Shuffle
+ranks/Replay) está envuelto en `Tooltip`/`TooltipTrigger` (design system),
+con una explicación en español simple de qué hace ese control si lo movés —
+ej. "Duración del vuelo, min (ms)": *"Cuánto tarda en volar la flecha más
+rápida del grupo. Bajarlo hace que esa flecha llegue antes."* El texto vive
+en el campo `hint` de cada entrada de `CONTROLS` en
+`app/dev/animations/page.tsx`. Para envolver un elemento que ya es
+interactivo por sí mismo (un `Button`, o el `Label` de `count`) sin anidar
+dos elementos interactivos, `TooltipTrigger` usa el prop `render` de
+base-ui — `<TooltipTrigger render={<Button ... />}>texto</TooltipTrigger>`
+hace que el trigger **sea** ese botón en vez de envolverlo en otro elemento
+extra.
+
+**Bug: la flecha se sale de la diana en tamaños grandes.** Los márgenes de
+`randomModeMaxRadiusPct` (modo random) y `RING_BANDS` (modo funnel) se
+ajustaron a ojo para `DEFAULT_ARROW_TUNING.arrowScalePct` (120%) — el único
+tamaño que existía antes de que `arrowScalePct` fuera un slider. Una vez que
+se puede subirlo hasta 250% desde el playground, la mitad del largo de la
+flecha crece por encima de ese margen y la punta se sale del borde blanco de
+la diana (reportado con captura al tope del slider). Fix acotado, en
+`landingSpot` (`ArrowToTarget.tsx`): el radio de aterrizaje se multiplica por
+`oversizeRadiusGuard(arrowScalePct) = min(1, 120 / arrowScalePct)` —
+`1` (sin efecto) para cualquier tamaño en o por debajo del que ya estaba
+verificado, y se va achicando el radio usable solo a partir de ahí. A
+propósito no se tocaron `RING_BANDS` ni la fórmula de margen en sí — el
+pedido fue arreglar el caso extremo sin rediseñar la lógica general de
+posicionamiento.
+
 ---
 
 ## 5. Motion tokens (valores de arranque, tuneables)
@@ -543,6 +583,20 @@ contador = ease-out.
     `localStorage` (guardar/cargar/borrar), sobreviven a un refresh de
     página; "Reset a valores por defecto" sigue sin tocarlos. Detalle
     completo en §4, mismo subtítulo que #9.
+11. **Playground: sticky, tooltips, fix de flecha saliéndose del borde**
+    (2026-07-26) → tres pedidos más sobre el mismo playground: (1) la
+    animación y la fila de controles principales (`count`/modo/Replay) pasan
+    a `lg:sticky lg:top-4`, así no desaparecen al scrollear para ver los
+    sliders de más abajo (el panel ya no entra completo en pantalla con 14
+    controles + presets); (2) cada control lleva un tooltip (DS) con una
+    explicación en español simple de qué hace si lo movés; (3) bug
+    reportado con captura — al subir `arrowScalePct` al máximo (250%) la
+    punta de la flecha se sale del borde blanco de la diana, porque los
+    márgenes de radio se habían verificado solo al tamaño de producción
+    (120%). Fix acotado (no una re-derivación general): el radio de
+    aterrizaje se multiplica por `min(1, 120 / arrowScalePct)` — sin efecto
+    en o por debajo del tamaño ya verificado, se achica recién a partir de
+    ahí. Detalle completo en §4.
 
 **Valores por defecto (tuneables, no bloquean):**
 

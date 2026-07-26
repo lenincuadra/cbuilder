@@ -193,7 +193,30 @@ const RING_BANDS = [
 
 export type ArrowLandingMode = "random" | "funnel";
 
-function landingSpot(rand: (i: number) => number, i: number, mode: ArrowLandingMode, funnelRank: number | undefined, randomModeMaxRadiusPct: number) {
+// RING_BANDS and randomModeMaxRadiusPct's margins were tuned/verified
+// visually at DEFAULT_ARROW_TUNING.arrowScalePct (see the comment on
+// DEFAULT_ARROW_TUNING). arrowScalePct is now a playground slider that goes
+// well past that — at large enough sizes an arrow's half-length outgrows
+// the margin and its tip pokes past the diana's outer edge (reported with a
+// screenshot at the slider's max, 250%). Rather than re-deriving every
+// radius for an arbitrary scale (which would ripple through RING_BANDS too,
+// and those are tied to the artwork's actual painted rings, not just a
+// margin — see their comment), landing radius is shrunk by how far over
+// that baseline the current scale is. A no-op at/under the baseline (120%,
+// today's production value) — this only kicks in once you push the size
+// slider into territory the margins were never checked against.
+function oversizeRadiusGuard(arrowScalePct: number): number {
+  return Math.min(1, DEFAULT_ARROW_TUNING.arrowScalePct / arrowScalePct);
+}
+
+function landingSpot(
+  rand: (i: number) => number,
+  i: number,
+  mode: ArrowLandingMode,
+  funnelRank: number | undefined,
+  randomModeMaxRadiusPct: number,
+  arrowScalePct: number,
+) {
   const theta = rand(i) * Math.PI * 2;
   let radius: number;
   if (mode === "funnel") {
@@ -202,6 +225,7 @@ function landingSpot(rand: (i: number) => number, i: number, mode: ArrowLandingM
   } else {
     radius = 3 + Math.sqrt(rand(i + 0.5)) * randomModeMaxRadiusPct;
   }
+  radius *= oversizeRadiusGuard(arrowScalePct);
   return {
     x: RING_CENTER_X + Math.cos(theta) * radius,
     y: RING_CENTER_Y + Math.sin(theta) * radius,
@@ -224,7 +248,7 @@ function buildShots(count: number, mode: ArrowLandingMode, funnelRanks: number[]
     const groupIndex = Math.floor(i / groupSize);
     const withinGroup = i % groupSize;
     const delay = Math.round(groupIndex * groupGap + withinGroup * 18);
-    const { x, y } = landingSpot(rand, i, mode, funnelRanks?.[i], tuning.randomModeMaxRadiusPct);
+    const { x, y } = landingSpot(rand, i, mode, funnelRanks?.[i], tuning.randomModeMaxRadiusPct, tuning.arrowScalePct);
     const ox = -Math.round(tuning.spawnOffsetMinPx + rand(i + 0.1) * (tuning.spawnOffsetMaxPx - tuning.spawnOffsetMinPx));
     const peak = -Math.round(tuning.arcHeightMinPx + rand(i + 0.6) * (tuning.arcHeightMaxPx - tuning.arcHeightMinPx));
     const peakAt = tuning.arcPeakAtMin + rand(i + 0.85) * (tuning.arcPeakAtMax - tuning.arcPeakAtMin);
