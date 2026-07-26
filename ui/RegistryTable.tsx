@@ -130,6 +130,7 @@ export function RegistryTable({
   // another. `totalSentCount` falsy (0, once loading is done) skips
   // straight past this to the empty/rows state below.
   const [revealDone, setRevealDone] = useState(false);
+  const showingReveal = !revealDone && (loading || (totalSentCount ?? 0) > 0);
   const [detailTab, setDetailTab] = useState<DetailTab>("detalles");
   const detailRow = detailCode ? (rows.find((row) => row.code === detailCode) ?? null) : null;
   const detailIndex = detailCode ? rows.findIndex((row) => row.code === detailCode) : -1;
@@ -159,38 +160,51 @@ export function RegistryTable({
   return (
     <>
       <div className="w-full overflow-x-auto rounded-lg border">
-        <Table className="w-full table-fixed max-[639px]:min-w-[720px]">
-          <TableHeader>
-            <TableRow>
-              {COLUMNS.map((column) => {
-                const Icon = column.icon;
-                return (
-                  <TableHead
-                    key={column.label}
-                    className={cn(
-                      "whitespace-nowrap",
-                      column.width,
-                      column.headClass ?? (Icon && "text-center"),
-                    )}
-                  >
-                    {Icon ? (
-                      <span
-                        className="inline-flex justify-center"
-                        title={column.label}
-                        aria-label={column.label}
-                      >
-                        <Icon className={cn("size-4", column.iconClass ?? "text-muted-foreground")} />
-                      </span>
-                    ) : (
-                      column.label
-                    )}
-                  </TableHead>
-                );
-              })}
-            </TableRow>
-          </TableHeader>
+        {/* The 720px min-width below exists so real columns don't get
+            crushed on narrow screens — it has nothing to do with the reveal
+            scene, whose only content is a centered animation. Forcing it
+            anyway made the diana sit off-center, requiring a horizontal
+            scroll to see something that doesn't need one: nothing else is
+            in the table at that point. */}
+        <Table className={cn("w-full table-fixed", !showingReveal && "max-[639px]:min-w-[720px]")}>
+          {/* No header while showing the reveal: there are no columns to
+              label yet (just a centered animation), and with the min-width
+              above dropped for that same reason, cramming whitespace-nowrap
+              headers into whatever width is left just ran their labels
+              together unreadably. */}
+          {!showingReveal && (
+            <TableHeader>
+              <TableRow>
+                {COLUMNS.map((column) => {
+                  const Icon = column.icon;
+                  return (
+                    <TableHead
+                      key={column.label}
+                      className={cn(
+                        "whitespace-nowrap",
+                        column.width,
+                        column.headClass ?? (Icon && "text-center"),
+                      )}
+                    >
+                      {Icon ? (
+                        <span
+                          className="inline-flex justify-center"
+                          title={column.label}
+                          aria-label={column.label}
+                        >
+                          <Icon className={cn("size-4", column.iconClass ?? "text-muted-foreground")} />
+                        </span>
+                      ) : (
+                        column.label
+                      )}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            </TableHeader>
+          )}
           <TableBody>
-            {!revealDone && (loading || (totalSentCount ?? 0) > 0) ? (
+            {showingReveal ? (
               <TableRow>
                 <TableCell colSpan={COLUMNS.length} className="py-8 text-center text-muted-foreground">
                   <div className="mx-auto w-32 sm:w-52 lg:w-64">
