@@ -781,6 +781,42 @@ en un `git stash` automático. Se le avisó al usuario en vez de asumir y
 cambiar de rama por su cuenta; una vez confirmado, se retomó desde el stash
 sin perder nada.
 
+### Ronda 13 — El pintado nunca se veía... en la app real
+
+Apenas pusheada la ronda 12, llegó el siguiente reporte: *"en el playground
+funciona bien, pero no veo que cambie de color dentro de la tabla."*
+
+La pista estaba en la diferencia entre los dos entornos donde vive el mismo
+componente. En `/dev/animations`, el `onDone` que le pasa la página es
+`() => console.log("arrow scene done")` — no hace nada visible. En
+`RegistryTable`, en cambio, `onDone` dispara `setRevealDone(true)`, que
+**desmonta** toda la escena y la reemplaza por la tabla real. Dos callers
+del mismo componente, uno inofensivo y uno que corta de raíz — y el segundo
+fue el que expuso un bug de timing que el primero no podía revelar nunca.
+
+El bug: `onDone` se dispara cuando el contador de progreso interno
+(`grandTotal`, un cálculo separado del timer de pintado de la ronda 12)
+llega a su fin — y ese cálculo solo contaba el vuelo (`totalFlightDuration`),
+no la pausa-antes-de-pintar que la ronda 12 había agregado. Resultado: el
+`onDone` real se disparaba en el instante exacto en que aterrizaba la
+última flecha — el mismo instante en que el timer de pintado (agendado para
+`totalFlightDuration + PAINT_REVEAL_PAUSE_MS`, 450ms más tarde) recién
+empezaba a esperar. En `RegistryTable`, eso significaba que la tabla real
+reemplazaba la escena con las flechas todavía grises, antes de que el
+pintado tuviera siquiera la oportunidad de correr.
+
+Fix: `grandTotal` pasa a sumar también `PAINT_REVEAL_PAUSE_MS` y un hold
+nuevo, `POST_PAINT_HOLD_MS` (700ms) — tiempo extra después del pintado para
+que además de correr, se alcance a *ver* antes de que cualquier caller
+reemplace la escena.
+
+Verificado contra el flujo real, no solo el playground: se interceptó
+`/api/registry` con Playwright para demorar artificialmente la respuesta (el
+mismo truco usado en la ronda 8), y se capturaron tres momentos — flechas
+recién aterrizadas y grises, flechas ya pintadas por color de anillo
+(todavía dentro de `RegistryTable`, antes del reemplazo), y finalmente la
+tabla real con los datos de verdad. Los tres se vieron en el orden correcto.
+
 ---
 
 ## Notas sueltas que no encajan en la cronología pero valen la pena dejar anotadas

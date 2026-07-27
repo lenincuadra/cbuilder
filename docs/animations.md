@@ -209,6 +209,19 @@ creciendo sobre el mismo montaje) dispara su propio ciclo aterrizar→pausa→
 pintar sin re-pintar (ni re-grisar) los que una tanda anterior ya pintó — el
 `setState` funcional del efecto solo agrega ids, nunca los saca.
 
+**`onDone` tiene que esperar también al pintado, no solo al vuelo.** Es un
+timer *aparte* del de arriba (el contador de progreso interno, no el de
+pintado), así que ambos tenían que quedar sincronizados a mano: `grandTotal`
+(el elapsed a partir del cual se llama `onDone`) suma
+`PAINT_REVEAL_PAUSE_MS` + `POST_PAINT_HOLD_MS` (700ms) por encima de
+`totalFlightDuration`, no solo el vuelo. Sin esto, `onDone` disparaba apenas
+aterrizaba la última flecha — **antes** de que el propio timer de pintado
+(agendado para `totalFlightDuration + PAINT_REVEAL_PAUSE_MS`) llegara a
+correr — y en un caller que desmonta la escena al recibir `onDone` (como
+`RegistryTable`, ver "Dónde vive" más abajo) eso significaba que el pintado
+nunca se llegaba a ver: la tabla real reemplazaba la escena con las flechas
+todavía grises.
+
 `shot.ringIndex` se calcula en `landingSpot` para **ambos** modos, no solo
 funnel: en `mode="funnel"` es directamente el `funnelRank` clampeado (ya se
 usaba para elegir la banda de radio); en `mode="random"` no hay rank, así
@@ -897,6 +910,24 @@ contador = ease-out.
     anillo más central que el real, cambiando un problema cosmético por uno
     de fondo (el color ya no correspondía a dónde leía la punta). Detalle
     completo en §2 "Color por anillo" (ambas subsecciones nuevas).
+20. **Fix: el pintado nunca se veía en `RegistryTable`** (2026-07-26) →
+    reporte del usuario: *"en el playground funciona bien, pero no veo que
+    cambie de color dentro de la tabla."* Causa: `onDone` (el callback que
+    `RegistryTable` usa para desmontar el reveal y mostrar la tabla real) se
+    disparaba en cuanto aterrizaba la última flecha — el mismo instante en
+    que el timer de pintado (agendado para `totalFlightDuration +
+    PAINT_REVEAL_PAUSE_MS`, ver decisión #19) recién empezaba a esperar. El
+    playground nunca lo notó porque su `onDone` solo hace un
+    `console.log` — no desmonta nada — así que ahí el pintado sí se
+    alcanzaba a ver aunque el timing interno ya estuviera roto. Fix: el
+    cálculo de `grandTotal` (el elapsed que dispara `onDone`) ahora suma
+    también `PAINT_REVEAL_PAUSE_MS` + un hold nuevo, `POST_PAINT_HOLD_MS`
+    (700ms), así el reveal se queda montado el tiempo suficiente para que el
+    pintado corra *y* se alcance a ver antes de que cualquier caller lo
+    reemplace. Verificado contra el flujo real (`RegistryTable`, con el
+    fetch de `/api/registry` demorado artificialmente vía Playwright): las
+    flechas aterrizan grises, se pintan visiblemente, y recién después la
+    tabla real las reemplaza.
 
 **Valores por defecto (tuneables, no bloquean):**
 
