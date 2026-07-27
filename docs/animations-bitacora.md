@@ -26,6 +26,7 @@ datos privados a este repo público.
 
 | # | Commit | Qué cambió | Captura |
 |---|---|---|---|
+| 00 | — (previo a todo commit) | Los assets crudos de Quiver AI — mascota búho (4 variantes, ninguna integrada) + los 5 objetos que sí se usaron, sin limpiar, con las etiquetas de parte que trae el generador (`hammer-head`, `fletching`, `anvil`, `fire`...). El verdadero punto de partida, de antes de que existiera una sola línea de código | `00-original-quiver-assets.png` |
 | 01 | `51adb27` | Primera implementación — el bug "en espiral" bien visible | `01-first-implementation-51adb27-playground.png` |
 | 02 | `df70dad` | Despiral del vuelo + seed random real (el reposo sigue tangente al anillo, todavía sin el fix de ángulo) | `02-despiral-random-seed-df70dad-playground.png` |
 | 03 | `c81efeb` | Ángulo de reposo casi-horizontal en vez de tangente al anillo | `03-rest-angle-horizontal-c81efeb-playground.png` |
