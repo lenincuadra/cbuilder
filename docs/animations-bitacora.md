@@ -11,6 +11,40 @@ Si `animations.md` responde "¿qué hace el sistema y por qué está diseñado a
 este documento responde "¿cómo se llegó a que estuviera diseñado así, y qué se
 probó antes que no funcionó?".
 
+## Capturas: la evolución visual, commit por commit
+
+`assets/illustrations/animation-process/` tiene una captura de `/dev/animations`
+por cada commit que cambió algo visual (13 en total — se salteó el plan original,
+sin UI, y los 3 commits que son solo documentación), más una segunda captura de
+la app real (`/`) desde que la escena se integró ahí (commit 9 en adelante). Todas
+con `count=18`, modo `random` (el color por anillo también aplica en ese modo, así
+que no hacía falta cambiar a `funnel` para verlo) y esperando al estado
+asentado/final de la escena antes de capturar — **no** con datos reales: se generó
+un registro sintético de 20 filas con nombres de empresa obviamente falsos ("Acme
+Corp", "TestWorks", etc.) en un worktree aislado, expresamente para no filtrar
+datos privados a este repo público.
+
+| # | Commit | Qué cambió | Captura |
+|---|---|---|---|
+| 01 | `51adb27` | Primera implementación — el bug "en espiral" bien visible | `01-first-implementation-51adb27-playground.png` |
+| 02 | `df70dad` | Despiral del vuelo + seed random real (el reposo sigue tangente al anillo, todavía sin el fix de ángulo) | `02-despiral-random-seed-df70dad-playground.png` |
+| 03 | `c81efeb` | Ángulo de reposo casi-horizontal en vez de tangente al anillo | `03-rest-angle-horizontal-c81efeb-playground.png` |
+| 04 | `3e40b6c` | Arco de vuelo más plano, a tono con el ángulo de reposo | `04-flatten-flight-arc-3e40b6c-playground.png` |
+| 05 | `918c266` | `ArrowTuning` + playground de sliders en vivo | `05-tuning-playground-918c266-playground.png` |
+| 06 | `d338111` | Layout de dos columnas, componentes del DS, presets guardables | `06-two-column-ds-presets-d338111-playground.png` |
+| 07 | `c666ed6` | Sticky, tooltips por control (capturado mostrando uno), fix de overflow | `07-sticky-tooltips-overflow-fix-c666ed6-playground.png` |
+| 08 | `01a29b9` | Legend del funnel legible, navbar sticky sin huecos | `08-funnel-legend-real-app-use-01a29b9-playground.png` |
+| 09 | `e12d0a1` | Primer uso real — el martillo cubriendo el loading (`Cargando registro…`), antes de reemplazarse por la diana | `09-real-reveal-in-table-e12d0a1-playground.png` / `-app.png` |
+| 10 | `f3914f0` | Escena continua (sin corte martillo→diana), tamaño responsivo | `10-continuous-scene-responsive-f3914f0-playground.png` / `-app.png` |
+| 11 | `73456a9` | Color por anillo — pintado por flecha, sin la pausa en grupo todavía | `11-color-by-ring-73456a9-playground.png` / `-app.png` |
+| 12 | `2633a3a` | Pintado en grupo + ancla por la punta — la captura de `-app` cae justo en el bug de la ronda 13 (flechas grises, nunca se pintan antes de que la tabla real las reemplace) | `12-batch-paint-tip-anchor-2633a3a-playground.png` / `-app.png` |
+| 13 | `53500e2` | Fix del `onDone` — el pintado ya se alcanza a ver en la app real | `13-ondone-fix-53500e2-playground.png` / `-app.png` |
+
+La captura de `12-...-app.png` vale la pena mirarla con atención: es, sin querer,
+documentación visual exacta del bug que describe la Ronda 13 más abajo — las
+flechas quedaron clavadas y grises, nunca llegaron a pintarse antes de que
+`onDone` reemplazara la escena por la tabla real.
+
 ---
 
 ## 2026-07-19 — El plan original: un personaje, dos escenas, Rive + Quiver AI
