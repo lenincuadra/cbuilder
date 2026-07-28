@@ -9,7 +9,7 @@ import { DrawerBody, DrawerFooter } from "@/components/ui/drawer";
 import { Progress } from "@/components/ui/progress";
 import type { CoverLetterTemplate } from "@/core/coverLetter/types";
 import type { GenerateCvInput, PendingRowInput } from "@/core/generateCv";
-import { DEFAULT_ROLE, type EditableFields, type RegistryRow } from "@/core/registry/types";
+import { DEFAULT_CV_MODE, DEFAULT_ROLE, type EditableFields, type RegistryRow } from "@/core/registry/types";
 import type { ScreeningQuestion } from "@/core/screening/types";
 import { generateCode } from "@/core/spec/code";
 import type { LinkSpec } from "@/core/spec/types";
@@ -20,10 +20,11 @@ import type { UseScreening } from "@/ui/useScreening";
 import { StepCompany } from "./StepCompany";
 import { StepConfirm } from "./StepConfirm";
 import { StepLanguage } from "./StepLanguage";
+import { StepMode } from "./StepMode";
 import { StepOptional } from "./StepOptional";
 import { emailRequirementMet, type WizardData } from "./types";
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 /**
  * What occupies the confirm step's slot: the summary + optional actions, or
  * one of their takeover forms (each brings its own DrawerBody + pinned
@@ -36,7 +37,7 @@ type ConfirmMode =
   | { kind: "screening-new" }
   | { kind: "screening-edit"; entry: ScreeningQuestion }
   | { kind: "screening-suggest"; entry: ScreeningQuestion };
-const STEP_TITLES = ["Empresa y fecha", "Opcionales", "Idioma y foco", "Confirmar"];
+const STEP_TITLES = ["Modo", "Empresa y fecha", "Opcionales", "Idioma y foco", "Confirmar"];
 
 /**
  * Fresh wizard state. With a pending row (deferred generation), steps 1–2 come
@@ -46,6 +47,7 @@ const STEP_TITLES = ["Empresa y fecha", "Opcionales", "Idioma y foco", "Confirma
  */
 function initialData(pendingRow?: RegistryRow): WizardData {
   return {
+    mode: pendingRow?.cvMode ?? DEFAULT_CV_MODE,
     company: pendingRow?.company ?? "",
     language: "EN",
     date: new Date(),
@@ -128,7 +130,10 @@ export function Wizard({
   onCancel,
   container,
 }: WizardProps) {
-  const startStep = pendingRow ? 3 : 1;
+  // Fresh flow starts at Modo (1); deferred generation skips Modo/Empresa/
+  // Opcionales (their data lives on the row) and starts at Idioma y foco (4).
+  // The Modo step isn't shown in the deferred flow yet — it defaults to "base".
+  const startStep = pendingRow ? 4 : 1;
   const [step, setStep] = useState(startStep);
   const [data, setData] = useState<WizardData>(() => initialData(pendingRow));
   const [previewCode, setPreviewCode] = useState<string | null>(null);
@@ -144,7 +149,9 @@ export function Wizard({
   // later from the detail panel (see docs/decisions.md → "Registro nunca
   // bloqueante").
   const companyValid = data.company.trim() !== "";
-  const canAdvance = step === 1 ? companyValid : true;
+  // Empresa (step 2) is the only field that gates advancing; Modo (step 1) is
+  // always valid (a mode is always selected — default "base").
+  const canAdvance = step === 2 ? companyValid : true;
 
   /**
    * Email to persist: an invalid typed email is omitted (never stored broken)
@@ -243,6 +250,7 @@ export function Wizard({
           jobUrl: data.jobUrl,
           jobContext: data.jobContext,
           focus: data.focus === "" ? undefined : data.focus,
+          cvMode: data.mode,
           code: previewCode,
         },
         activeRow ?? undefined,
@@ -321,10 +329,11 @@ export function Wizard({
         </div>
 
         <div className="min-h-[260px]">
-          {step === 1 && <StepCompany data={data} set={set} container={container} />}
-          {step === 2 && <StepOptional data={data} set={set} container={container} />}
-          {step === 3 && <StepLanguage data={data} set={set} container={container} spec={spec} />}
-          {step === 4 && previewCode && (
+          {step === 1 && <StepMode data={data} set={set} container={container} />}
+          {step === 2 && <StepCompany data={data} set={set} container={container} />}
+          {step === 3 && <StepOptional data={data} set={set} container={container} />}
+          {step === 4 && <StepLanguage data={data} set={set} container={container} spec={spec} />}
+          {step === 5 && previewCode && (
             <StepConfirm
               data={data}
               previewCode={previewCode}

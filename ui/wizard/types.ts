@@ -1,4 +1,4 @@
-import type { Channel } from "@/core/registry/types";
+import type { Channel, CvMode } from "@/core/registry/types";
 import { languagesFor, type LanguageChoice } from "@/core/types";
 
 export { languagesFor };
@@ -11,6 +11,8 @@ export const FOCUS_NONE = "__none__";
 
 /** Mutable wizard state. Notes and status are not set here — they live in the table. */
 export interface WizardData {
+  /** How the CV body is built — chosen in the first step (see `CvMode`). */
+  mode: CvMode;
   company: string;
   language: LanguageChoice;
   date: Date;

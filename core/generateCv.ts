@@ -14,6 +14,7 @@ import {
   MAX_UPDATES,
   type ApplicationStatus,
   type Channel,
+  type CvMode,
   type EditableFields,
   type RegistryRow,
 } from "./registry/types";
@@ -34,6 +35,8 @@ export interface GenerateCvInput {
   status?: ApplicationStatus;
   /** Portfolio focus profile id (from the spec) baked into the CV's tracked links. */
   focus?: string;
+  /** How the CV body was tailored (see `CvMode`). Persisted as a faithful record. */
+  cvMode?: CvMode;
   /**
    * Cover letter to generate alongside the CV: final per-language markdown
    * (variables already resolved and hand-edited in the wizard). Languages
@@ -146,6 +149,7 @@ export async function generateCv(
     jobContext: cleaned(input.jobContext),
     language: input.languageChoice,
     focus: input.focus,
+    cvMode: input.cvMode,
     links,
     coverLetter,
     zipName,

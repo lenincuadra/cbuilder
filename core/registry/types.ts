@@ -26,8 +26,21 @@ export type Channel = (typeof CHANNELS)[number];
  */
 export type ApplicationStatus = "Borrador" | "Activo" | "Rechazado" | "Aceptado";
 
+/**
+ * How the CV body was built for this application — chosen at the start of the
+ * wizard. A spectrum of how much the CV adapts to the job description (see
+ * `docs/cv-tailoring-plan.md`):
+ * - "base": the fixed master + tracked links (the app's original behavior).
+ * - "assisted": AI rewrites Lenin's real experience into the JD's language.
+ * - "verbatim": the JD's exact phrases injected, gated by human verification.
+ * Absent on a row = "base" (legacy rows, and the deferred-generation flow which
+ * does not offer the selector yet).
+ */
+export type CvMode = "base" | "assisted" | "verbatim";
+
 export const DEFAULT_ROLE = "UX/UI Designer";
 export const DEFAULT_STATUS: ApplicationStatus = "Activo";
+export const DEFAULT_CV_MODE: CvMode = "base";
 
 /** Max follow-up updates kept per application. */
 export const MAX_UPDATES = 12;
@@ -101,6 +114,12 @@ export interface RegistryRow {
    * Like `language`, not editable post-creation: the sent CV already carries it.
    */
   focus?: string;
+  /**
+   * How the CV body was built (see `CvMode`). Faithful record of how the sent
+   * CV was tailored — like `focus`/`language`, not editable post-creation.
+   * Absent = "base" (legacy rows and the deferred-generation flow).
+   */
+  cvMode?: CvMode;
   /** The three tracked links (short form) baked into this CV — faithful record. */
   links?: TrackedLinks;
   /**
