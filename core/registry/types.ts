@@ -1,5 +1,5 @@
 import type { CoverLetterBodies, CoverLetterRecord } from "../coverLetter/types";
-import type { ParsedJd } from "../jdParse/types";
+import type { ParsedJd, VerifiedClaims } from "../jdParse/types";
 import type { TrackedLinks } from "../spec/links";
 import type { Language, LanguageChoice } from "../types";
 
@@ -128,6 +128,11 @@ export interface RegistryRow {
    * Absent = "base" (legacy rows and the deferred-generation flow).
    */
   cvMode?: CvMode;
+  /**
+   * Verbatim claims verified in the Modo 3 gate before generation. Faithful
+   * record of what Lenin confirmed — absent on modes 1/2 and legacy rows.
+   */
+  verifiedClaims?: VerifiedClaims;
   /** The three tracked links (short form) baked into this CV — faithful record. */
   links?: TrackedLinks;
   /**

@@ -41,9 +41,8 @@ const MODES: ModeOption[] = [
     value: "verbatim",
     label: "Copiar la búsqueda",
     description:
-      "Inyecta las frases exactas de la búsqueda en el CV, con verificación por afirmación. Máximo match ATS.",
+      "Verificás cada frase de la búsqueda antes de inyectarla. Máximo match ATS — solo lo que realmente tenés.",
     icon: PenLine,
-    soon: true,
   },
 ];
 

@@ -1,10 +1,10 @@
 -- cv-builder — run this in the Supabase SQL editor (prod after merges that touch schema).
--- schema_version: 9  (registry + notes + stable_links + cover_letter_templates
+-- schema_version: 10 (registry + notes + stable_links + cover_letter_templates
 --                     + screening_questions + cvs bucket + cv_pending/delivery_files
 --                     + Borrador status + cover_letter_draft/job_context
 --                     + screening_questions.draft + general_notes_entries
 --                     + drive_letter_docs + milestones
---                     + cv_mode + parsed_jd)
+--                     + cv_mode + parsed_jd + verified_claims)
 -- Bump schema_version when this file changes; see docs/versioning.md §3.
 -- Columns map to RegistryRow (camelCase) via snake_case; the app converts them.
 
@@ -36,7 +36,8 @@ create table if not exists public.registry (
   delivery_files jsonb,                            -- archived delivered files ["<folder>/<file>.docx", ...]
   milestones  jsonb,                               -- funnel milestones reached {responded?, interview?, offer?, referral?}: "YYYY-MM-DD"
   cv_mode     text,                                -- how the CV body was tailored ("base"|"assisted"|"verbatim")
-  parsed_jd   jsonb                                -- AI-structured parse of the job description
+  parsed_jd   jsonb,                               -- AI-structured parse of the job description
+  verified_claims jsonb                            -- verbatim claims verified in Modo 3 gate (VerifiedClaims)
 );
 
 -- Newest applications first when listing.
@@ -135,6 +136,8 @@ insert into storage.buckets (id, name, public)
 --   -- schema_version 9: cv_mode + parsed_jd (CV tailoring — 3 modes)
 --   alter table public.registry add column if not exists cv_mode text;
 --   alter table public.registry add column if not exists parsed_jd jsonb;
+--   -- schema_version 10: verified_claims (Modo 3 verbatim gate)
+--   alter table public.registry add column if not exists verified_claims jsonb;
 --   -- Add the 'Aceptado' outcome status (funnel close-out):
 --   alter table public.registry drop constraint if exists registry_status_check;
 --   alter table public.registry add constraint registry_status_check

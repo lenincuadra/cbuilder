@@ -10,7 +10,7 @@ import type {
   StatusUpdate,
 } from "../../core/registry/types";
 import type { CoverLetterBodies, CoverLetterRecord } from "../../core/coverLetter/types";
-import type { ParsedJd } from "../../core/jdParse/types";
+import type { ParsedJd, VerifiedClaims } from "../../core/jdParse/types";
 import type { TrackedLinks } from "../../core/spec/links";
 import type { Language, LanguageChoice } from "../../core/types";
 
@@ -46,6 +46,7 @@ interface RegistryRowDb {
   delivery_files: string[] | null;
   cv_mode: string | null;
   parsed_jd: ParsedJd | null;
+  verified_claims: VerifiedClaims | null;
 }
 
 export function dbToRow(db: RegistryRowDb): RegistryRow {
@@ -80,6 +81,7 @@ export function dbToRow(db: RegistryRowDb): RegistryRow {
     deliveryFiles: db.delivery_files ?? undefined,
     cvMode: (db.cv_mode ?? undefined) as CvMode | undefined,
     parsedJd: db.parsed_jd ?? undefined,
+    verifiedClaims: db.verified_claims ?? undefined,
   };
 }
 
@@ -116,6 +118,7 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
     delivery_files: row.deliveryFiles ?? null,
     cv_mode: row.cvMode ?? null,
     parsed_jd: row.parsedJd ?? null,
+    verified_claims: row.verifiedClaims ?? null,
   };
 }
 
@@ -147,6 +150,7 @@ export function editableToDb(fields: EditableFields): Partial<RegistryRowDb> {
   if ("deliveryFiles" in fields) out.delivery_files = fields.deliveryFiles ?? null;
   if ("cvMode" in fields) out.cv_mode = fields.cvMode ?? null;
   if ("parsedJd" in fields) out.parsed_jd = fields.parsedJd ?? null;
+  if ("verifiedClaims" in fields) out.verified_claims = fields.verifiedClaims ?? null;
   return out;
 }
 

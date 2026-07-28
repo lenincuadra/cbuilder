@@ -8,7 +8,8 @@ import { buildTrackedLinks } from "./spec/links";
 import type { LinkSpec } from "./spec/types";
 import { languagesFor, type Language, type LanguageChoice } from "./types";
 import { packageCvs, type CvEntry } from "./zip";
-import type { ParsedJd } from "./jdParse/types";
+import { buildVerbatimSlots } from "./jdParse/slots";
+import type { ParsedJd, VerifiedClaims } from "./jdParse/types";
 import {
   DEFAULT_ROLE,
   DEFAULT_STATUS,
@@ -34,6 +35,8 @@ export interface GenerateCvInput {
   jobContext?: string;
   /** Structured parse of the job description (AI-extracted). */
   parsedJd?: ParsedJd;
+  /** Verbatim claims verified in the Modo 3 gate (see `VerifiedClaims`). */
+  verifiedClaims?: VerifiedClaims;
   notes?: string;
   status?: ApplicationStatus;
   /** Portfolio focus profile id (from the spec) baked into the CV's tracked links. */
@@ -107,11 +110,18 @@ export async function generateCv(
   // into every master and persist them on the row (faithful record of what was sent).
   const links = buildTrackedLinks(deps.spec, code, input.focus);
 
+  // Build content slots for tailored modes. Mode 3 (verbatim) injects
+  // verified verbatim claims; modes 1/2 leave slots undefined (master untouched).
+  const slots =
+    input.cvMode === "verbatim" && input.parsedJd && input.verifiedClaims
+      ? buildVerbatimSlots(input.parsedJd, input.verifiedClaims)
+      : undefined;
+
   const entries: CvEntry[] = [];
   const sentBodies: CoverLetterBodies = {};
   for (const language of languagesFor(input.languageChoice)) {
     const master = await deps.loadMaster(language);
-    const docx = await fillMaster(master, links);
+    const docx = await fillMaster(master, links, slots);
     const letterBody = input.coverLetter?.bodies[language]?.trim();
     let coverLetter: Uint8Array | undefined;
     if (letterBody) {
@@ -151,6 +161,7 @@ export async function generateCv(
     jobUrl: cleaned(input.jobUrl),
     jobContext: cleaned(input.jobContext),
     parsedJd: input.parsedJd,
+    verifiedClaims: input.verifiedClaims,
     language: input.languageChoice,
     focus: input.focus,
     cvMode: input.cvMode,

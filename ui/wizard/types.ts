@@ -1,5 +1,5 @@
 import type { CvMode } from "@/core/registry/types";
-import type { ParsedJd } from "@/core/jdParse/types";
+import type { ParsedJd, VerifiedClaims } from "@/core/jdParse/types";
 import type { Channel } from "@/core/registry/types";
 import { languagesFor, type LanguageChoice } from "@/core/types";
 
@@ -36,6 +36,11 @@ export interface WizardData {
    * until parsed; persisted on the row for use by modes 2 and 3.
    */
   parsedJd: ParsedJd | null;
+  /**
+   * Verbatim claims verified in the Modo 3 gate (StepVerify). Null until the
+   * gate step is visited; each toggle updates this live. Persisted on the row.
+   */
+  verifiedClaims: VerifiedClaims | null;
   /** Portfolio focus profile id (from the spec) for the tracked links. "" = sin foco. */
   focus: string;
 }
