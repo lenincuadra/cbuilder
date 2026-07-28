@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   ApplicationStatus,
   Channel,
+  CvMode,
   EditableFields,
   Milestones,
   RegistryRow,
@@ -9,6 +10,7 @@ import type {
   StatusUpdate,
 } from "../../core/registry/types";
 import type { CoverLetterBodies, CoverLetterRecord } from "../../core/coverLetter/types";
+import type { ParsedJd } from "../../core/jdParse/types";
 import type { TrackedLinks } from "../../core/spec/links";
 import type { Language, LanguageChoice } from "../../core/types";
 
@@ -42,6 +44,8 @@ interface RegistryRowDb {
   archived: boolean | null;
   cv_pending: boolean | null;
   delivery_files: string[] | null;
+  cv_mode: string | null;
+  parsed_jd: ParsedJd | null;
 }
 
 export function dbToRow(db: RegistryRowDb): RegistryRow {
@@ -74,6 +78,8 @@ export function dbToRow(db: RegistryRowDb): RegistryRow {
     // "absent", so rows with a CV keep their original shape.
     cvPending: db.cv_pending ? true : undefined,
     deliveryFiles: db.delivery_files ?? undefined,
+    cvMode: (db.cv_mode ?? undefined) as CvMode | undefined,
+    parsedJd: db.parsed_jd ?? undefined,
   };
 }
 
@@ -108,6 +114,8 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
     archived: row.archived ?? false,
     cv_pending: row.cvPending ?? false,
     delivery_files: row.deliveryFiles ?? null,
+    cv_mode: row.cvMode ?? null,
+    parsed_jd: row.parsedJd ?? null,
   };
 }
 
@@ -137,6 +145,8 @@ export function editableToDb(fields: EditableFields): Partial<RegistryRowDb> {
   if ("archived" in fields) out.archived = fields.archived ?? false;
   if ("cvPending" in fields) out.cv_pending = fields.cvPending ?? false;
   if ("deliveryFiles" in fields) out.delivery_files = fields.deliveryFiles ?? null;
+  if ("cvMode" in fields) out.cv_mode = fields.cvMode ?? null;
+  if ("parsedJd" in fields) out.parsed_jd = fields.parsedJd ?? null;
   return out;
 }
 

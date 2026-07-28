@@ -1,4 +1,7 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
+import { buildJdParsePrompt, parseJdResponse } from "@/core/jdParse/prompt";
+import type { ParsedJd } from "@/core/jdParse/types";
 
 // Fetches an external URL live — never statically cached.
 export const dynamic = "force-dynamic";
@@ -65,6 +68,30 @@ function findMicrodataDescription(html: string): string | null {
 }
 
 /**
+ * Best-effort structured parse of a job description via Claude Haiku — runs
+ * after the raw text is extracted from the URL. Gracefully skipped when the
+ * API key is absent (same contract as all AI features).
+ */
+async function tryParseJd(text: string, apiKey: string | undefined): Promise<ParsedJd | null> {
+  if (!apiKey || text.length < 20) return null;
+  try {
+    const client = new Anthropic({ apiKey });
+    const { system, user } = buildJdParsePrompt(text);
+    const message = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 800,
+      system,
+      messages: [{ role: "user", content: user }],
+    });
+    const textBlock = message.content.find((b) => b.type === "text");
+    const raw = textBlock && "text" in textBlock ? textBlock.text : "";
+    return parseJdResponse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Best-effort extraction of a job posting's description from its JobPosting
  * markup — tries JSON-LD first (schema.org, most large ATS platforms emit
  * this for Google Jobs), then schema.org Microdata (`itemprop="description"`,
@@ -74,6 +101,10 @@ function findMicrodataDescription(html: string): string | null {
  * empty — no markup of either kind exists in the raw HTML), but
  * needs no new infra and never blocks — always 200, `context: null` on any
  * failure (bad URL, unreachable, no JobPosting schema found).
+ *
+ * Response: `{ context: string | null; parsed: ParsedJd | null }`.
+ * When `context` is found and the API key is set, `parsed` holds the
+ * AI-extracted structured JD; otherwise `parsed` is null.
  */
 export async function POST(request: Request) {
   const body = (await request.json()) as { url?: unknown };
@@ -83,10 +114,10 @@ export async function POST(request: Request) {
   try {
     parsed = new URL(url);
   } catch {
-    return NextResponse.json({ context: null });
+    return NextResponse.json({ context: null, parsed: null });
   }
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    return NextResponse.json({ context: null });
+    return NextResponse.json({ context: null, parsed: null });
   }
 
   try {
@@ -94,14 +125,16 @@ export async function POST(request: Request) {
       signal: AbortSignal.timeout(8000),
       headers: { "User-Agent": "Mozilla/5.0 (compatible; cv-builder)" },
     });
-    if (!response.ok) return NextResponse.json({ context: null });
+    if (!response.ok) return NextResponse.json({ context: null, parsed: null });
     const html = await response.text();
     for (const match of html.matchAll(LD_JSON_RE)) {
       try {
         const posting = findJobPosting(JSON.parse(match[1]));
         const text = posting?.description ? stripHtml(posting.description) : "";
         if (text.length > 20) {
-          return NextResponse.json({ context: text.slice(0, MAX_CONTEXT_LENGTH) });
+          const context = text.slice(0, MAX_CONTEXT_LENGTH);
+          const parsedJd = await tryParseJd(context, process.env.ANTHROPIC_API_KEY);
+          return NextResponse.json({ context, parsed: parsedJd });
         }
       } catch {
         // Not valid/relevant JSON in this block — try the next <script> tag.
@@ -110,10 +143,12 @@ export async function POST(request: Request) {
     const microdata = findMicrodataDescription(html);
     const microdataText = microdata ? stripHtml(microdata) : "";
     if (microdataText.length > 20) {
-      return NextResponse.json({ context: microdataText.slice(0, MAX_CONTEXT_LENGTH) });
+      const context = microdataText.slice(0, MAX_CONTEXT_LENGTH);
+      const parsedJd = await tryParseJd(context, process.env.ANTHROPIC_API_KEY);
+      return NextResponse.json({ context, parsed: parsedJd });
     }
-    return NextResponse.json({ context: null });
+    return NextResponse.json({ context: null, parsed: null });
   } catch {
-    return NextResponse.json({ context: null });
+    return NextResponse.json({ context: null, parsed: null });
   }
 }

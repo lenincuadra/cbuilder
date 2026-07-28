@@ -57,6 +57,7 @@ function initialData(pendingRow?: RegistryRow): WizardData {
     who: pendingRow?.who ?? "",
     jobUrl: pendingRow?.jobUrl ?? "",
     jobContext: pendingRow?.jobContext ?? "",
+    parsedJd: pendingRow?.parsedJd ?? null,
     focus: "",
   };
 }
@@ -205,6 +206,7 @@ export function Wizard({
           email: sanitizedEmail(),
           jobUrl: data.jobUrl,
           jobContext: data.jobContext,
+          parsedJd: data.parsedJd ?? undefined,
         },
         activeRow ?? undefined,
       );
@@ -249,6 +251,7 @@ export function Wizard({
           email: sanitizedEmail(),
           jobUrl: data.jobUrl,
           jobContext: data.jobContext,
+          parsedJd: data.parsedJd ?? undefined,
           focus: data.focus === "" ? undefined : data.focus,
           cvMode: data.mode,
           code: previewCode,

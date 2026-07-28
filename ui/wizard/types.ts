@@ -1,4 +1,6 @@
-import type { Channel, CvMode } from "@/core/registry/types";
+import type { CvMode } from "@/core/registry/types";
+import type { ParsedJd } from "@/core/jdParse/types";
+import type { Channel } from "@/core/registry/types";
 import { languagesFor, type LanguageChoice } from "@/core/types";
 
 export { languagesFor };
@@ -28,6 +30,12 @@ export interface WizardData {
    * the AI pipeline beyond company/role/focus. Optional.
    */
   jobContext: string;
+  /**
+   * Structured parse of the job description — AI-extracted from `jobContext`
+   * when the user clicks "Detectar" (URL) or "Analizar" (manual paste). Null
+   * until parsed; persisted on the row for use by modes 2 and 3.
+   */
+  parsedJd: ParsedJd | null;
   /** Portfolio focus profile id (from the spec) for the tracked links. "" = sin foco. */
   focus: string;
 }

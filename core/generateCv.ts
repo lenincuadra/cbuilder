@@ -8,6 +8,7 @@ import { buildTrackedLinks } from "./spec/links";
 import type { LinkSpec } from "./spec/types";
 import { languagesFor, type Language, type LanguageChoice } from "./types";
 import { packageCvs, type CvEntry } from "./zip";
+import type { ParsedJd } from "./jdParse/types";
 import {
   DEFAULT_ROLE,
   DEFAULT_STATUS,
@@ -31,6 +32,8 @@ export interface GenerateCvInput {
   jobUrl?: string;
   /** Free-text requirements/highlights from the posting — extra AI grounding. */
   jobContext?: string;
+  /** Structured parse of the job description (AI-extracted). */
+  parsedJd?: ParsedJd;
   notes?: string;
   status?: ApplicationStatus;
   /** Portfolio focus profile id (from the spec) baked into the CV's tracked links. */
@@ -147,6 +150,7 @@ export async function generateCv(
     who: cleaned(input.who),
     jobUrl: cleaned(input.jobUrl),
     jobContext: cleaned(input.jobContext),
+    parsedJd: input.parsedJd,
     language: input.languageChoice,
     focus: input.focus,
     cvMode: input.cvMode,
@@ -175,6 +179,8 @@ export interface PendingRowInput {
   jobUrl?: string;
   /** Free-text requirements/highlights from the posting — extra AI grounding. */
   jobContext?: string;
+  /** Structured parse of the job description (AI-extracted). */
+  parsedJd?: ParsedJd;
   /**
    * A cover letter written mid-wizard before registering without CV — kept as
    * the row's draft so nothing typed (or AI-generated) is lost; the deferred
@@ -231,6 +237,7 @@ export function buildPendingRow(input: PendingRowInput, deps: PendingRowDeps): R
     who: cleaned(input.who),
     jobUrl: cleaned(input.jobUrl),
     jobContext: cleaned(input.jobContext),
+    parsedJd: input.parsedJd,
     coverLetterDraft: input.coverLetterDraft,
     createdAt: now().toISOString(),
     cvPending: true,

@@ -1,4 +1,5 @@
 import type { CoverLetterBodies, CoverLetterRecord } from "../coverLetter/types";
+import type { ParsedJd } from "../jdParse/types";
 import type { TrackedLinks } from "../spec/links";
 import type { Language, LanguageChoice } from "../types";
 
@@ -107,6 +108,13 @@ export interface RegistryRow {
    * best-effort auto-filled from `jobUrl`'s JobPosting schema (JSON-LD).
    */
   jobContext?: string;
+  /**
+   * Structured parse of the job description — AI-extracted from `jobContext`.
+   * Present when the posting was detected or analyzed (modes 2/3); absent on
+   * mode 1 base rows and legacy rows. Source of keywords, tools, and section
+   * headers for the CV tailoring pipeline.
+   */
+  parsedJd?: ParsedJd;
   /** Language choice the user picked (EN / ES / Ambos). */
   language?: LanguageChoice;
   /**
