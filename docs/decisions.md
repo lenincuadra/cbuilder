@@ -10,6 +10,20 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## CV tailoreado por JD: slots/variantes, no AI del cuerpo entero (2026-07-27)
+Nueva fase (fase 3): tailorear el **cuerpo del CV** por job description, no solo la carta y el
+tracking. La guía de `docs/job-strategy/` (título alineado, keywords verbatim, estructura
+espejada, bullets cuantificados, sección de valores, formato ATS) es la tesis; plan completo en
+`docs/cv-tailoring-plan.md`.
+
+Decisión de scope: **Master + variantes/slots**, no full-AI del cuerpo. Razón: que la AI genere
+todo el CV es justo donde se inventan métricas/empleadores → viola la regla inviolable de no
+alucinar. Los masters ATS-safe siguen siendo la fuente de verdad; se rellenan slots por
+aplicación. Los slots se inyectan **como data / programáticamente** (mismo criterio que "Cover
+letters: templates como data + letterhead programático", más abajo), **no** multiplicando
+archivos `.docx` — así no se multiplica la fragilidad de editar masters a mano. Descartado:
+full-AI del cuerpo (riesgo de alucinación); un master por focus/rol (fragilidad + drift).
+
 ## Wizard: cover letter y preguntas dejan de ser pasos, pasan a acciones opcionales en Confirmar (2026-07-26)
 **Decisión**: se borran `StepCoverLetter.tsx` y `StepScreening.tsx` — el wizard pasa de 6
 a **4 pasos** (Empresa y fecha · Opcionales · Idioma y foco · Confirmar). El último paso
