@@ -77,6 +77,8 @@ export interface RowDetailDrawerProps {
   onDelete: (code: string) => void | Promise<void>;
   /** Open the deferred-generation wizard for a pending row ("Generar CV"). */
   onGenerateCv?: (row: RegistryRow) => void;
+  /** Open the wizard to generate an additional CV (another mode) for this application. */
+  onGenerateVariant?: (row: RegistryRow) => void;
   /** Shared screening-questions bank (the Preguntas section reads/writes it). */
   screening: UseScreening;
   /** Cover letter templates, for the post-hoc "Generar cover letter" takeover. */
@@ -117,6 +119,7 @@ export function RowDetailDrawer({
   onUpdate,
   onDelete,
   onGenerateCv,
+  onGenerateVariant,
   screening,
   templates,
   initialTab = "detalles",
@@ -438,7 +441,13 @@ export function RowDetailDrawer({
                   {!row.cvPending && (
                     <TrackedLinks code={row.code} focus={row.focus} links={row.links} />
                   )}
-                  <DeliveryInfo row={row} onGenerateCv={() => onGenerateCv?.(row)} />
+                  <DeliveryInfo
+                    row={row}
+                    onGenerateCv={() => onGenerateCv?.(row)}
+                    onGenerateVariant={
+                      onGenerateVariant ? () => onGenerateVariant(row) : undefined
+                    }
+                  />
                   <CoverLetterSection
                     row={row}
                     onStartGenerate={() => setMode({ kind: "cover-letter-generate" })}

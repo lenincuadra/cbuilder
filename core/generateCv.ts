@@ -53,6 +53,13 @@ export interface GenerateCvInput {
   /** How the CV body was tailored (see `CvMode`). Persisted as a faithful record. */
   cvMode?: CvMode;
   /**
+   * When set, this is an ADDITIONAL CV for an application that already has one:
+   * delivery folders nest under this mode subfolder (e.g. "ats") so variants
+   * don't collide, and the caller appends rather than replaces. The row's
+   * identity fields (code, links) are unchanged.
+   */
+  variantSubfolder?: string;
+  /**
    * Cover letter to generate alongside the CV: final per-language markdown
    * (variables already resolved and hand-edited in the wizard). Languages
    * without a body simply ship without a letter.
@@ -149,7 +156,7 @@ export async function generateCv(
       sentBodies[language] = letterBody;
     }
     entries.push({
-      folder: folderName({ language, company: input.company, code }),
+      folder: folderName({ language, company: input.company, code, variant: input.variantSubfolder }),
       language,
       docx,
       coverLetter,
@@ -162,10 +169,12 @@ export async function generateCv(
       : undefined;
 
   const zip = await packageCvs(entries);
+  // A variant folder carries a "/" (…_code/ats); flatten it for the zip file name.
+  const variantSuffix = input.variantSubfolder ? `_${input.variantSubfolder}` : "";
   const zipName =
     entries.length === 1
-      ? `${entries[0].folder}.zip`
-      : `${slugifyCompany(input.company)}_${code}.zip`;
+      ? `${entries[0].folder.replace("/", "_")}.zip`
+      : `${slugifyCompany(input.company)}_${code}${variantSuffix}.zip`;
   const now = deps.now ?? (() => new Date());
 
   const row: RegistryRow = {

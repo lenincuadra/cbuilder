@@ -86,6 +86,28 @@ describe("generateCv", () => {
     expect(zip.file("ES_globallogic_0628a2/Lenin_Cuadra_CV.docx")).not.toBeNull();
   });
 
+  it("variantSubfolder nests an additional CV under the mode, flattens the zip name", async () => {
+    const result = await generateCv(
+      {
+        company: "GlobalLogic",
+        languageChoice: "EN",
+        date: new Date(2026, 5, 28),
+        code: "0628a2", // reuse the application's existing code
+        cvMode: "ats",
+        variantSubfolder: "ats",
+      },
+      deps({ now: fixedNow, loadMaster: async () => new Uint8Array() }),
+    );
+
+    expect(result.folderNames).toEqual(["EN_globallogic_0628a2/ats"]);
+    // Zip file name flattens the slash so it's a valid filename.
+    expect(result.zipName).toBe("EN_globallogic_0628a2_ats.zip");
+
+    const zip = await JSZip.loadAsync(result.zip);
+    // The docx sits inside the mode subfolder, keeping the fixed filename.
+    expect(zip.file("EN_globallogic_0628a2/ats/Lenin_Cuadra_CV.docx")).not.toBeNull();
+  });
+
   it("avoids a code already present in the registry", async () => {
     const result = await generateCv(
       { company: "Acme", languageChoice: "EN", date: new Date(2026, 5, 28) },

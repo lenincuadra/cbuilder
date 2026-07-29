@@ -14,11 +14,22 @@ import { deliveryFileUrl, revealDelivery } from "@/lib/archive";
  * `[LANG]_[company]_[code]`), kind (from the generic delivery file name) and
  * the display label — language first: "EN · CV", "ES · Carta".
  */
-function deliveryFileMeta(path: string): { language: string; kind: string; label: string } {
-  const [folder = "", file = ""] = path.split("/");
+function deliveryFileMeta(path: string): {
+  language: string;
+  kind: string;
+  variant?: string;
+  label: string;
+} {
+  // Path is "[LANG]_[company]_[code]/[file]" or, for an extra CV variant,
+  // "[LANG]_[company]_[code]/[mode]/[file]" (the mode is the middle segment).
+  const parts = path.split("/");
+  const folder = parts[0] ?? "";
+  const file = parts[parts.length - 1] ?? "";
+  const variant = parts.length === 3 ? parts[1] : undefined;
   const language = folder.split("_")[0];
   const kind = file === CV_FILENAME ? "CV" : file === COVER_LETTER_FILENAME ? "Carta" : file;
-  return { language, kind, label: language ? `${language} · ${kind}` : kind };
+  const label = [language, kind, variant].filter(Boolean).join(" · ");
+  return { language, kind, variant, label };
 }
 
 /** Direct Google Doc URL for a delivered file, from the row's per-doc links. */
@@ -35,6 +46,8 @@ export interface DeliveryInfoProps {
   row: RegistryRow;
   /** Open the deferred-generation wizard for this pending row. */
   onGenerateCv?: () => void;
+  /** Open the wizard to generate an ADDITIONAL CV (another mode) for this application. */
+  onGenerateVariant?: () => void;
 }
 
 /**
@@ -45,7 +58,7 @@ export interface DeliveryInfoProps {
  * rows without per-file archives keep the old zip/folder/doc-links fallback.
  * A pending row (no CV yet) shows the "Generar CV" CTA instead.
  */
-export function DeliveryInfo({ row, onGenerateCv }: DeliveryInfoProps) {
+export function DeliveryInfo({ row, onGenerateCv, onGenerateVariant }: DeliveryInfoProps) {
   const files = row.deliveryFiles ?? [];
   const docs = Object.entries(row.driveDocs ?? {}) as Array<[string, string]>;
 
@@ -185,6 +198,14 @@ export function DeliveryInfo({ row, onGenerateCv }: DeliveryInfoProps) {
             </div>
           ))
         ))}
+
+      {/* Generate another CV (a different mode) for this same application. */}
+      {onGenerateVariant && (
+        <Button variant="outline" size="sm" className="mt-1" onClick={onGenerateVariant}>
+          <FilePlus2 className="size-4" />
+          Generar otro CV
+        </Button>
+      )}
     </div>
   );
 }

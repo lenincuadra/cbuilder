@@ -141,6 +141,12 @@ export interface WizardProps {
    * uses the row's already-reserved code instead of generating one.
    */
   pendingRow?: RegistryRow;
+  /**
+   * "Generate another CV" for an application that already has one: the row is
+   * the seed (its code/data reused), but the flow starts at Modo so a different
+   * mode can be picked, and generation appends a variant instead of replacing.
+   */
+  variantMode?: boolean;
   /** Optional: dismiss the wizard from the first step (turns "Atrás" into "Cancelar"). */
   onCancel?: () => void;
   /** Portal target for the step dropdowns when the wizard runs inside a drawer. */
@@ -158,13 +164,15 @@ export function Wizard({
   screening,
   onEnsureRow,
   pendingRow,
+  variantMode,
   onCancel,
   container,
 }: WizardProps) {
   // Fresh flow starts at Modo (1); deferred generation skips Modo/Empresa/
   // Opcionales (their data lives on the row) and starts at Idioma y foco (4).
-  // The Modo step isn't shown in the deferred flow yet — it defaults to "base".
-  const startStep = pendingRow ? 4 : 1;
+  // "Generate another CV" (variantMode) seeds from the row but starts at Modo,
+  // so a different mode can be chosen for the same application.
+  const startStep = variantMode ? 1 : pendingRow ? 4 : 1;
   const [step, setStep] = useState(startStep);
   const [data, setData] = useState<WizardData>(() => initialData(pendingRow));
   const [previewCode, setPreviewCode] = useState<string | null>(null);
