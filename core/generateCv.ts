@@ -8,12 +8,15 @@ import { buildTrackedLinks } from "./spec/links";
 import type { LinkSpec } from "./spec/types";
 import { languagesFor, type Language, type LanguageChoice } from "./types";
 import { packageCvs, type CvEntry } from "./zip";
+import { buildAssistedSlots, buildVerbatimSlots } from "./jdParse/slots";
+import type { ParsedJd, VerifiedClaims } from "./jdParse/types";
 import {
   DEFAULT_ROLE,
   DEFAULT_STATUS,
   MAX_UPDATES,
   type ApplicationStatus,
   type Channel,
+  type CvMode,
   type EditableFields,
   type RegistryRow,
 } from "./registry/types";
@@ -30,10 +33,18 @@ export interface GenerateCvInput {
   jobUrl?: string;
   /** Free-text requirements/highlights from the posting — extra AI grounding. */
   jobContext?: string;
+  /** Structured parse of the job description (AI-extracted). */
+  parsedJd?: ParsedJd;
+  /** Verbatim claims verified in the Modo 3 gate (see `VerifiedClaims`). */
+  verifiedClaims?: VerifiedClaims;
+  /** AI-drafted professional summaries per language (Modo 2 — Asistido). */
+  assistedSummaries?: Partial<Record<Language, string>>;
   notes?: string;
   status?: ApplicationStatus;
   /** Portfolio focus profile id (from the spec) baked into the CV's tracked links. */
   focus?: string;
+  /** How the CV body was tailored (see `CvMode`). Persisted as a faithful record. */
+  cvMode?: CvMode;
   /**
    * Cover letter to generate alongside the CV: final per-language markdown
    * (variables already resolved and hand-edited in the wizard). Languages
@@ -101,11 +112,22 @@ export async function generateCv(
   // into every master and persist them on the row (faithful record of what was sent).
   const links = buildTrackedLinks(deps.spec, code, input.focus);
 
+  // Verbatim slots are language-independent (same verified claims for every language).
+  const verbatimSlots =
+    input.cvMode === "verbatim" && input.parsedJd && input.verifiedClaims
+      ? buildVerbatimSlots(input.parsedJd, input.verifiedClaims)
+      : undefined;
+
   const entries: CvEntry[] = [];
   const sentBodies: CoverLetterBodies = {};
   for (const language of languagesFor(input.languageChoice)) {
     const master = await deps.loadMaster(language);
-    const docx = await fillMaster(master, links);
+    // Assisted slots are per-language (each language gets its own AI draft).
+    const slots =
+      input.cvMode === "assisted" && input.assistedSummaries?.[language]
+        ? buildAssistedSlots(input.assistedSummaries[language]!)
+        : verbatimSlots;
+    const docx = await fillMaster(master, links, slots);
     const letterBody = input.coverLetter?.bodies[language]?.trim();
     let coverLetter: Uint8Array | undefined;
     if (letterBody) {
@@ -144,8 +166,11 @@ export async function generateCv(
     who: cleaned(input.who),
     jobUrl: cleaned(input.jobUrl),
     jobContext: cleaned(input.jobContext),
+    parsedJd: input.parsedJd,
+    verifiedClaims: input.verifiedClaims,
     language: input.languageChoice,
     focus: input.focus,
+    cvMode: input.cvMode,
     links,
     coverLetter,
     zipName,
@@ -171,6 +196,8 @@ export interface PendingRowInput {
   jobUrl?: string;
   /** Free-text requirements/highlights from the posting — extra AI grounding. */
   jobContext?: string;
+  /** Structured parse of the job description (AI-extracted). */
+  parsedJd?: ParsedJd;
   /**
    * A cover letter written mid-wizard before registering without CV — kept as
    * the row's draft so nothing typed (or AI-generated) is lost; the deferred
@@ -227,6 +254,7 @@ export function buildPendingRow(input: PendingRowInput, deps: PendingRowDeps): R
     who: cleaned(input.who),
     jobUrl: cleaned(input.jobUrl),
     jobContext: cleaned(input.jobContext),
+    parsedJd: input.parsedJd,
     coverLetterDraft: input.coverLetterDraft,
     createdAt: now().toISOString(),
     cvPending: true,

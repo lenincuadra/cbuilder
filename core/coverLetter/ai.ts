@@ -1,4 +1,5 @@
 import type { AiModel } from "../ai/models";
+import type { ParsedJd } from "../jdParse/types";
 import type { Language } from "../types";
 import type { CoverLetterBodies } from "./types";
 
@@ -10,6 +11,8 @@ export interface CoverLetterAiInput {
   who?: string;
   focus?: string;
   jobContext?: string;
+  /** Structured JD parse — supplies exact keywords for the Technical Match paragraph. */
+  parsedJd?: ParsedJd;
 }
 
 /**
@@ -33,6 +36,7 @@ export async function requestAiDraft(
       who: input.who,
       focus: input.focus,
       jobContext: input.jobContext,
+      parsedJd: input.parsedJd,
       model,
       languages,
     }),

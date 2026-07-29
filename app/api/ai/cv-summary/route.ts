@@ -1,21 +1,20 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { buildContextBlock, buildCoverLetterPrompt } from "@/core/ai/prompt";
+import { buildContextBlock, buildCvSummaryPrompt } from "@/core/ai/prompt";
 import { DEFAULT_AI_MODEL, isAiModel } from "@/core/ai/models";
-import type { ParsedJd } from "@/core/jdParse/types";
 import type { Language } from "@/core/types";
+import type { ParsedJd } from "@/core/jdParse/types";
 import { readProfileBackground } from "@/lib/storage/profileContext";
 import { readSpecCache } from "@/lib/storage/specCache";
 
 // Calls the Anthropic API live — never statically cached.
 export const dynamic = "force-dynamic";
 
-const MAX_TOKENS = 700;
+const MAX_TOKENS = 300;
 
 interface RequestBody {
   company?: unknown;
   role?: unknown;
-  who?: unknown;
   focus?: unknown;
   jobContext?: unknown;
   parsedJd?: unknown;
@@ -28,17 +27,21 @@ function sanitizeLanguages(input: unknown): Language[] {
   return input.filter((value): value is Language => value === "EN" || value === "ES");
 }
 
+function sanitizeParsedJd(input: unknown): ParsedJd | undefined {
+  if (!input || typeof input !== "object") return undefined;
+  return input as ParsedJd;
+}
+
 /**
- * Draft a cover letter body per requested language, grounded in the AI context
- * pack (data/profile/background.md) plus focus-specific portfolio proof points.
- * 501 = ANTHROPIC_API_KEY absent or context pack missing (feature off, same
- * contract as the gdocs/cvs sinks). Body lands in the wizard's editable
- * textarea — nothing here is persisted directly.
+ * Draft a professional summary paragraph per requested language, tailored to
+ * the job description. Output is plain text (no markdown) — it slots directly
+ * into the CV's Professional Summary paragraph via `fillMaster`.
+ *
+ * 501 = API key or context pack absent (feature off).
  */
 export async function POST(request: Request) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    // Error strings here surface directly in UI toasts → Spanish (product content).
     return NextResponse.json(
       { error: "IA no configurada: falta ANTHROPIC_API_KEY en el servidor." },
       { status: 501 },
@@ -48,12 +51,12 @@ export async function POST(request: Request) {
   const body = (await request.json()) as RequestBody;
   const company = typeof body.company === "string" ? body.company.trim() : "";
   const role = typeof body.role === "string" ? body.role.trim() : "";
-  const who = typeof body.who === "string" ? body.who.trim() : undefined;
   const focus = typeof body.focus === "string" && body.focus !== "" ? body.focus : undefined;
   const jobContext = typeof body.jobContext === "string" ? body.jobContext : undefined;
-  const parsedJd = body.parsedJd && typeof body.parsedJd === "object" ? (body.parsedJd as ParsedJd) : undefined;
+  const parsedJd = sanitizeParsedJd(body.parsedJd);
   const model = isAiModel(body.model) ? body.model : DEFAULT_AI_MODEL;
   const languages = sanitizeLanguages(body.languages);
+
   if (company === "" || role === "" || languages.length === 0) {
     return NextResponse.json({ error: "Datos inválidos." }, { status: 400 });
   }
@@ -72,7 +75,7 @@ export async function POST(request: Request) {
     const entries = await Promise.all(
       languages.map(async (language) => {
         const context = buildContextBlock(background, spec, focus, language, jobContext);
-        const { system, user } = buildCoverLetterPrompt({ context, company, role, who, language, parsedJd });
+        const { system, user } = buildCvSummaryPrompt({ context, company, role, language, parsedJd });
         const message = await client.messages.create({
           model,
           max_tokens: MAX_TOKENS,
@@ -83,10 +86,8 @@ export async function POST(request: Request) {
         return [language, text && "text" in text ? text.text.trim() : ""] as const;
       }),
     );
-    const bodies = Object.fromEntries(entries) as Partial<Record<Language, string>>;
-    // Echo the model actually used — traceability for a paid call, and lets
-    // the client confirm its selection was honored (not silently defaulted).
-    return NextResponse.json({ bodies, model });
+    const summaries = Object.fromEntries(entries) as Partial<Record<Language, string>>;
+    return NextResponse.json({ summaries, model });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Falló la generación con IA." },

@@ -63,7 +63,14 @@ export function CoverLetterGenerateForm({
     setGenerating(true);
     try {
       const drafted = await requestAiDraft(
-        { company: row.company, role: row.role, who: row.who, focus: row.focus, jobContext },
+        {
+          company: row.company,
+          role: row.role,
+          who: row.who,
+          focus: row.focus,
+          jobContext,
+          parsedJd: row.parsedJd,
+        },
         languagesFor(row.language ?? "EN"),
         model,
       );

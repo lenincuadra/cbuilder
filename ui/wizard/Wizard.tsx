@@ -9,7 +9,7 @@ import { DrawerBody, DrawerFooter } from "@/components/ui/drawer";
 import { Progress } from "@/components/ui/progress";
 import type { CoverLetterTemplate } from "@/core/coverLetter/types";
 import type { GenerateCvInput, PendingRowInput } from "@/core/generateCv";
-import { DEFAULT_ROLE, type EditableFields, type RegistryRow } from "@/core/registry/types";
+import { DEFAULT_CV_MODE, DEFAULT_ROLE, type EditableFields, type RegistryRow } from "@/core/registry/types";
 import type { ScreeningQuestion } from "@/core/screening/types";
 import { generateCode } from "@/core/spec/code";
 import type { LinkSpec } from "@/core/spec/types";
@@ -17,13 +17,23 @@ import { CoverLetterGenerateForm } from "@/ui/detail/CoverLetterGenerateForm";
 import { ScreeningNewForm } from "@/ui/detail/ScreeningNewForm";
 import { ScreeningSuggestForm } from "@/ui/detail/ScreeningSuggestForm";
 import type { UseScreening } from "@/ui/useScreening";
+import { StepAssisted } from "./StepAssisted";
 import { StepCompany } from "./StepCompany";
 import { StepConfirm } from "./StepConfirm";
 import { StepLanguage } from "./StepLanguage";
+import { StepMode } from "./StepMode";
 import { StepOptional } from "./StepOptional";
+import { StepVerify } from "./StepVerify";
 import { emailRequirementMet, type WizardData } from "./types";
 
-const TOTAL_STEPS = 4;
+/**
+ * Total wizard steps per mode. Modes 2 and 3 add an extra step between
+ * Idioma y foco and Confirmar (Asistido → Resumen IA; Verbatim → Verificar claims).
+ */
+function totalStepsFor(mode: string): number {
+  return mode === "verbatim" || mode === "assisted" ? 6 : 5;
+}
+
 /**
  * What occupies the confirm step's slot: the summary + optional actions, or
  * one of their takeover forms (each brings its own DrawerBody + pinned
@@ -36,7 +46,9 @@ type ConfirmMode =
   | { kind: "screening-new" }
   | { kind: "screening-edit"; entry: ScreeningQuestion }
   | { kind: "screening-suggest"; entry: ScreeningQuestion };
-const STEP_TITLES = ["Empresa y fecha", "Opcionales", "Idioma y foco", "Confirmar"];
+const STEP_TITLES_BASE = ["Modo", "Empresa y fecha", "Opcionales", "Idioma y foco", "Confirmar"];
+const STEP_TITLES_ASSISTED = ["Modo", "Empresa y fecha", "Opcionales", "Idioma y foco", "Resumen IA", "Confirmar"];
+const STEP_TITLES_VERBATIM = ["Modo", "Empresa y fecha", "Opcionales", "Idioma y foco", "Verificar claims", "Confirmar"];
 
 /**
  * Fresh wizard state. With a pending row (deferred generation), steps 1–2 come
@@ -46,6 +58,7 @@ const STEP_TITLES = ["Empresa y fecha", "Opcionales", "Idioma y foco", "Confirma
  */
 function initialData(pendingRow?: RegistryRow): WizardData {
   return {
+    mode: pendingRow?.cvMode ?? DEFAULT_CV_MODE,
     company: pendingRow?.company ?? "",
     language: "EN",
     date: new Date(),
@@ -55,6 +68,9 @@ function initialData(pendingRow?: RegistryRow): WizardData {
     who: pendingRow?.who ?? "",
     jobUrl: pendingRow?.jobUrl ?? "",
     jobContext: pendingRow?.jobContext ?? "",
+    parsedJd: pendingRow?.parsedJd ?? null,
+    assistedSummaries: null,
+    verifiedClaims: null,
     focus: "",
   };
 }
@@ -128,7 +144,10 @@ export function Wizard({
   onCancel,
   container,
 }: WizardProps) {
-  const startStep = pendingRow ? 3 : 1;
+  // Fresh flow starts at Modo (1); deferred generation skips Modo/Empresa/
+  // Opcionales (their data lives on the row) and starts at Idioma y foco (4).
+  // The Modo step isn't shown in the deferred flow yet — it defaults to "base".
+  const startStep = pendingRow ? 4 : 1;
   const [step, setStep] = useState(startStep);
   const [data, setData] = useState<WizardData>(() => initialData(pendingRow));
   const [previewCode, setPreviewCode] = useState<string | null>(null);
@@ -140,11 +159,30 @@ export function Wizard({
 
   const set = (patch: Partial<WizardData>) => setData((current) => ({ ...current, ...patch }));
 
+  const totalSteps = totalStepsFor(data.mode);
+  const stepTitles =
+    data.mode === "verbatim"
+      ? STEP_TITLES_VERBATIM
+      : data.mode === "assisted"
+        ? STEP_TITLES_ASSISTED
+        : STEP_TITLES_BASE;
+  // Confirm step index depends on mode (5 for base/assisted, 6 for verbatim).
+  const confirmStep = totalSteps;
+
   // Empresa is the only blocking field — everything else can be completed
   // later from the detail panel (see docs/decisions.md → "Registro nunca
   // bloqueante").
   const companyValid = data.company.trim() !== "";
-  const canAdvance = step === 1 ? companyValid : true;
+  // Step 2 gates on company name. Step 5 extra-step gates on the respective
+  // mode's data being initialised (happens on StepVerify / StepAssisted mount).
+  const canAdvance =
+    step === 2
+      ? companyValid
+      : step === 5 && data.mode === "verbatim"
+        ? data.verifiedClaims !== null
+        : step === 5 && data.mode === "assisted"
+          ? data.assistedSummaries !== null
+          : true;
 
   /**
    * Email to persist: an invalid typed email is omitted (never stored broken)
@@ -159,7 +197,7 @@ export function Wizard({
   }
 
   function goNext() {
-    if (step < TOTAL_STEPS - 1) {
+    if (step < confirmStep - 1) {
       setStep(step + 1);
       return;
     }
@@ -173,7 +211,7 @@ export function Wizard({
     try {
       const code = activeRow?.code ?? generateCode({ spec, date: data.date, existingCodes });
       setPreviewCode(code);
-      setStep(TOTAL_STEPS);
+      setStep(confirmStep);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo generar el código.");
     }
@@ -198,6 +236,7 @@ export function Wizard({
           email: sanitizedEmail(),
           jobUrl: data.jobUrl,
           jobContext: data.jobContext,
+          parsedJd: data.parsedJd ?? undefined,
         },
         activeRow ?? undefined,
       );
@@ -242,7 +281,14 @@ export function Wizard({
           email: sanitizedEmail(),
           jobUrl: data.jobUrl,
           jobContext: data.jobContext,
+          parsedJd: data.parsedJd ?? undefined,
+          assistedSummaries:
+            data.assistedSummaries && Object.keys(data.assistedSummaries).length > 0
+              ? data.assistedSummaries
+              : undefined,
+          verifiedClaims: data.verifiedClaims ?? undefined,
           focus: data.focus === "" ? undefined : data.focus,
+          cvMode: data.mode,
           code: previewCode,
         },
         activeRow ?? undefined,
@@ -262,7 +308,7 @@ export function Wizard({
   // whole slot (own DrawerBody + pinned footer, same shape as every other
   // form takeover in the app) — the wizard's own body/nav step aside for it,
   // exactly like RowDetailDrawer does for its own takeovers.
-  if (step === TOTAL_STEPS && confirmMode.kind === "cover-letter-generate" && activeRow) {
+  if (step === confirmStep && confirmMode.kind === "cover-letter-generate" && activeRow) {
     return (
       <CoverLetterGenerateForm
         row={activeRow}
@@ -274,7 +320,7 @@ export function Wizard({
     );
   }
   if (
-    step === TOTAL_STEPS &&
+    step === confirmStep &&
     activeRow &&
     screening &&
     (confirmMode.kind === "screening-new" ||
@@ -313,18 +359,25 @@ export function Wizard({
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>
-              Paso {step} de {TOTAL_STEPS}
+              Paso {step} de {totalSteps}
             </span>
-            <span className="font-medium text-foreground">{STEP_TITLES[step - 1]}</span>
+            <span className="font-medium text-foreground">{stepTitles[step - 1]}</span>
           </div>
-          <Progress value={(step / TOTAL_STEPS) * 100} />
+          <Progress value={(step / totalSteps) * 100} />
         </div>
 
         <div className="min-h-[260px]">
-          {step === 1 && <StepCompany data={data} set={set} container={container} />}
-          {step === 2 && <StepOptional data={data} set={set} container={container} />}
-          {step === 3 && <StepLanguage data={data} set={set} container={container} spec={spec} />}
-          {step === 4 && previewCode && (
+          {step === 1 && <StepMode data={data} set={set} container={container} />}
+          {step === 2 && <StepCompany data={data} set={set} container={container} />}
+          {step === 3 && <StepOptional data={data} set={set} container={container} />}
+          {step === 4 && <StepLanguage data={data} set={set} container={container} spec={spec} />}
+          {step === 5 && data.mode === "assisted" && (
+            <StepAssisted data={data} set={set} container={container} />
+          )}
+          {step === 5 && data.mode === "verbatim" && (
+            <StepVerify data={data} set={set} container={container} />
+          )}
+          {step === confirmStep && previewCode && (
             <StepConfirm
               data={data}
               previewCode={previewCode}
@@ -371,7 +424,7 @@ export function Wizard({
           {/* Fork: register the process now, generate the CV later. Available
               from step 1 (Empresa is the only requirement) on every step
               before Confirmar — registering is never gated on the CV path. */}
-          {step < TOTAL_STEPS && onSavePending && (
+          {step < confirmStep && onSavePending && (
             <Button
               type="button"
               variant="outline"
@@ -387,7 +440,7 @@ export function Wizard({
               Registrar sin CV
             </Button>
           )}
-          {step < TOTAL_STEPS ? (
+          {step < confirmStep ? (
             <Button type="button" size="sm" onClick={goNext} disabled={!canAdvance || savingPending}>
               Siguiente
               <ChevronRight className="size-4" />
