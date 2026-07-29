@@ -16,11 +16,6 @@ interface ModeOption {
   soon?: boolean;
 }
 
-/**
- * The three CV-tailoring modes (see `docs/cv-tailoring-plan.md`). Only "base"
- * is selectable for now: modes 2 and 3 don't change the output yet, so offering
- * them would record a CV as tailored when it isn't.
- */
 const MODES: ModeOption[] = [
   {
     value: "base",
@@ -35,7 +30,6 @@ const MODES: ModeOption[] = [
     description:
       "La IA reescribe tu experiencia real en el lenguaje y la estructura de la búsqueda. Nunca inventa.",
     icon: Sparkles,
-    soon: true,
   },
   {
     value: "verbatim",
