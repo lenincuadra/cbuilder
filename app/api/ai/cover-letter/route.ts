@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { buildContextBlock, buildCoverLetterPrompt } from "@/core/ai/prompt";
 import { DEFAULT_AI_MODEL, isAiModel } from "@/core/ai/models";
+import type { ParsedJd } from "@/core/jdParse/types";
 import type { Language } from "@/core/types";
 import { readProfileBackground } from "@/lib/storage/profileContext";
 import { readSpecCache } from "@/lib/storage/specCache";
@@ -17,6 +18,7 @@ interface RequestBody {
   who?: unknown;
   focus?: unknown;
   jobContext?: unknown;
+  parsedJd?: unknown;
   languages?: unknown;
   model?: unknown;
 }
@@ -49,6 +51,7 @@ export async function POST(request: Request) {
   const who = typeof body.who === "string" ? body.who.trim() : undefined;
   const focus = typeof body.focus === "string" && body.focus !== "" ? body.focus : undefined;
   const jobContext = typeof body.jobContext === "string" ? body.jobContext : undefined;
+  const parsedJd = body.parsedJd && typeof body.parsedJd === "object" ? (body.parsedJd as ParsedJd) : undefined;
   const model = isAiModel(body.model) ? body.model : DEFAULT_AI_MODEL;
   const languages = sanitizeLanguages(body.languages);
   if (company === "" || role === "" || languages.length === 0) {
@@ -69,7 +72,7 @@ export async function POST(request: Request) {
     const entries = await Promise.all(
       languages.map(async (language) => {
         const context = buildContextBlock(background, spec, focus, language, jobContext);
-        const { system, user } = buildCoverLetterPrompt({ context, company, role, who, language });
+        const { system, user } = buildCoverLetterPrompt({ context, company, role, who, language, parsedJd });
         const message = await client.messages.create({
           model,
           max_tokens: MAX_TOKENS,

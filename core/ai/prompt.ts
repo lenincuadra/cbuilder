@@ -76,32 +76,57 @@ export interface CoverLetterPromptInput {
   role: string;
   who?: string;
   language: Language;
+  parsedJd?: ParsedJd;
 }
 
 /**
- * System + user prompt for a cover letter body. The letterhead (name, role,
- * contact, date) is generated programmatically elsewhere — this draft is the
- * full letter *body*: greeting through sign-off, markdown only (paragraphs,
- * line breaks, "- " lists, **bold**, *italic* — matches the letter renderer).
+ * System + user prompt for a cover letter body following the 5-paragraph
+ * formula (Hook → Technical Match → Experience Story → Why This Role → Close).
+ * The letterhead is generated programmatically elsewhere — this draft is the
+ * full letter body: greeting through sign-off, markdown only.
  */
 export function buildCoverLetterPrompt(input: CoverLetterPromptInput): {
   system: string;
   user: string;
 } {
-  const { context, company, role, who, language } = input;
+  const { context, company, role, who, language, parsedJd } = input;
   const languageName = language === "EN" ? "English" : "Spanish";
   const greeting = who?.trim()
     ? `Address it to ${who.trim()}.`
-    : "No named contact — use a generic professional greeting (no \"To Whom It May Concern\").";
+    : `No named contact — use a generic professional greeting (not "To Whom It May Concern").`;
+
+  let p2hint = "";
+  if (parsedJd) {
+    const kws = [
+      ...parsedJd.requiredKeywords,
+      ...parsedJd.tools,
+      ...parsedJd.preferredKeywords,
+    ].filter((k) => k.trim()).slice(0, 12);
+    if (kws.length > 0) {
+      p2hint =
+        ` For paragraph 2, prioritise these exact terms from the JD (use them verbatim where they apply): ` +
+        kws.join(", ") + `.`;
+    }
+  }
 
   return {
     system: `${VOICE_PREAMBLE}\n\n${context}`,
     user:
       `Write the body of a cover letter (greeting through sign-off, no letterhead) for an ` +
-      `application to ${company} for the role "${role}". ${greeting} Write it in ${languageName}. ` +
-      `3-4 short paragraphs: why this role/company, the strongest one or two relevant proof ` +
-      `points from the context above, a brief close. Markdown only: paragraphs, line breaks, ` +
-      `"- " lists, **bold**, *italic*.`,
+      `application to ${company} for the role "${role}". ${greeting} Write in ${languageName}. ` +
+      `Use EXACTLY 5 paragraphs in this order:\n` +
+      `1. Hook — genuine enthusiasm for THIS company specifically; mention their mission, ` +
+      `a product, or a challenge they face. Not generic.\n` +
+      `2. Technical Match — relevant technical skills using their exact terminology; keep it ` +
+      `natural but keyword-rich ("I'm proficient in X, have strong Y skills...").${p2hint}\n` +
+      `3. Experience Story — one specific, brief example of relevant work; include a number ` +
+      `or outcome where possible.\n` +
+      `4. Why This Role — what specifically excites Lenin about THIS role; reference the JD.\n` +
+      `5. Close — availability/location if relevant, interest in discussing further; 2–3 ` +
+      `sentences max.\n\n` +
+      `Tone: human, use contractions (I'm, I've, don't). Never open with "I am writing to ` +
+      `express my interest in". Don't repeat the CV — add context. Under 400 words. ` +
+      `Markdown only: paragraphs, line breaks, **bold**, *italic*.`,
   };
 }
 
