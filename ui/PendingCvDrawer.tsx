@@ -33,6 +33,12 @@ export interface PendingCvDrawerProps {
   /** Shared screening bank + row-ensuring callback for the confirm step's optional actions. */
   screening?: WizardProps["screening"];
   onEnsureRow?: WizardProps["onEnsureRow"];
+  /**
+   * "Generate another CV" for a row that already has one: seeds from the row
+   * but starts at Modo (pick a different mode) and appends a variant. Changes
+   * the header copy accordingly.
+   */
+  variantMode?: boolean;
 }
 
 /**
@@ -52,6 +58,7 @@ export function PendingCvDrawer({
   onUpdate,
   screening,
   onEnsureRow,
+  variantMode,
 }: PendingCvDrawerProps) {
   const isMobile = useIsMobile();
   // The drawer node — the wizard's dropdowns portal here (same as PanelCard).
@@ -67,7 +74,9 @@ export function PendingCvDrawer({
     >
       <DrawerContent ref={setNode}>
         <DrawerHeader className="relative pr-12">
-          <DrawerTitle>Generar CV · {row?.company}</DrawerTitle>
+          <DrawerTitle>
+            {variantMode ? "Generar otro CV" : "Generar CV"} · {row?.company}
+          </DrawerTitle>
           <DrawerDescription className="font-mono text-xs">{row?.code}</DrawerDescription>
           <Button
             variant="ghost"
@@ -88,6 +97,7 @@ export function PendingCvDrawer({
             templates={templates}
             generating={generating}
             pendingRow={row}
+            variantMode={variantMode}
             onUpdate={onUpdate}
             screening={screening}
             onEnsureRow={onEnsureRow}

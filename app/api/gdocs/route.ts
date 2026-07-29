@@ -49,7 +49,22 @@ export async function POST(request: Request) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token, appFolder, language, docxBase64, docName }),
     });
-    const data = (await response.json()) as { url?: string; folderUrl?: string; error?: string };
+    // Read as text first: a stale deployment URL or a re-auth prompt answers
+    // with an HTML page, not JSON — surfacing a snippet makes that diagnosable
+    // instead of a generic "unreachable".
+    const raw = await response.text();
+    let data: { url?: string; folderUrl?: string; error?: string } = {};
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      const snippet = raw.replace(/\s+/g, " ").trim().slice(0, 120);
+      return NextResponse.json(
+        {
+          error: `Apps Script devolvió una respuesta no-JSON (HTTP ${response.status}) — revisá que GDOCS_SCRIPT_URL sea el deployment actual. ${snippet}`,
+        },
+        { status: 502 },
+      );
+    }
     if (!response.ok || data.error || !data.url) {
       return NextResponse.json(
         { error: data.error ?? `Apps Script failed (HTTP ${response.status}).` },

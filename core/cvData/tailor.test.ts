@@ -40,12 +40,14 @@ describe("suggestCompetencies", () => {
 });
 
 describe("initialAtsSelections", () => {
-  it("pre-checks only the competencies Lenin already lists", () => {
+  it("pre-checks ALL competencies by default (select-all on)", () => {
     const sel = initialAtsSelections(JD, DATA);
     expect(sel.competencies).toContain("Design Systems");
     expect(sel.competencies).toContain("Figma");
-    expect(sel.competencies).not.toContain("Nonexistent Skill XYZ");
-    expect(sel.competencies).not.toContain("Jira");
+    expect(sel.competencies).toContain("Nonexistent Skill XYZ");
+    expect(sel.competencies).toContain("Jira");
+    // Every deduped candidate is selected initially.
+    expect(sel.competencies).toHaveLength(suggestCompetencies(JD, DATA).length);
   });
 
   it("seeds one empty value row per company value, title unverified", () => {
@@ -65,6 +67,7 @@ describe("buildAtsOverrides", () => {
       competencies: [],
       values: [{ value: "Bold", evidence: "" }],
       summary: "   ",
+      experienceVariant: "default",
     });
     expect(overrides).toEqual({});
   });
@@ -78,6 +81,7 @@ describe("buildAtsOverrides", () => {
         { value: "Human", evidence: "  " }, // dropped
       ],
       summary: "Tailored summary.",
+      experienceVariant: "default",
     });
     expect(overrides.title).toBe("Staff Product Designer, Design Systems");
     expect(overrides.summary).toBe("Tailored summary.");
@@ -85,13 +89,53 @@ describe("buildAtsOverrides", () => {
     expect(overrides.valuesAlignment).toEqual([
       { value: "Bold", evidence: "Led AI adoption across a team." },
     ]);
+    // "default" variant → no experience override.
+    expect(overrides.experienceChrono).toBeUndefined();
+    expect(overrides.experienceThematic).toBeUndefined();
   });
 
   it("omits title when JD has none even if verified", () => {
     const overrides = buildAtsOverrides(
       { ...JD, jobTitle: undefined },
-      { titleVerified: true, competencies: [], values: [] },
+      { titleVerified: true, competencies: [], values: [], experienceVariant: "default" },
     );
     expect(overrides.title).toBeUndefined();
+  });
+
+  it("uses thematic experience only when variant is thematic and content exists", () => {
+    const thematic = [{ header: "Research", bullets: [{ text: "Ran discovery.", company: "Avaya", dates: "2021" }] }];
+    const overrides = buildAtsOverrides(JD, {
+      titleVerified: false,
+      competencies: [],
+      values: [],
+      experienceVariant: "thematic",
+      experienceThematic: thematic,
+    });
+    expect(overrides.experienceThematic).toEqual(thematic);
+    expect(overrides.experienceChrono).toBeUndefined();
+  });
+
+  it("uses chronological experience only when variant is chronological", () => {
+    const chrono = [{ role: "Product Designer", company: "Flevo", dates: "2023", context: [], bullets: ["Redesigned KYC."] }];
+    const overrides = buildAtsOverrides(JD, {
+      titleVerified: false,
+      competencies: [],
+      values: [],
+      experienceVariant: "chronological",
+      experienceChrono: chrono,
+    });
+    expect(overrides.experienceChrono).toEqual(chrono);
+    expect(overrides.experienceThematic).toBeUndefined();
+  });
+
+  it("ignores restructured content when variant is default", () => {
+    const overrides = buildAtsOverrides(JD, {
+      titleVerified: false,
+      competencies: [],
+      values: [],
+      experienceVariant: "default",
+      experienceThematic: [{ header: "X", bullets: [{ text: "y", company: "z", dates: "2020" }] }],
+    });
+    expect(overrides.experienceThematic).toBeUndefined();
   });
 });

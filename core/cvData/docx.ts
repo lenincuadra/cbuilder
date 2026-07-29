@@ -1,6 +1,6 @@
 import JSZip from "jszip";
 import type { TrackedLinks } from "../spec/links";
-import type { CvData } from "./types";
+import type { CvData, ExperienceEntry } from "./types";
 
 /**
  * Builds a complete CV .docx from structured `CvData` — the "ATS máximo" mode.
@@ -82,6 +82,14 @@ function bullet(text: string): string {
   );
 }
 
+/** A JD-themed experience group (thematic structure): a JD header + real bullets under it. */
+export interface ThematicGroup {
+  /** A JD responsibility header, e.g. "Research & Discovery". */
+  header: string;
+  /** Real bullets that demonstrate this theme, each tagged with where/when. */
+  bullets: { text: string; company: string; dates: string }[];
+}
+
 export interface CvContentOverrides {
   /** JD job title (verified) — replaces the default headline. */
   title?: string;
@@ -91,6 +99,14 @@ export interface CvContentOverrides {
   coreCompetencies?: string[];
   /** Company values from the JD paired with real evidence — "Values Alignment" section. */
   valuesAlignment?: { value: string; evidence: string }[];
+  /**
+   * Experience structure override (ATS mode). At most one is used:
+   * - `experienceChrono`: keep jobs (company/dates), reworded/reordered bullets.
+   * - `experienceThematic`: regroup bullets under JD headers (guide-literal).
+   * Absent → the default chronological experience from `data`.
+   */
+  experienceChrono?: ExperienceEntry[];
+  experienceThematic?: ThematicGroup[];
 }
 
 function headerParagraphs(data: CvData, links: TrackedLinks, title: string): string {
@@ -117,8 +133,9 @@ function headerParagraphs(data: CvData, links: TrackedLinks, title: string): str
   );
 }
 
-function experienceSection(data: CvData): string {
-  const entries = data.experience
+/** Chronological experience: one block per job (role · company, dates, context, bullets). */
+function chronoExperience(entries: ExperienceEntry[]): string {
+  return entries
     .map((e) => {
       const roleLine = para(
         run(e.role, ROLE) + run("  ·  ", ROLE) + run(e.company, ROLE) + `<w:r><w:tab/></w:r>` + run(e.dates, MUTED),
@@ -129,7 +146,35 @@ function experienceSection(data: CvData): string {
       return roleLine + context + bullets;
     })
     .join("");
-  return sectionHeader(data.sectionTitles.experience) + entries;
+}
+
+/** A JD-themed sub-header inside the experience section (smaller than a section header). */
+function themeHeader(text: string): string {
+  return para(run(text, ROLE), { before: 120, after: 20 });
+}
+
+/** Thematic experience: JD headers as sub-sections, real bullets tagged with company · dates. */
+function thematicExperience(groups: ThematicGroup[]): string {
+  return groups
+    .map((g) => {
+      const bullets = g.bullets
+        .map((b) =>
+          bullet(`${b.text}`).replace(
+            "</w:p>",
+            run(`   — ${b.company} · ${b.dates}`, MUTED) + "</w:p>",
+          ),
+        )
+        .join("");
+      return themeHeader(g.header) + bullets;
+    })
+    .join("");
+}
+
+function experienceSection(data: CvData, overrides: CvContentOverrides): string {
+  const body = overrides.experienceThematic
+    ? thematicExperience(overrides.experienceThematic)
+    : chronoExperience(overrides.experienceChrono ?? data.experience);
+  return sectionHeader(data.sectionTitles.experience) + body;
 }
 
 function skillsSection(data: CvData): string {
@@ -222,7 +267,7 @@ export async function buildCvDocx(
     sectionHeader(data.sectionTitles.summary) +
     para(run(summary, BODY), { after: 40 }) +
     (overrides.coreCompetencies?.length ? coreCompetenciesSection(data, overrides.coreCompetencies) : "") +
-    experienceSection(data) +
+    experienceSection(data, overrides) +
     skillsSection(data) +
     (overrides.valuesAlignment?.length ? valuesAlignmentSection(data, overrides.valuesAlignment) : "") +
     certificationsSection(data) +

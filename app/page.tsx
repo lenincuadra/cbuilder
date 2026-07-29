@@ -54,6 +54,9 @@ export default function Home() {
   const [openRequest, setOpenRequest] = useState<{ code: string; nonce: number } | null>(null);
   // Pending row whose deferred-generation wizard is open ("Generar CV" in the detail).
   const [pendingTarget, setPendingTarget] = useState<RegistryRow | null>(null);
+  // Row for which we're generating an ADDITIONAL CV (another mode) — separate
+  // from pendingTarget (deferred first-CV generation).
+  const [variantTarget, setVariantTarget] = useState<RegistryRow | null>(null);
 
   const existingCodes = rows.map((row) => row.code);
 
@@ -206,15 +209,27 @@ export default function Home() {
    * in place (same code) instead of adding a new one, and the timeline gets an
    * automatic "CV generado" entry.
    */
-  async function handleGenerate(input: GenerateCvInput, pending?: RegistryRow) {
+  async function handleGenerate(
+    input: GenerateCvInput,
+    pending?: RegistryRow,
+    variantRow?: RegistryRow,
+  ) {
     if (!spec) {
       toast.error("No se pudo leer el link-spec del portfolio. Revisá la conexión.");
       return;
     }
     setGenerating(true);
     try {
-      const result = await generateCv(input, { spec, existingCodes, loadMaster });
-      if (pending) {
+      // An additional CV for an existing application: reuse its code and nest the
+      // delivery under the chosen mode's subfolder so variants don't collide.
+      const genInput: GenerateCvInput = variantRow
+        ? { ...input, code: variantRow.code, variantSubfolder: input.cvMode }
+        : input;
+      const result = await generateCv(genInput, { spec, existingCodes, loadMaster });
+      if (variantRow) {
+        // No status/identity change — the row already shipped a CV; delivery
+        // files (and Drive docs) are appended further down.
+      } else if (pending) {
         await update(pending.code, deferredGenerationFields(pending, result));
       } else {
         await add(result.row);
@@ -239,7 +254,11 @@ export default function Home() {
       }
       if (archiveState === "ok") {
         await update(result.code, {
-          deliveryFiles: deliveryFiles.map((file) => file.path),
+          // A variant appends to the application's existing delivery files.
+          deliveryFiles: [
+            ...(variantRow?.deliveryFiles ?? []),
+            ...deliveryFiles.map((file) => file.path),
+          ],
         }).catch(() => {
           // The files are archived; only the registry pointer failed — not fatal.
         });
@@ -253,16 +272,28 @@ export default function Home() {
       const driveDocs: NonNullable<RegistryRow["driveDocs"]> = {};
       const driveLetterDocs: NonNullable<RegistryRow["driveLetterDocs"]> = {};
       let driveFolder: string | undefined;
-      let gdocsFailed = false;
+      // Track WHY the Drive sink produced no docs: a real failure (throw, with
+      // its reason) vs "off" (501 → createGoogleDoc returns null). Surfacing the
+      // reason makes a misconfigured prod sink diagnosable instead of silent.
+      let gdocsError: string | undefined;
+      let gdocsCreated = false;
+      let gdocsOff = false;
       for (const entry of result.entries) {
         // App folder = the delivery folder without its language prefix, shared
-        // across languages ("EN_acme_0628a2" -> "acme_0628a2").
-        const appFolder = entry.folder.slice(entry.language.length + 1);
+        // across languages ("EN_acme_0628a2" -> "acme_0628a2"). A variant folder
+        // nests the mode ("acme_0628a2/ats"); Drive folder names can't contain
+        // "/", so keep the base folder and move the mode into the doc name.
+        const rawFolder = entry.folder.slice(entry.language.length + 1);
+        const [appFolder] = rawFolder.split("/");
+        const cvDocName = variantRow ? `${CV_DOC_NAME}_${input.cvMode}` : CV_DOC_NAME;
         try {
-          const doc = await createGoogleDoc(appFolder, entry.language, entry.docx, CV_DOC_NAME);
+          const doc = await createGoogleDoc(appFolder, entry.language, entry.docx, cvDocName);
           if (doc) {
             driveDocs[entry.language] = doc.docUrl;
             driveFolder = doc.folderUrl ?? driveFolder;
+            gdocsCreated = true;
+          } else {
+            gdocsOff = true; // 501 — integration not configured
           }
           if (entry.coverLetter) {
             const letterDoc = await createGoogleDoc(
@@ -273,12 +304,17 @@ export default function Home() {
             );
             if (letterDoc) driveLetterDocs[entry.language] = letterDoc.docUrl;
           }
-        } catch {
-          gdocsFailed = true;
+        } catch (error) {
+          gdocsError = error instanceof Error ? error.message : "Apps Script inalcanzable.";
         }
       }
       if (Object.keys(driveDocs).length > 0 || Object.keys(driveLetterDocs).length > 0) {
-        await update(result.code, { driveDocs, driveLetterDocs, driveFolder }).catch(() => {
+        await update(result.code, {
+          // Merge with the application's existing Drive links (variant keeps prior).
+          driveDocs: { ...(variantRow?.driveDocs ?? {}), ...driveDocs },
+          driveLetterDocs: { ...(variantRow?.driveLetterDocs ?? {}), ...driveLetterDocs },
+          driveFolder,
+        }).catch(() => {
           // The docs exist in Drive; only the registry link failed — not fatal.
         });
       }
@@ -313,8 +349,16 @@ export default function Home() {
       if (archiveState === "failed") {
         toast.warning(`No se pudo archivar la copia de ${result.code}.`);
       }
-      if (gdocsFailed) {
-        toast.warning(`No se pudo crear ${result.code} en Google Docs.`);
+      if (gdocsError) {
+        // Show the actual reason (HTTP status / Apps Script message) so a
+        // broken prod sink is diagnosable, not silently "no Drive link".
+        toast.warning(`Drive: ${gdocsError}`, { duration: 12000 });
+      } else if (gdocsOff && !gdocsCreated) {
+        // Every attempt returned 501: the integration isn't configured in this
+        // environment (missing GDOCS_SCRIPT_URL / GDOCS_TOKEN).
+        toast.info("Drive no configurado (faltan GDOCS_SCRIPT_URL / GDOCS_TOKEN).", {
+          duration: 8000,
+        });
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al generar el CV.");
@@ -360,6 +404,7 @@ export default function Home() {
             onUpdate={handleUpdate}
             onDelete={handleDelete}
             onGenerateCv={setPendingTarget}
+            onGenerateVariant={setVariantTarget}
             screening={screening}
             templates={coverLetters.templates}
             openRequest={openRequest}
@@ -414,6 +459,21 @@ export default function Home() {
         templates={coverLetters.templates}
         generating={generating}
         onGenerate={(input) => handleGenerate(input, pendingTarget ?? undefined)}
+        onUpdate={handleUpdate}
+        screening={screening}
+        onEnsureRow={ensureDraftRow}
+      />
+
+      {/* Additional CV (another mode) for an application that already shipped one. */}
+      <PendingCvDrawer
+        row={variantTarget}
+        variantMode
+        onClose={() => setVariantTarget(null)}
+        spec={spec}
+        existingCodes={existingCodes}
+        templates={coverLetters.templates}
+        generating={generating}
+        onGenerate={(input) => handleGenerate(input, undefined, variantTarget ?? undefined)}
         onUpdate={handleUpdate}
         screening={screening}
         onEnsureRow={ensureDraftRow}

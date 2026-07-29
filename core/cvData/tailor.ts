@@ -1,6 +1,9 @@
 import type { ParsedJd } from "../jdParse/types";
-import type { CvContentOverrides } from "./docx";
-import type { CvData } from "./types";
+import type { CvContentOverrides, ThematicGroup } from "./docx";
+import type { CvData, ExperienceEntry } from "./types";
+
+/** Which experience structure the ATS CV uses (chosen in the gate). */
+export type ExperienceVariant = "default" | "chronological" | "thematic";
 
 /** One candidate keyword for the Core Competencies gate. */
 export interface CompetencyCandidate {
@@ -64,17 +67,30 @@ export interface AtsSelections {
   values: ValueAlignment[];
   /** AI-tailored professional summary (edited). Empty → keep the master summary. */
   summary?: string;
+  /**
+   * Experience structure for this CV. "default" keeps the base chronological
+   * experience untouched; the other two use the AI-restructured, human-edited
+   * content below.
+   */
+  experienceVariant: ExperienceVariant;
+  /** Edited chronological experience (variant === "chronological"). */
+  experienceChrono?: ExperienceEntry[];
+  /** Edited thematic experience (variant === "thematic"). */
+  experienceThematic?: ThematicGroup[];
 }
 
-/** The initial (empty) gate state — competencies pre-selected to the ones Lenin already lists. */
+/**
+ * The initial gate state — all competencies checked by default (select-all on),
+ * so Lenin opts out of what he doesn't have rather than opting into each one.
+ * The title stays unverified (a conscious yes) and value evidence starts empty.
+ */
 export function initialAtsSelections(parsedJd: ParsedJd, data: CvData): AtsSelections {
   return {
     titleVerified: false,
-    competencies: suggestCompetencies(parsedJd, data)
-      .filter((c) => c.alreadyListed)
-      .map((c) => c.keyword),
+    competencies: suggestCompetencies(parsedJd, data).map((c) => c.keyword),
     values: parsedJd.companyValues.map((value) => ({ value, evidence: "" })),
     summary: "",
+    experienceVariant: "default",
   };
 }
 
@@ -103,6 +119,12 @@ export function buildAtsOverrides(
   const values = selections.values.filter((v) => v.evidence.trim() !== "");
   if (values.length > 0) {
     overrides.valuesAlignment = values.map((v) => ({ value: v.value, evidence: v.evidence.trim() }));
+  }
+
+  if (selections.experienceVariant === "thematic" && selections.experienceThematic?.length) {
+    overrides.experienceThematic = selections.experienceThematic;
+  } else if (selections.experienceVariant === "chronological" && selections.experienceChrono?.length) {
+    overrides.experienceChrono = selections.experienceChrono;
   }
 
   return overrides;

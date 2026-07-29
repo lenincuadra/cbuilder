@@ -31,10 +31,33 @@ function asStringArray(value: unknown): string[] {
   return value.filter((v): v is string => typeof v === "string");
 }
 
+/**
+ * Extract a JSON object from the model's raw text. Haiku often wraps the object
+ * in ```json fences or adds a sentence around it, which a naive JSON.parse
+ * rejects. Strip fences, then fall back to the first `{`…last `}` slice.
+ */
+function extractJsonObject(text: string): unknown {
+  const stripped = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+  try {
+    return JSON.parse(stripped);
+  } catch {
+    const start = stripped.indexOf("{");
+    const end = stripped.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+      return JSON.parse(stripped.slice(start, end + 1));
+    }
+    throw new Error("no JSON object found");
+  }
+}
+
 /** Parse the raw AI response text into a `ParsedJd`. Returns an empty structure on failure. */
 export function parseJdResponse(text: string): ParsedJd {
   try {
-    const json = JSON.parse(text.trim()) as Partial<ParsedJd>;
+    const json = extractJsonObject(text) as Partial<ParsedJd>;
     return {
       jobTitle: typeof json.jobTitle === "string" && json.jobTitle ? json.jobTitle : undefined,
       requiredKeywords: asStringArray(json.requiredKeywords),

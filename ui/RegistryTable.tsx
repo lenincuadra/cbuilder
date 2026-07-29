@@ -88,6 +88,8 @@ export interface RegistryTableProps {
   onDelete: (code: string) => void | Promise<void>;
   /** Open the deferred-generation wizard for a pending row ("Generar CV"). */
   onGenerateCv?: (row: RegistryRow) => void;
+  /** Open the wizard to generate an additional CV (another mode) for this application. */
+  onGenerateVariant?: (row: RegistryRow) => void;
   /** Shared screening-questions bank (drawer's Preguntas section). */
   screening: UseScreening;
   /** Cover letter templates, for the drawer's post-hoc "Generar cover letter" takeover. */
@@ -113,6 +115,7 @@ export function RegistryTable({
   onUpdate,
   onDelete,
   onGenerateCv,
+  onGenerateVariant,
   screening,
   templates,
   emptyMessage,
@@ -301,6 +304,14 @@ export function RegistryTable({
           setDetailOpen(false);
           onGenerateCv?.(row);
         }}
+        onGenerateVariant={
+          onGenerateVariant
+            ? (row) => {
+                setDetailOpen(false);
+                onGenerateVariant(row);
+              }
+            : undefined
+        }
         screening={screening}
         templates={templates}
         initialTab={detailTab}

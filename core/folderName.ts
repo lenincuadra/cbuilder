@@ -20,9 +20,16 @@ export interface FolderNameInput {
   language: Language;
   company: string;
   code: string;
+  /**
+   * Optional mode subfolder for an additional CV variant of the same
+   * application (e.g. "ats"), so multiple modes for one code don't collide:
+   * `EN_globallogic_0628r4/ats`. Absent for the first CV.
+   */
+  variant?: string;
 }
 
-/** Build the delivery folder name: `[LANG]_[company]_[code]`, e.g. "EN_globallogic_0628r4". */
-export function folderName({ language, company, code }: FolderNameInput): string {
-  return `${language}_${slugifyCompany(company)}_${code}`;
+/** Build the delivery folder name: `[LANG]_[company]_[code]` (+ `/[variant]` for extra CVs). */
+export function folderName({ language, company, code, variant }: FolderNameInput): string {
+  const base = `${language}_${slugifyCompany(company)}_${code}`;
+  return variant ? `${base}/${variant}` : base;
 }
