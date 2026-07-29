@@ -26,12 +26,23 @@ import { StepOptional } from "./StepOptional";
 import { StepVerify } from "./StepVerify";
 import { emailRequirementMet, type WizardData } from "./types";
 
+/** True when parsedJd has at least one extractable claim (title, keyword, or tool). */
+function hasJdContent(parsedJd: { jobTitle?: string; requiredKeywords: string[]; tools: string[]; preferredKeywords: string[] } | null): boolean {
+  if (!parsedJd) return false;
+  return (
+    !!parsedJd.jobTitle ||
+    parsedJd.requiredKeywords.length > 0 ||
+    parsedJd.tools.length > 0 ||
+    parsedJd.preferredKeywords.length > 0
+  );
+}
+
 /**
- * Total wizard steps per mode. Modes 2 and 3 add an extra step between
- * Idioma y foco and Confirmar (Asistido → Resumen IA; Verbatim → Verificar claims).
+ * Total wizard steps per mode. Modes 2 and 3 add an extra step only when the
+ * JD was successfully parsed into structured claims — no content, no extra step.
  */
-function totalStepsFor(mode: string): number {
-  return mode === "verbatim" || mode === "assisted" ? 6 : 5;
+function totalStepsFor(mode: string, hasJd: boolean): number {
+  return (mode === "verbatim" || mode === "assisted") && hasJd ? 6 : 5;
 }
 
 /**
@@ -159,11 +170,12 @@ export function Wizard({
 
   const set = (patch: Partial<WizardData>) => setData((current) => ({ ...current, ...patch }));
 
-  const totalSteps = totalStepsFor(data.mode);
+  const hasJd = hasJdContent(data.parsedJd);
+  const totalSteps = totalStepsFor(data.mode, hasJd);
   const stepTitles =
-    data.mode === "verbatim"
+    data.mode === "verbatim" && hasJd
       ? STEP_TITLES_VERBATIM
-      : data.mode === "assisted"
+      : data.mode === "assisted" && hasJd
         ? STEP_TITLES_ASSISTED
         : STEP_TITLES_BASE;
   // Confirm step index depends on mode (5 for base/assisted, 6 for verbatim).
@@ -178,9 +190,9 @@ export function Wizard({
   const canAdvance =
     step === 2
       ? companyValid
-      : step === 5 && data.mode === "verbatim"
+      : step === 5 && data.mode === "verbatim" && hasJd
         ? data.verifiedClaims !== null
-        : step === 5 && data.mode === "assisted"
+        : step === 5 && data.mode === "assisted" && hasJd
           ? data.assistedSummaries !== null
           : true;
 
@@ -375,10 +387,10 @@ export function Wizard({
           {step === 2 && <StepCompany data={data} set={set} container={container} />}
           {step === 3 && <StepOptional data={data} set={set} container={container} />}
           {step === 4 && <StepLanguage data={data} set={set} container={container} spec={spec} />}
-          {step === 5 && data.mode === "assisted" && (
+          {step === 5 && data.mode === "assisted" && hasJd && (
             <StepAssisted data={data} set={set} container={container} />
           )}
-          {step === 5 && data.mode === "verbatim" && (
+          {step === 5 && data.mode === "verbatim" && hasJd && (
             <StepVerify data={data} set={set} container={container} />
           )}
           {step === confirmStep && previewCode && (
