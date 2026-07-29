@@ -28,7 +28,8 @@
         "Identifiqué 4 casos de uso de alto valor para el sistema código-primero: (1) Demos de ventas con look & feel de producción, (2) Testing de usuarios de mayor fidelidad para detectar problemas reales de accesibilidad y comportamiento, (3) Presentaciones a stakeholders con fidelidad de app real, (4) Eliminación potencial del handoff de diseño tradicional.",
         "Desarrollé un plugin de Figma para exportación batch de imágenes en .webp, reduciendo el tiempo de exportación de ~1 hora por 12 imágenes a menos de un minuto.",
         "Aumento del 300% en suscripciones únicas de usuarios en una funcionalidad clave tras el rediseño de los flujos de Materials Adoption y Course Supplies.",
-        "Lidero el proceso de diseño de concepto a implementación: documentación de componentes en Figma, handoff a desarrolladores y alineación con stakeholders."
+        "Lidero el proceso de diseño de concepto a implementación: documentación de componentes en Figma, handoff a desarrolladores y alineación con stakeholders.",
+        "Colaboro con Product Managers para llevar funcionalidades de la ideación a la entrega; participo en entrevistas de usuario, toma de notas y definición de producto."
       ]
     },
     {
@@ -44,7 +45,8 @@
         "Rediseño de la WebApp SaaS (B2B) para gestión de datos de estudiantes por parte de instituciones.",
         "Integración de Amazon Rekognition con el equipo backend para automatizar extracción de datos de documentos y autofill, reduciendo el abandono del funnel.",
         "Construcción y mantenimiento de Design System en Figma (Atomic Design) alineado con la implementación de Tailwind CSS del frontend. Desarrollé el componente 'cell' como base del producto B2B.",
-        "Diseño de flujos de checkout para 3 tipos de usuarios. Creación de piezas de marketing y presentaciones para inversores junto al CPO y COO."
+        "Diseño de flujos de checkout para 3 tipos de usuarios: Vendedores, Estudiantes y botón de pago personalizado.",
+        "Creación de piezas de marketing de producto y materiales de presentación para inversores junto al CPO y COO."
       ]
     },
     {
@@ -57,7 +59,8 @@
       ],
       "bullets": [
         "Rediseño UI de producto financiero embebido; refactorización del sistema de colores hacia un Design System con accesibilidad WCAG.",
-        "Rebranding de wallet fintech; adaptación de componentes de mobile a pantallas de tamaño Kiosk."
+        "Rebranding de wallet fintech; adaptación de componentes de mobile a pantallas de tamaño Kiosk.",
+        "Creación de un componente dinámico de filtro de color en Figma aplicable a cualquier ilustración del sistema."
       ]
     },
     {
@@ -111,7 +114,7 @@
     },
     {
       "category": "Research & Estrategia",
-      "items": ["Entrevistas de usuario", "Usability Testing", "A/B Testing", "Card Sorting", "Empathy Mapping", "Diseño basado en datos"]
+      "items": ["Entrevistas de usuario", "Usability Testing", "A/B Testing", "Card Sorting", "Empathy Mapping", "Evaluación heurística", "Diseño basado en datos"]
     },
     {
       "category": "Técnico",
@@ -127,7 +130,7 @@
     },
     {
       "category": "Colaboración",
-      "items": ["Equipos cross-funcionales", "Gestión de stakeholders", "Facilitación de workshops", "Agile / Scrum"]
+      "items": ["Equipos cross-funcionales", "Gestión de stakeholders", "Facilitación de workshops", "Agile / Scrum", "Crítica de diseño"]
     },
     {
       "category": "Herramientas",
