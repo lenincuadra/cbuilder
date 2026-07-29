@@ -1,3 +1,4 @@
+import type { ExperienceEntry } from "@/core/cvData/types";
 import type { ParsedJd } from "@/core/jdParse/types";
 import type { LinkSpec } from "@/core/spec/types";
 import type { Language } from "@/core/types";
@@ -127,6 +128,83 @@ export function buildCoverLetterPrompt(input: CoverLetterPromptInput): {
       `Tone: human, use contractions (I'm, I've, don't). Never open with "I am writing to ` +
       `express my interest in". Don't repeat the CV — add context. Under 400 words. ` +
       `Markdown only: paragraphs, line breaks, **bold**, *italic*.`,
+  };
+}
+
+export type ExperienceVariant = "chronological" | "thematic";
+
+export interface AtsExperiencePromptInput {
+  experience: ExperienceEntry[];
+  parsedJd: ParsedJd;
+  variant: ExperienceVariant;
+  language: Language;
+}
+
+/** Serialize the real experience for the prompt (job header + bullets). */
+function serializeExperience(experience: ExperienceEntry[]): string {
+  return experience
+    .map((e) => {
+      const bullets = e.bullets.map((b) => `  - ${b}`).join("\n");
+      return `Job: ${e.role} · ${e.company} (${e.dates})\n${bullets}`;
+    })
+    .join("\n\n");
+}
+
+/**
+ * System + user prompt to restructure Lenin's REAL experience for a JD (ATS mode).
+ * Two variants:
+ * - "chronological": keep jobs (role/company/dates/context), reword bullets to
+ *   weave in the JD's verbatim terms WHERE TRUTHFUL, reorder most-relevant first.
+ * - "thematic": regroup the real bullets under 3–4 JD-aligned theme headers,
+ *   tagging each with its company + year.
+ *
+ * Grounding is strict: only reword/regroup existing bullets, never invent facts,
+ * metrics, tools, or skills. Every line is human-verified in the gate afterward.
+ */
+export function buildAtsExperiencePrompt(input: AtsExperiencePromptInput): {
+  system: string;
+  user: string;
+} {
+  const { experience, parsedJd, variant, language } = input;
+  const langName = language === "EN" ? "English" : "Spanish";
+  const keywords = [...parsedJd.requiredKeywords, ...parsedJd.tools, ...parsedJd.preferredKeywords]
+    .filter((k) => k.trim())
+    .join(", ");
+
+  const system =
+    "You restructure Lenin Cuadra's REAL CV experience for a specific job. " +
+    "STRICT RULE: use ONLY the facts in the bullets given — never invent employers, " +
+    "roles, dates, metrics, tools, or skills. You MAY reword a bullet to incorporate the " +
+    "job's exact terminology, but ONLY where that term genuinely applies to what the bullet " +
+    "already says. If a JD term doesn't truthfully fit any bullet, leave it out. Keep every " +
+    "metric and proper noun intact. Output valid JSON only — no markdown, no commentary.";
+
+  const jobsBlock = serializeExperience(experience);
+
+  if (variant === "thematic") {
+    return {
+      system,
+      user:
+        `Lenin's real experience:\n\n${jobsBlock}\n\n` +
+        `The job's key terms: ${keywords}.\n\n` +
+        `Regroup his real bullets under 3–4 theme headers aligned to this job's main ` +
+        `responsibility areas (derive the headers from the job, e.g. "Research & Usability ` +
+        `Testing", "Design Systems"). Each bullet keeps its source company and year. Reword ` +
+        `bullets to include the job's terms where truthful. Write headers and bullets in ` +
+        `${langName}. Return ONLY a JSON array: ` +
+        `[{"header":"...","bullets":[{"text":"...","company":"...","dates":"..."}]}].`,
+    };
+  }
+
+  return {
+    system,
+    user:
+      `Lenin's real experience:\n\n${jobsBlock}\n\n` +
+      `The job's key terms: ${keywords}.\n\n` +
+      `Keep every job (role, company, dates). For each job, reword its bullets to naturally ` +
+      `include the job's terms where truthful, and reorder them so the most relevant to this ` +
+      `job come first. Do not drop jobs or invent bullets. Write in ${langName}. Return ONLY a ` +
+      `JSON array: [{"role":"...","company":"...","dates":"...","context":["..."],"bullets":["..."]}].`,
   };
 }
 

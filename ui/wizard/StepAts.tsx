@@ -7,9 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { cvDataFor } from "@/core/cvData";
 import { initialAtsSelections, suggestCompetencies } from "@/core/cvData/tailor";
-import type { AtsSelections } from "@/core/cvData/tailor";
+import type { AtsSelections, ExperienceVariant } from "@/core/cvData/tailor";
+import type { ThematicGroup } from "@/core/cvData/docx";
+import type { ExperienceEntry } from "@/core/cvData/types";
 import { scoreFromText } from "@/core/jdParse/score";
 import { languagesFor, type Language } from "@/core/types";
 import type { StepProps } from "./StepCompany";
@@ -42,6 +45,7 @@ export function StepAts({ data, set }: StepProps) {
 
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [valuesLoading, setValuesLoading] = useState(false);
+  const [expLoading, setExpLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Initialise the gate on mount (pre-checks competencies Lenin already lists).
@@ -133,8 +137,64 @@ export function StepAts({ data, set }: StepProps) {
     }
   }
 
+  function setExperienceVariant(variant: ExperienceVariant) {
+    patch({ experienceVariant: variant });
+  }
+
+  async function generateExperience() {
+    const variant = sel!.experienceVariant;
+    if (variant === "default") return;
+    setExpLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/ai/ats-experience", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variant, parsedJd, language: lang }),
+      });
+      const payload = (await res.json()) as {
+        chrono?: ExperienceEntry[];
+        thematic?: ThematicGroup[];
+        error?: string;
+      };
+      if (!res.ok) throw new Error(payload.error ?? `Error ${res.status}`);
+      if (variant === "thematic") patch({ experienceThematic: payload.thematic ?? [] });
+      else patch({ experienceChrono: payload.chrono ?? [] });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error reestructurando la experiencia.");
+    } finally {
+      setExpLoading(false);
+    }
+  }
+
+  function setChronoBullets(index: number, text: string) {
+    const chrono = (sel!.experienceChrono ?? []).map((e, i) =>
+      i === index ? { ...e, bullets: text.split("\n").map((b) => b.trim()).filter(Boolean) } : e,
+    );
+    patch({ experienceChrono: chrono });
+  }
+
+  function setThematicHeader(index: number, header: string) {
+    const groups = (sel!.experienceThematic ?? []).map((g, i) => (i === index ? { ...g, header } : g));
+    patch({ experienceThematic: groups });
+  }
+
+  function setThematicBulletText(gi: number, bi: number, textValue: string) {
+    const groups = (sel!.experienceThematic ?? []).map((g, i) =>
+      i === gi
+        ? { ...g, bullets: g.bullets.map((b, j) => (j === bi ? { ...b, text: textValue } : b)) }
+        : g,
+    );
+    patch({ experienceThematic: groups });
+  }
+
   const score = sel.summary ? scoreFromText(parsedJd, sel.summary) : null;
   const multiLang = languagesFor(data.language).length > 1;
+  const expVariants: { value: ExperienceVariant; label: string }[] = [
+    { value: "default", label: "Por defecto" },
+    { value: "chronological", label: "Cronológica" },
+    { value: "thematic", label: "Temática" },
+  ];
 
   return (
     <div className="space-y-5">
@@ -209,6 +269,98 @@ export function StepAts({ data, set }: StepProps) {
           </div>
         </div>
       )}
+
+      {/* Experience structure */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Estructura de experiencia
+        </p>
+        <div className="flex gap-1.5">
+          {expVariants.map((v) => (
+            <button
+              key={v.value}
+              type="button"
+              onClick={() => setExperienceVariant(v.value)}
+              className={cn(
+                "rounded-md border px-2.5 py-1 text-xs transition-colors",
+                sel.experienceVariant === v.value
+                  ? "border-ring bg-accent/40 font-medium"
+                  : "border-border hover:bg-accent/20",
+              )}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+        {sel.experienceVariant === "default" ? (
+          <p className="text-xs text-muted-foreground">
+            Usa tu experiencia tal cual (por empresa y fecha), sin reestructurar.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                {sel.experienceVariant === "chronological"
+                  ? "Mantiene tus trabajos; reescribe bullets con términos de la JD. Revisá cada línea."
+                  : "Reagrupa tus bullets bajo headers de la JD. Revisá cada línea."}
+              </p>
+              <button
+                type="button"
+                onClick={generateExperience}
+                disabled={expLoading}
+                className="flex shrink-0 items-center gap-1 text-xs text-foreground hover:underline disabled:opacity-50"
+              >
+                {expLoading ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                {(sel.experienceVariant === "chronological" ? sel.experienceChrono : sel.experienceThematic)
+                  ?.length
+                  ? "Regenerar"
+                  : "Generar con IA"}
+              </button>
+            </div>
+
+            {/* Chronological editor */}
+            {sel.experienceVariant === "chronological" &&
+              sel.experienceChrono?.map((e, i) => (
+                <div key={`${e.company}-${i}`} className="space-y-1">
+                  <p className="text-xs font-medium text-foreground">
+                    {e.role} · {e.company} <span className="text-muted-foreground">· {e.dates}</span>
+                  </p>
+                  <Textarea
+                    value={e.bullets.join("\n")}
+                    onChange={(ev) => setChronoBullets(i, ev.target.value)}
+                    rows={Math.max(2, e.bullets.length)}
+                    className="resize-none text-xs"
+                  />
+                </div>
+              ))}
+
+            {/* Thematic editor */}
+            {sel.experienceVariant === "thematic" &&
+              sel.experienceThematic?.map((g, gi) => (
+                <div key={`${g.header}-${gi}`} className="space-y-1.5 rounded-md border p-2">
+                  <input
+                    value={g.header}
+                    onChange={(ev) => setThematicHeader(gi, ev.target.value)}
+                    className="w-full bg-transparent text-xs font-medium text-foreground outline-none"
+                  />
+                  {g.bullets.map((b, bi) => (
+                    <div key={bi} className="space-y-0.5">
+                      <Textarea
+                        value={b.text}
+                        onChange={(ev) => setThematicBulletText(gi, bi, ev.target.value)}
+                        rows={2}
+                        className="resize-none text-xs"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        — {b.company} · {b.dates}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
 
       {/* Values Alignment */}
       {parsedJd.companyValues.length > 0 && (
