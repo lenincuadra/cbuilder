@@ -14,7 +14,7 @@ import {
 import { funnelRanksFor } from "@/core/funnel";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { CV_FILENAME } from "@/core/zip";
-import { archiveDeliveryFiles, revealDelivery, type DeliveryFile } from "@/lib/archive";
+import { archiveDeliveryFiles, type DeliveryFile } from "@/lib/archive";
 import { downloadBytes } from "@/lib/download";
 import { COVER_LETTER_DOC_NAME, CV_DOC_NAME, createGoogleDoc } from "@/lib/gdocs";
 import { loadMaster } from "@/lib/masters";
@@ -320,31 +320,14 @@ export default function Home() {
       }
 
       // Single success alert. Secondary button opens the Drive folder when the
-      // sink ran, otherwise reveals the archived CV in Finder — only when the
-      // archive actually ran locally; on a deploy there's no Finder.
-      const finderButton =
-        archiveState === "ok"
-          ? {
-              label: "Finder",
-              onClick: () => {
-                revealDelivery(deliveryFiles[0].path)
-                  .then((unavailable) => {
-                    if (unavailable) toast.info(unavailable);
-                  })
-                  .catch((error: unknown) =>
-                    toast.error(
-                      error instanceof Error ? error.message : "No se pudo abrir el Finder.",
-                    ),
-                  );
-              },
-            }
-          : undefined;
+      // sink ran (no Finder shortcut — it doesn't work on a deploy, and locally
+      // the file is easy to find; the row's Entrega has the archived copy).
       toast.success(`CV generado · código ${result.code}`, {
         duration: 10000,
         action: { label: "Detalles", onClick: () => openGeneratedRow(result.code) },
         cancel: driveFolder
           ? { label: "Drive", onClick: () => window.open(driveFolder, "_blank") }
-          : finderButton,
+          : undefined,
       });
       if (archiveState === "failed") {
         toast.warning(`No se pudo archivar la copia de ${result.code}.`);
