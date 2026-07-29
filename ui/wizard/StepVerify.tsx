@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { emptyVerifiedClaims } from "@/core/jdParse/slots";
+import { scoreFromClaims } from "@/core/jdParse/score";
 import type { VerifiedClaims } from "@/core/jdParse/types";
 import type { StepProps } from "./StepCompany";
 
@@ -110,6 +111,9 @@ export function StepVerify({ data, set }: StepProps) {
   }
 
   const c = claims ?? emptyVerifiedClaims();
+  const score = scoreFromClaims(parsedJd, c);
+  const scoreColor =
+    score.pct >= 70 ? "text-emerald-600" : score.pct >= 40 ? "text-amber-600" : "text-destructive";
 
   return (
     <div className="space-y-5">
@@ -192,6 +196,22 @@ export function StepVerify({ data, set }: StepProps) {
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {score.covered.length + score.missing.length > 0 && (
+        <div className="rounded-lg border bg-muted/40 p-3 space-y-1.5">
+          <p className="text-xs font-medium text-muted-foreground">
+            Cobertura de keywords clave:{" "}
+            <span className={scoreColor}>
+              {score.covered.length} de {score.covered.length + score.missing.length} ({score.pct}%)
+            </span>
+          </p>
+          {score.missing.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Sin marcar: {score.missing.join(", ")}
+            </p>
+          )}
         </div>
       )}
     </div>

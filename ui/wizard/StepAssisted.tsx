@@ -6,6 +6,7 @@ import { RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { lintContent, scoreFromText } from "@/core/jdParse/score";
 import { languagesFor } from "@/core/types";
 import type { Language } from "@/core/types";
 import type { StepProps } from "./StepCompany";
@@ -112,23 +113,49 @@ export function StepAssisted({ data, set }: StepProps) {
 
       {hasAny && (
         <div className="space-y-4">
-          {languages.map((lang) =>
-            summaries[lang] !== undefined ? (
-              <div key={lang} className="space-y-1.5">
+          {languages.map((lang) => {
+            const text = summaries[lang];
+            if (text === undefined) return null;
+            const score = data.parsedJd ? scoreFromText(data.parsedJd, text) : null;
+            const lintWarnings = lintContent({ summary: text });
+            const scoreColor =
+              !score || score.pct >= 70
+                ? "text-emerald-600"
+                : score.pct >= 40
+                  ? "text-amber-600"
+                  : "text-destructive";
+            return (
+              <div key={lang} className="space-y-2">
                 {languages.length > 1 && (
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     {langLabel[lang]}
                   </p>
                 )}
                 <Textarea
-                  value={summaries[lang]}
+                  value={text}
                   onChange={(e) => setSummary(lang, e.target.value)}
                   rows={5}
                   className="resize-none text-sm"
                 />
+                {score && score.covered.length + score.missing.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Keywords clave:{" "}
+                    <span className={scoreColor}>
+                      {score.covered.length}/{score.covered.length + score.missing.length} ({score.pct}%)
+                    </span>
+                    {score.missing.length > 0 && (
+                      <> · ausentes: {score.missing.join(", ")}</>
+                    )}
+                  </p>
+                )}
+                {lintWarnings.map((w) => (
+                  <p key={w.message} className="text-xs text-amber-600">
+                    ⚠ {w.message}
+                  </p>
+                ))}
               </div>
-            ) : null,
-          )}
+            );
+          })}
         </div>
       )}
     </div>
