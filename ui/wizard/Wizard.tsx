@@ -358,12 +358,16 @@ export function Wizard({
       <DrawerBody className="gap-4">
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              Paso {step} de {totalSteps}
-            </span>
+            {step === 1 ? (
+              <span>Modo de generación</span>
+            ) : (
+              <span>
+                Paso {step - 1} de {totalSteps - 1}
+              </span>
+            )}
             <span className="font-medium text-foreground">{stepTitles[step - 1]}</span>
           </div>
-          <Progress value={(step / totalSteps) * 100} />
+          <Progress value={step === 1 ? 0 : ((step - 1) / (totalSteps - 1)) * 100} />
         </div>
 
         <div className="min-h-[260px]">
