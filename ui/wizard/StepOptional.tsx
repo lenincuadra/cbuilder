@@ -41,7 +41,14 @@ export function StepOptional({ data, set, container }: StepProps) {
       });
       const payload = (await res.json()) as { context?: string | null; parsed?: ParsedJd | null };
       if (payload.context) {
-        set({ jobContext: payload.context, parsedJd: payload.parsed ?? null });
+        const p = payload.parsed;
+        const hasContent =
+          p &&
+          (p.jobTitle ||
+            p.requiredKeywords.length > 0 ||
+            p.tools.length > 0 ||
+            p.preferredKeywords.length > 0);
+        set({ jobContext: payload.context, parsedJd: hasContent ? p : null });
       } else {
         toast.info("No encontramos el detalle del puesto en esa página — completalo a mano.");
       }
@@ -62,9 +69,22 @@ export function StepOptional({ data, set, container }: StepProps) {
         body: JSON.stringify({ text: data.jobContext.trim() }),
       });
       const payload = (await res.json()) as { parsed?: ParsedJd | null };
-      set({ parsedJd: payload.parsed ?? null });
-      if (!payload.parsed) {
-        toast.info("IA no configurada — la descripción queda guardada para revisión manual.");
+      const parsed = payload.parsed;
+      const hasContent =
+        parsed &&
+        (parsed.jobTitle ||
+          parsed.requiredKeywords.length > 0 ||
+          parsed.tools.length > 0 ||
+          parsed.preferredKeywords.length > 0);
+      if (!hasContent) {
+        set({ parsedJd: null });
+        toast.info(
+          parsed
+            ? "La IA no detectó keywords en esta descripción — revisá que el texto sea la JD completa."
+            : "IA no configurada — la descripción queda guardada para revisión manual.",
+        );
+      } else {
+        set({ parsedJd: parsed });
       }
     } catch {
       toast.info("No se pudo analizar el puesto — la descripción queda guardada.");
@@ -179,11 +199,12 @@ export function StepOptional({ data, set, container }: StepProps) {
             <span className="text-foreground font-medium">
               {[
                 data.parsedJd.requiredKeywords.length > 0 &&
-                  `${data.parsedJd.requiredKeywords.length} keywords requeridas`,
+                  `${data.parsedJd.requiredKeywords.length} keywords`,
                 data.parsedJd.tools.length > 0 && `${data.parsedJd.tools.length} tools`,
+                data.parsedJd.jobTitle && `título "${data.parsedJd.jobTitle}"`,
               ]
                 .filter(Boolean)
-                .join(", ") || "sin keywords detectadas"}
+                .join(", ")}
             </span>
           </p>
         )}

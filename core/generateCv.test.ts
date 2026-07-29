@@ -180,6 +180,41 @@ describe("generateCv", () => {
     const zip = await JSZip.loadAsync(result.zip);
     expect(zip.file("EN_acme_0628a2/Lenin_Cuadra_Cover_Letter.docx")).toBeNull();
   });
+
+  it("ATS mode builds a fresh CV from data (not the master) and records the overrides", async () => {
+    // loadMaster must NOT be called in ATS mode — throw if it is.
+    const result = await generateCv(
+      {
+        company: "Acme",
+        languageChoice: "EN",
+        date: new Date(2026, 5, 28),
+        cvMode: "ats",
+        atsOverrides: {
+          title: "Staff Product Designer, Design Systems",
+          coreCompetencies: ["Design Systems", "Figma"],
+        },
+      },
+      deps({
+        rng: fixedRng,
+        now: fixedNow,
+        loadMaster: async () => {
+          throw new Error("loadMaster should not be called in ATS mode");
+        },
+      }),
+    );
+
+    expect(result.row.cvMode).toBe("ats");
+    expect(result.row.atsOverrides?.title).toBe("Staff Product Designer, Design Systems");
+
+    const zip = await JSZip.loadAsync(result.zip);
+    const docx = zip.file("EN_acme_0628a2/Lenin_Cuadra_CV.docx");
+    expect(docx).not.toBeNull();
+    const inner = await JSZip.loadAsync(await docx!.async("uint8array"));
+    const xml = await inner.file("word/document.xml")!.async("string");
+    // The injected title and a core competency made it into the built CV.
+    expect(xml).toContain("Staff Product Designer, Design Systems");
+    expect(xml).toContain("CORE COMPETENCIES");
+  });
 });
 
 describe("buildPendingRow", () => {

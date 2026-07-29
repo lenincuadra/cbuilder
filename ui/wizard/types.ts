@@ -1,4 +1,5 @@
 import type { CvMode } from "@/core/registry/types";
+import type { AtsSelections } from "@/core/cvData/tailor";
 import type { ParsedJd, VerifiedClaims } from "@/core/jdParse/types";
 import type { Channel } from "@/core/registry/types";
 import { languagesFor, type Language, type LanguageChoice } from "@/core/types";
@@ -47,6 +48,12 @@ export interface WizardData {
    * gate step is visited; each toggle updates this live. Persisted on the row.
    */
   verifiedClaims: VerifiedClaims | null;
+  /**
+   * ATS-mode gate selections (StepAts): verified title, checked Core
+   * Competencies, Values Alignment evidence, and the tailored summary. Null
+   * until the gate step is visited; becomes the CV overrides at generation.
+   */
+  atsSelections: AtsSelections | null;
   /** Portfolio focus profile id (from the spec) for the tracked links. "" = sin foco. */
   focus: string;
 }

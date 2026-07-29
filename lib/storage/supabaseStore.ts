@@ -10,6 +10,7 @@ import type {
   StatusUpdate,
 } from "../../core/registry/types";
 import type { CoverLetterBodies, CoverLetterRecord } from "../../core/coverLetter/types";
+import type { CvContentOverrides } from "../../core/cvData/docx";
 import type { ParsedJd, VerifiedClaims } from "../../core/jdParse/types";
 import type { TrackedLinks } from "../../core/spec/links";
 import type { Language, LanguageChoice } from "../../core/types";
@@ -47,6 +48,7 @@ interface RegistryRowDb {
   cv_mode: string | null;
   parsed_jd: ParsedJd | null;
   verified_claims: VerifiedClaims | null;
+  ats_overrides: CvContentOverrides | null;
 }
 
 export function dbToRow(db: RegistryRowDb): RegistryRow {
@@ -82,6 +84,7 @@ export function dbToRow(db: RegistryRowDb): RegistryRow {
     cvMode: (db.cv_mode ?? undefined) as CvMode | undefined,
     parsedJd: db.parsed_jd ?? undefined,
     verifiedClaims: db.verified_claims ?? undefined,
+    atsOverrides: db.ats_overrides ?? undefined,
   };
 }
 
@@ -119,6 +122,7 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
     cv_mode: row.cvMode ?? null,
     parsed_jd: row.parsedJd ?? null,
     verified_claims: row.verifiedClaims ?? null,
+    ats_overrides: row.atsOverrides ?? null,
   };
 }
 
@@ -151,6 +155,7 @@ export function editableToDb(fields: EditableFields): Partial<RegistryRowDb> {
   if ("cvMode" in fields) out.cv_mode = fields.cvMode ?? null;
   if ("parsedJd" in fields) out.parsed_jd = fields.parsedJd ?? null;
   if ("verifiedClaims" in fields) out.verified_claims = fields.verifiedClaims ?? null;
+  if ("atsOverrides" in fields) out.ats_overrides = fields.atsOverrides ?? null;
   return out;
 }
 

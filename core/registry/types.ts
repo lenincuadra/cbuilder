@@ -1,4 +1,5 @@
 import type { CoverLetterBodies, CoverLetterRecord } from "../coverLetter/types";
+import type { CvContentOverrides } from "../cvData/docx";
 import type { ParsedJd, VerifiedClaims } from "../jdParse/types";
 import type { TrackedLinks } from "../spec/links";
 import type { Language, LanguageChoice } from "../types";
@@ -34,10 +35,13 @@ export type ApplicationStatus = "Borrador" | "Activo" | "Rechazado" | "Aceptado"
  * - "base": the fixed master + tracked links (the app's original behavior).
  * - "assisted": AI rewrites Lenin's real experience into the JD's language.
  * - "verbatim": the JD's exact phrases injected, gated by human verification.
+ * - "ats": a fresh CV built from scratch per JD (from structured cvData, not
+ *   the master) — full guide strategy: JD title, verbatim Core Competencies,
+ *   Values Alignment. JD paste is mandatory; gated by human verification.
  * Absent on a row = "base" (legacy rows, and the deferred-generation flow which
  * does not offer the selector yet).
  */
-export type CvMode = "base" | "assisted" | "verbatim";
+export type CvMode = "base" | "assisted" | "verbatim" | "ats";
 
 export const DEFAULT_ROLE = "UX/UI Designer";
 export const DEFAULT_STATUS: ApplicationStatus = "Activo";
@@ -133,6 +137,11 @@ export interface RegistryRow {
    * record of what Lenin confirmed — absent on modes 1/2 and legacy rows.
    */
   verifiedClaims?: VerifiedClaims;
+  /**
+   * The JD-tailored content injected into the ATS-mode CV (title, Core
+   * Competencies, Values Alignment, summary). Faithful record — ATS mode only.
+   */
+  atsOverrides?: CvContentOverrides;
   /** The three tracked links (short form) baked into this CV — faithful record. */
   links?: TrackedLinks;
   /**
