@@ -40,12 +40,14 @@ describe("suggestCompetencies", () => {
 });
 
 describe("initialAtsSelections", () => {
-  it("pre-checks only the competencies Lenin already lists", () => {
+  it("pre-checks ALL competencies by default (select-all on)", () => {
     const sel = initialAtsSelections(JD, DATA);
     expect(sel.competencies).toContain("Design Systems");
     expect(sel.competencies).toContain("Figma");
-    expect(sel.competencies).not.toContain("Nonexistent Skill XYZ");
-    expect(sel.competencies).not.toContain("Jira");
+    expect(sel.competencies).toContain("Nonexistent Skill XYZ");
+    expect(sel.competencies).toContain("Jira");
+    // Every deduped candidate is selected initially.
+    expect(sel.competencies).toHaveLength(suggestCompetencies(JD, DATA).length);
   });
 
   it("seeds one empty value row per company value, title unverified", () => {

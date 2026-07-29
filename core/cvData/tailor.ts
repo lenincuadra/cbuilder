@@ -79,13 +79,15 @@ export interface AtsSelections {
   experienceThematic?: ThematicGroup[];
 }
 
-/** The initial (empty) gate state — competencies pre-selected to the ones Lenin already lists. */
+/**
+ * The initial gate state — all competencies checked by default (select-all on),
+ * so Lenin opts out of what he doesn't have rather than opting into each one.
+ * The title stays unverified (a conscious yes) and value evidence starts empty.
+ */
 export function initialAtsSelections(parsedJd: ParsedJd, data: CvData): AtsSelections {
   return {
     titleVerified: false,
-    competencies: suggestCompetencies(parsedJd, data)
-      .filter((c) => c.alreadyListed)
-      .map((c) => c.keyword),
+    competencies: suggestCompetencies(parsedJd, data).map((c) => c.keyword),
     values: parsedJd.companyValues.map((value) => ({ value, evidence: "" })),
     summary: "",
     experienceVariant: "default",

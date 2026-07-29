@@ -235,12 +235,28 @@ export function StepAts({ data, set }: StepProps) {
       {/* Core Competencies */}
       {candidates.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Core Competencies{" "}
-            <span className="font-normal normal-case">({sel.competencies.length} marcadas)</span>
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Core Competencies{" "}
+              <span className="font-normal normal-case">({sel.competencies.length} marcadas)</span>
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                patch({
+                  competencies:
+                    sel.competencies.length === candidates.length
+                      ? []
+                      : candidates.map((c) => c.keyword),
+                })
+              }
+              className="text-xs text-foreground hover:underline"
+            >
+              {sel.competencies.length === candidates.length ? "Deseleccionar todo" : "Seleccionar todo"}
+            </button>
+          </div>
           <p className="text-xs text-muted-foreground">
-            Keywords verbatim de la búsqueda. Pre-marcamos las que ya están en tus skills.
+            Keywords verbatim de la búsqueda. Vienen todas marcadas — destildá lo que no tengas.
           </p>
           <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
             {candidates.map((c) => (
