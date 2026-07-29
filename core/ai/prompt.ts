@@ -130,6 +130,37 @@ export function buildCoverLetterPrompt(input: CoverLetterPromptInput): {
   };
 }
 
+export interface ValuesAlignmentPromptInput {
+  context: string;
+  values: string[];
+  language: Language;
+}
+
+/**
+ * System + user prompt for the ATS "Values Alignment" section: for each company
+ * value from the JD, draft a short evidence line pairing it with something real
+ * Lenin did (grounded in the context — never invents). Output is a JSON array
+ * of { value, evidence } so evidence maps back to each value; Lenin edits/approves
+ * every line in the gate before anything is injected.
+ */
+export function buildValuesAlignmentPrompt(input: ValuesAlignmentPromptInput): {
+  system: string;
+  user: string;
+} {
+  const { context, values, language } = input;
+  const langName = language === "EN" ? "English" : "Spanish";
+  return {
+    system: `${VOICE_PREAMBLE}\n\n${context}`,
+    user:
+      `A company lists these values: ${values.map((v) => `"${v}"`).join(", ")}. ` +
+      `For each value, write ONE short sentence (≤ 20 words, ${langName}) pairing it with a ` +
+      `real, specific thing from Lenin's background above — a project, outcome, or way of ` +
+      `working. Never invent; if nothing in the context genuinely fits a value, return an ` +
+      `empty string for its evidence (Lenin will fill it). Return ONLY a JSON array like ` +
+      `[{"value":"<the value>","evidence":"<sentence>"}], no markdown, no commentary.`,
+  };
+}
+
 export interface ScreeningAnswerPromptInput {
   context: string;
   question: string;

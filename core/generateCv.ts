@@ -10,6 +10,8 @@ import { languagesFor, type Language, type LanguageChoice } from "./types";
 import { packageCvs, type CvEntry } from "./zip";
 import { buildAssistedSlots, buildVerbatimSlots } from "./jdParse/slots";
 import type { ParsedJd, VerifiedClaims } from "./jdParse/types";
+import { cvDataFor } from "./cvData";
+import { buildCvDocx, type CvContentOverrides } from "./cvData/docx";
 import {
   DEFAULT_ROLE,
   DEFAULT_STATUS,
@@ -39,6 +41,11 @@ export interface GenerateCvInput {
   verifiedClaims?: VerifiedClaims;
   /** AI-drafted professional summaries per language (Modo 2 — Asistido). */
   assistedSummaries?: Partial<Record<Language, string>>;
+  /**
+   * Verified JD-tailored content for the ATS mode (title, Core Competencies,
+   * Values Alignment, summary). Applied to every language's fresh-built CV.
+   */
+  atsOverrides?: CvContentOverrides;
   notes?: string;
   status?: ApplicationStatus;
   /** Portfolio focus profile id (from the spec) baked into the CV's tracked links. */
@@ -121,13 +128,20 @@ export async function generateCv(
   const entries: CvEntry[] = [];
   const sentBodies: CoverLetterBodies = {};
   for (const language of languagesFor(input.languageChoice)) {
-    const master = await deps.loadMaster(language);
-    // Assisted slots are per-language (each language gets its own AI draft).
-    const slots =
-      input.cvMode === "assisted" && input.assistedSummaries?.[language]
-        ? buildAssistedSlots(input.assistedSummaries[language]!)
-        : verbatimSlots;
-    const docx = await fillMaster(master, links, slots);
+    let docx: Uint8Array;
+    if (input.cvMode === "ats") {
+      // ATS mode builds a fresh CV from structured data (never the master),
+      // overlaying the verified JD-tailored content.
+      docx = await buildCvDocx(cvDataFor(language), links, input.atsOverrides ?? {});
+    } else {
+      const master = await deps.loadMaster(language);
+      // Assisted slots are per-language (each language gets its own AI draft).
+      const slots =
+        input.cvMode === "assisted" && input.assistedSummaries?.[language]
+          ? buildAssistedSlots(input.assistedSummaries[language]!)
+          : verbatimSlots;
+      docx = await fillMaster(master, links, slots);
+    }
     const letterBody = input.coverLetter?.bodies[language]?.trim();
     let coverLetter: Uint8Array | undefined;
     if (letterBody) {
@@ -168,6 +182,7 @@ export async function generateCv(
     jobContext: cleaned(input.jobContext),
     parsedJd: input.parsedJd,
     verifiedClaims: input.verifiedClaims,
+    atsOverrides: input.atsOverrides,
     language: input.languageChoice,
     focus: input.focus,
     cvMode: input.cvMode,
