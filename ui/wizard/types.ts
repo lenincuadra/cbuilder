@@ -1,7 +1,7 @@
 import type { CvMode } from "@/core/registry/types";
 import type { ParsedJd, VerifiedClaims } from "@/core/jdParse/types";
 import type { Channel } from "@/core/registry/types";
-import { languagesFor, type LanguageChoice } from "@/core/types";
+import { languagesFor, type Language, type LanguageChoice } from "@/core/types";
 
 export { languagesFor };
 
@@ -36,6 +36,12 @@ export interface WizardData {
    * until parsed; persisted on the row for use by modes 2 and 3.
    */
   parsedJd: ParsedJd | null;
+  /**
+   * AI-drafted professional summary per language (Modo 2 — Asistido). Null
+   * until the StepAssisted step is visited; populated on first generation,
+   * then editable before confirming. Not persisted on the row (ephemeral draft).
+   */
+  assistedSummaries: Partial<Record<Language, string>> | null;
   /**
    * Verbatim claims verified in the Modo 3 gate (StepVerify). Null until the
    * gate step is visited; each toggle updates this live. Persisted on the row.

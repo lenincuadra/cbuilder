@@ -21,6 +21,11 @@ export function buildVerbatimSlots(
   return slots;
 }
 
+/** Content slots for Modo 2 (Assisted): injects only the AI-drafted summary. */
+export function buildAssistedSlots(summary: string): ContentSlots {
+  return { summary };
+}
+
 /** The initial (empty) state of the gate — populated when StepVerify first mounts. */
 export function emptyVerifiedClaims(): VerifiedClaims {
   return {

@@ -8,7 +8,7 @@ import { buildTrackedLinks } from "./spec/links";
 import type { LinkSpec } from "./spec/types";
 import { languagesFor, type Language, type LanguageChoice } from "./types";
 import { packageCvs, type CvEntry } from "./zip";
-import { buildVerbatimSlots } from "./jdParse/slots";
+import { buildAssistedSlots, buildVerbatimSlots } from "./jdParse/slots";
 import type { ParsedJd, VerifiedClaims } from "./jdParse/types";
 import {
   DEFAULT_ROLE,
@@ -37,6 +37,8 @@ export interface GenerateCvInput {
   parsedJd?: ParsedJd;
   /** Verbatim claims verified in the Modo 3 gate (see `VerifiedClaims`). */
   verifiedClaims?: VerifiedClaims;
+  /** AI-drafted professional summaries per language (Modo 2 — Asistido). */
+  assistedSummaries?: Partial<Record<Language, string>>;
   notes?: string;
   status?: ApplicationStatus;
   /** Portfolio focus profile id (from the spec) baked into the CV's tracked links. */
@@ -110,9 +112,8 @@ export async function generateCv(
   // into every master and persist them on the row (faithful record of what was sent).
   const links = buildTrackedLinks(deps.spec, code, input.focus);
 
-  // Build content slots for tailored modes. Mode 3 (verbatim) injects
-  // verified verbatim claims; modes 1/2 leave slots undefined (master untouched).
-  const slots =
+  // Verbatim slots are language-independent (same verified claims for every language).
+  const verbatimSlots =
     input.cvMode === "verbatim" && input.parsedJd && input.verifiedClaims
       ? buildVerbatimSlots(input.parsedJd, input.verifiedClaims)
       : undefined;
@@ -121,6 +122,11 @@ export async function generateCv(
   const sentBodies: CoverLetterBodies = {};
   for (const language of languagesFor(input.languageChoice)) {
     const master = await deps.loadMaster(language);
+    // Assisted slots are per-language (each language gets its own AI draft).
+    const slots =
+      input.cvMode === "assisted" && input.assistedSummaries?.[language]
+        ? buildAssistedSlots(input.assistedSummaries[language]!)
+        : verbatimSlots;
     const docx = await fillMaster(master, links, slots);
     const letterBody = input.coverLetter?.bodies[language]?.trim();
     let coverLetter: Uint8Array | undefined;

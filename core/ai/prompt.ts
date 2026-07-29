@@ -1,3 +1,4 @@
+import type { ParsedJd } from "@/core/jdParse/types";
 import type { LinkSpec } from "@/core/spec/types";
 import type { Language } from "@/core/types";
 
@@ -109,6 +110,55 @@ export interface ScreeningAnswerPromptInput {
   question: string;
   company?: string;
   role?: string;
+}
+
+export interface CvSummaryPromptInput {
+  context: string;
+  company: string;
+  role: string;
+  language: Language;
+  parsedJd?: ParsedJd;
+}
+
+/**
+ * System + user prompt for an AI-tailored professional summary paragraph. Output
+ * is plain text (no markdown) — it slots directly into the .docx paragraph.
+ * The AI rewrites Lenin's real experience in the JD's language; never invents.
+ */
+export function buildCvSummaryPrompt(input: CvSummaryPromptInput): {
+  system: string;
+  user: string;
+} {
+  const { context, company, role, language, parsedJd } = input;
+  const langName = language === "EN" ? "English" : "Spanish";
+
+  let jdExtra = "";
+  if (parsedJd) {
+    if (parsedJd.jobTitle) {
+      jdExtra += `\n\n## Target role title\n${parsedJd.jobTitle}`;
+    }
+    const keywords = [
+      ...parsedJd.requiredKeywords,
+      ...parsedJd.tools,
+      ...parsedJd.preferredKeywords,
+    ].filter((k) => k.trim());
+    if (keywords.length > 0) {
+      jdExtra +=
+        "\n\n## JD keywords and tools (weave in where truthfully applicable)\n" +
+        keywords.map((k) => `- ${k}`).join("\n");
+    }
+  }
+
+  return {
+    system: `${VOICE_PREAMBLE}\n\n${context}${jdExtra}`,
+    user:
+      `Write the professional summary paragraph for Lenin Cuadra's CV for his application ` +
+      `to ${company} as "${role}". Write in ${langName}. Plain text only — no markdown, ` +
+      `no bullet points, no headers, no labels. 2–3 sentences. First person. Lead with ` +
+      `the most relevant proof point or credential from the context, naturally incorporate ` +
+      `any JD keywords that truthfully apply, close with the distinctive value he brings ` +
+      `to this specific role. Never invent skills, projects, or metrics.`,
+  };
 }
 
 /** System + user prompt for a suggested pre-screening answer. */

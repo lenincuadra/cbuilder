@@ -17,6 +17,7 @@ import { CoverLetterGenerateForm } from "@/ui/detail/CoverLetterGenerateForm";
 import { ScreeningNewForm } from "@/ui/detail/ScreeningNewForm";
 import { ScreeningSuggestForm } from "@/ui/detail/ScreeningSuggestForm";
 import type { UseScreening } from "@/ui/useScreening";
+import { StepAssisted } from "./StepAssisted";
 import { StepCompany } from "./StepCompany";
 import { StepConfirm } from "./StepConfirm";
 import { StepLanguage } from "./StepLanguage";
@@ -26,11 +27,11 @@ import { StepVerify } from "./StepVerify";
 import { emailRequirementMet, type WizardData } from "./types";
 
 /**
- * Total wizard steps per mode. Modo 3 (verbatim) adds a verification gate
- * (StepVerify) between Idioma y foco and Confirmar.
+ * Total wizard steps per mode. Modes 2 and 3 add an extra step between
+ * Idioma y foco and Confirmar (Asistido → Resumen IA; Verbatim → Verificar claims).
  */
 function totalStepsFor(mode: string): number {
-  return mode === "verbatim" ? 6 : 5;
+  return mode === "verbatim" || mode === "assisted" ? 6 : 5;
 }
 
 /**
@@ -46,6 +47,7 @@ type ConfirmMode =
   | { kind: "screening-edit"; entry: ScreeningQuestion }
   | { kind: "screening-suggest"; entry: ScreeningQuestion };
 const STEP_TITLES_BASE = ["Modo", "Empresa y fecha", "Opcionales", "Idioma y foco", "Confirmar"];
+const STEP_TITLES_ASSISTED = ["Modo", "Empresa y fecha", "Opcionales", "Idioma y foco", "Resumen IA", "Confirmar"];
 const STEP_TITLES_VERBATIM = ["Modo", "Empresa y fecha", "Opcionales", "Idioma y foco", "Verificar claims", "Confirmar"];
 
 /**
@@ -67,6 +69,7 @@ function initialData(pendingRow?: RegistryRow): WizardData {
     jobUrl: pendingRow?.jobUrl ?? "",
     jobContext: pendingRow?.jobContext ?? "",
     parsedJd: pendingRow?.parsedJd ?? null,
+    assistedSummaries: null,
     verifiedClaims: null,
     focus: "",
   };
@@ -157,7 +160,12 @@ export function Wizard({
   const set = (patch: Partial<WizardData>) => setData((current) => ({ ...current, ...patch }));
 
   const totalSteps = totalStepsFor(data.mode);
-  const stepTitles = data.mode === "verbatim" ? STEP_TITLES_VERBATIM : STEP_TITLES_BASE;
+  const stepTitles =
+    data.mode === "verbatim"
+      ? STEP_TITLES_VERBATIM
+      : data.mode === "assisted"
+        ? STEP_TITLES_ASSISTED
+        : STEP_TITLES_BASE;
   // Confirm step index depends on mode (5 for base/assisted, 6 for verbatim).
   const confirmStep = totalSteps;
 
@@ -165,14 +173,16 @@ export function Wizard({
   // later from the detail panel (see docs/decisions.md → "Registro nunca
   // bloqueante").
   const companyValid = data.company.trim() !== "";
-  // Step 2 (Empresa) gates advancing; step 5 in verbatim mode (gate) requires
-  // verifiedClaims to have been initialised (happens on mount of StepVerify).
+  // Step 2 gates on company name. Step 5 extra-step gates on the respective
+  // mode's data being initialised (happens on StepVerify / StepAssisted mount).
   const canAdvance =
     step === 2
       ? companyValid
       : step === 5 && data.mode === "verbatim"
         ? data.verifiedClaims !== null
-        : true;
+        : step === 5 && data.mode === "assisted"
+          ? data.assistedSummaries !== null
+          : true;
 
   /**
    * Email to persist: an invalid typed email is omitted (never stored broken)
@@ -272,6 +282,10 @@ export function Wizard({
           jobUrl: data.jobUrl,
           jobContext: data.jobContext,
           parsedJd: data.parsedJd ?? undefined,
+          assistedSummaries:
+            data.assistedSummaries && Object.keys(data.assistedSummaries).length > 0
+              ? data.assistedSummaries
+              : undefined,
           verifiedClaims: data.verifiedClaims ?? undefined,
           focus: data.focus === "" ? undefined : data.focus,
           cvMode: data.mode,
@@ -357,6 +371,9 @@ export function Wizard({
           {step === 2 && <StepCompany data={data} set={set} container={container} />}
           {step === 3 && <StepOptional data={data} set={set} container={container} />}
           {step === 4 && <StepLanguage data={data} set={set} container={container} spec={spec} />}
+          {step === 5 && data.mode === "assisted" && (
+            <StepAssisted data={data} set={set} container={container} />
+          )}
           {step === 5 && data.mode === "verbatim" && (
             <StepVerify data={data} set={set} container={container} />
           )}
