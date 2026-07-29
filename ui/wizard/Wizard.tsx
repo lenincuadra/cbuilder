@@ -17,7 +17,9 @@ import { CoverLetterGenerateForm } from "@/ui/detail/CoverLetterGenerateForm";
 import { ScreeningNewForm } from "@/ui/detail/ScreeningNewForm";
 import { ScreeningSuggestForm } from "@/ui/detail/ScreeningSuggestForm";
 import type { UseScreening } from "@/ui/useScreening";
+import { buildAtsOverrides } from "@/core/cvData/tailor";
 import { StepAssisted } from "./StepAssisted";
+import { StepAts } from "./StepAts";
 import { StepCompany } from "./StepCompany";
 import { StepConfirm } from "./StepConfirm";
 import { StepLanguage } from "./StepLanguage";
@@ -38,10 +40,12 @@ function hasJdContent(parsedJd: { jobTitle?: string; requiredKeywords: string[];
 }
 
 /**
- * Total wizard steps per mode. Modes 2 and 3 add an extra step only when the
- * JD was successfully parsed into structured claims — no content, no extra step.
+ * Total wizard steps per mode. The ATS mode always has 6 (JD is mandatory, so
+ * its gate always runs). Modes 2 and 3 add the extra step only when the JD was
+ * parsed into structured claims — no content, no extra step.
  */
 function totalStepsFor(mode: string, hasJd: boolean): number {
+  if (mode === "ats") return 6;
   return (mode === "verbatim" || mode === "assisted") && hasJd ? 6 : 5;
 }
 
@@ -60,6 +64,7 @@ type ConfirmMode =
 const STEP_TITLES_BASE = ["Modo", "Empresa y fecha", "Opcionales", "Idioma y foco", "Confirmar"];
 const STEP_TITLES_ASSISTED = ["Modo", "Empresa y fecha", "Opcionales", "Idioma y foco", "Resumen IA", "Confirmar"];
 const STEP_TITLES_VERBATIM = ["Modo", "Empresa y fecha", "Opcionales", "Idioma y foco", "Verificar claims", "Confirmar"];
+const STEP_TITLES_ATS = ["Modo", "Empresa y fecha", "Opcionales", "Idioma y foco", "Armar CV (ATS)", "Confirmar"];
 
 /**
  * Fresh wizard state. With a pending row (deferred generation), steps 1–2 come
@@ -82,6 +87,7 @@ function initialData(pendingRow?: RegistryRow): WizardData {
     parsedJd: pendingRow?.parsedJd ?? null,
     assistedSummaries: null,
     verifiedClaims: null,
+    atsSelections: null,
     focus: "",
   };
 }
@@ -173,11 +179,13 @@ export function Wizard({
   const hasJd = hasJdContent(data.parsedJd);
   const totalSteps = totalStepsFor(data.mode, hasJd);
   const stepTitles =
-    data.mode === "verbatim" && hasJd
-      ? STEP_TITLES_VERBATIM
-      : data.mode === "assisted" && hasJd
-        ? STEP_TITLES_ASSISTED
-        : STEP_TITLES_BASE;
+    data.mode === "ats"
+      ? STEP_TITLES_ATS
+      : data.mode === "verbatim" && hasJd
+        ? STEP_TITLES_VERBATIM
+        : data.mode === "assisted" && hasJd
+          ? STEP_TITLES_ASSISTED
+          : STEP_TITLES_BASE;
   // Confirm step index depends on mode (5 for base/assisted, 6 for verbatim).
   const confirmStep = totalSteps;
 
@@ -190,11 +198,16 @@ export function Wizard({
   const canAdvance =
     step === 2
       ? companyValid
-      : step === 5 && data.mode === "verbatim" && hasJd
-        ? data.verifiedClaims !== null
-        : step === 5 && data.mode === "assisted" && hasJd
-          ? data.assistedSummaries !== null
-          : true;
+      : // ATS mode: the JD is mandatory — can't leave Opcionales without it.
+        step === 3 && data.mode === "ats"
+        ? hasJd
+        : step === 5 && data.mode === "ats"
+          ? data.atsSelections !== null
+          : step === 5 && data.mode === "verbatim" && hasJd
+            ? data.verifiedClaims !== null
+            : step === 5 && data.mode === "assisted" && hasJd
+              ? data.assistedSummaries !== null
+              : true;
 
   /**
    * Email to persist: an invalid typed email is omitted (never stored broken)
@@ -299,6 +312,10 @@ export function Wizard({
               ? data.assistedSummaries
               : undefined,
           verifiedClaims: data.verifiedClaims ?? undefined,
+          atsOverrides:
+            data.mode === "ats" && data.parsedJd && data.atsSelections
+              ? buildAtsOverrides(data.parsedJd, data.atsSelections)
+              : undefined,
           focus: data.focus === "" ? undefined : data.focus,
           cvMode: data.mode,
           code: previewCode,
@@ -392,6 +409,9 @@ export function Wizard({
           )}
           {step === 5 && data.mode === "verbatim" && hasJd && (
             <StepVerify data={data} set={set} container={container} />
+          )}
+          {step === 5 && data.mode === "ats" && (
+            <StepAts data={data} set={set} container={container} />
           )}
           {step === confirmStep && previewCode && (
             <StepConfirm

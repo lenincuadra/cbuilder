@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, PenLine, Sparkles } from "lucide-react";
+import { Check, PenLine, Sparkles, Target } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,13 @@ const MODES: ModeOption[] = [
     description:
       "Verificás cada frase de la búsqueda antes de inyectarla. Máximo match ATS — solo lo que realmente tenés.",
     icon: PenLine,
+  },
+  {
+    value: "ats",
+    label: "ATS máximo",
+    description:
+      "Arma un CV nuevo desde cero para esta búsqueda: título, Core Competencies verbatim y Values Alignment. Requiere pegar la descripción.",
+    icon: Target,
   },
 ];
 
