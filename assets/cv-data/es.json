@@ -1,0 +1,159 @@
+{
+  "language": "ES",
+  "name": "Lenin Cuadra",
+  "title": "Senior Product Designer · Líder de Adopción de IA",
+  "location": "Córdoba, Argentina · Remoto & Híbrido",
+  "links": {
+    "portfolio": "lenincuadra.com",
+    "github": "github.com/lenincuadra",
+    "linkedin": "linkedin.com/in/lenincuadra"
+  },
+  "contact": {
+    "email": "hola@lenincuadra.com",
+    "phone": "+549 351-376-6049"
+  },
+  "summary": "6 años de experiencia en diseño end-to-end de productos SaaS, fintech y EdTech. Actualmente liderando la adopción de IA en un equipo de 6 diseñadores, realizando entrevistas de diagnóstico, workshops de descubrimiento y demostraciones de flujos con IA. Desarrollé un sistema de componentes código-primero usando Claude Code + MCP de Figma que comprimió una semana de trabajo en 2 días, habilitando demos de ventas con look & feel real, pruebas de usabilidad de alta fidelidad y un camino hacia la eliminación del handoff tradicional. Sólida experiencia en Design Systems, colaboración cross-funcional y traducción de restricciones técnicas complejas en experiencias intuitivas.",
+  "experience": [
+    {
+      "role": "Product Designer · Líder Adopción IA",
+      "company": "PSH",
+      "dates": "Mar 2024 – Presente",
+      "context": [
+        "Liderando la integración de IA en un equipo de 6 diseñadores.",
+        "Cliente: Follett (EdTech, mercado USA) - modalidad remota, en inglés."
+      ],
+      "bullets": [
+        "Lideré la iniciativa de adopción de IA en el equipo de diseño: realicé entrevistas y encuestas informales para mapear el nivel actual, facilité un workshop de descubrimiento para identificar necesidades por contexto de cliente, y conduzco demos periódicas para impulsar la adopción de flujos con IA.",
+        "Propuse e inicié un flujo de Design System basado en GitHub: construí una librería de componentes funcional usando Claude Code + Figma MCP, replicando un producto completo en código desde referencias en Figma en 2 días (vs. 1 semana anterior). Pitch aprobado; repo en configuración.",
+        "Identifiqué 4 casos de uso de alto valor para el sistema código-primero: (1) Demos de ventas con look & feel de producción, (2) Testing de usuarios de mayor fidelidad para detectar problemas reales de accesibilidad y comportamiento, (3) Presentaciones a stakeholders con fidelidad de app real, (4) Eliminación potencial del handoff de diseño tradicional.",
+        "Desarrollé un plugin de Figma para exportación batch de imágenes en .webp, reduciendo el tiempo de exportación de ~1 hora por 12 imágenes a menos de un minuto.",
+        "Aumento del 300% en suscripciones únicas de usuarios en una funcionalidad clave tras el rediseño de los flujos de Materials Adoption y Course Supplies.",
+        "Lidero el proceso de diseño de concepto a implementación: documentación de componentes en Figma, handoff a desarrolladores y alineación con stakeholders."
+      ]
+    },
+    {
+      "role": "Product Designer",
+      "company": "Flevo",
+      "dates": "Ene 2023 – Dic 2023",
+      "context": [
+        "Startup fintech enfocada en acceso a crédito estudiantil (B2C/B2B/B2B2C)."
+      ],
+      "bullets": [
+        "Rediseño end-to-end del funnel KYC con aumento de adquisición de usuarios del 50%+.",
+        "Diseño end-to-end del producto v3 con Dynamic Pricing basado en análisis del historial crediticio del deudor.",
+        "Rediseño de la WebApp SaaS (B2B) para gestión de datos de estudiantes por parte de instituciones.",
+        "Integración de Amazon Rekognition con el equipo backend para automatizar extracción de datos de documentos y autofill, reduciendo el abandono del funnel.",
+        "Construcción y mantenimiento de Design System en Figma (Atomic Design) alineado con la implementación de Tailwind CSS del frontend. Desarrollé el componente 'cell' como base del producto B2B.",
+        "Diseño de flujos de checkout para 3 tipos de usuarios. Creación de piezas de marketing y presentaciones para inversores junto al CPO y COO."
+      ]
+    },
+    {
+      "role": "Product Designer",
+      "company": "Truenorth",
+      "dates": "Mar 2022 – Oct 2022",
+      "context": [
+        "Diseño de producto financiero B2B para PyMEs y solopreneurs.",
+        "Modalidad remota, en inglés, para mercado USA."
+      ],
+      "bullets": [
+        "Rediseño UI de producto financiero embebido; refactorización del sistema de colores hacia un Design System con accesibilidad WCAG.",
+        "Rebranding de wallet fintech; adaptación de componentes de mobile a pantallas de tamaño Kiosk."
+      ]
+    },
+    {
+      "role": "UX/UI Designer",
+      "company": "Avaya",
+      "dates": "Jun 2021 – Mar 2022",
+      "context": [
+        "Refactoring de una aplicación SaaS de comunicaciones. via Incluit (hoy Avenga)."
+      ],
+      "bullets": [
+        "Discovery completo: sitemap del estado actual, entrevistas a usuarios, mapa de empatía y workshop de priorización con el equipo UX.",
+        "Diseño de prototipos low-fi a high-fi; 2 rondas de testing de usabilidad con iteración basada en insights."
+      ]
+    },
+    {
+      "role": "Product Designer",
+      "company": "Naranja X",
+      "dates": "Jun 2020 – May 2021",
+      "context": [
+        "Diseño de productos fintech B2B y B2C; SaaS interno y marketing. via Incluit (hoy Avenga)."
+      ],
+      "bullets": [
+        "Diseño de producto fintech de 0 a 1: flujos, sitemaps, wireframes, mockups hi-fi y componentes del Design System.",
+        "Lideré investigación: usability tests, benchmarks y card sorting.",
+        "Rediseño de SaaS interno mejorando la Developer Experience; uso de datos de Hotjar + Google Analytics para toma de decisiones."
+      ]
+    },
+    {
+      "role": "UX/UI Designer",
+      "company": "Montironi",
+      "dates": "Ago 2019 – May 2020",
+      "context": [
+        "Diseño UX/UI enfocado en generación de leads para el equipo de Marketing."
+      ],
+      "bullets": [
+        "Aumento del 221% en ventas vs Q1 del año anterior.",
+        "Diseño y validación mediante landing pages, páginas web y newsletters.",
+        "A/B testing de copies, imágenes y botones.",
+        "Decisiones basadas en datos de Google Analytics y heatmaps de Hotjar."
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "category": "IA y Herramientas Emergentes",
+      "items": ["Claude Code", "MCP (Figma)", "Figma AI", "ChatGPT", "Prototipado con IA", "Flujos con prompts", "Vibe coding"]
+    },
+    {
+      "category": "Product Design",
+      "items": ["Diseño end-to-end", "Design Systems", "Design Tokens", "Atomic Design", "Interaction Design", "Visual Design", "UX Writing"]
+    },
+    {
+      "category": "Research & Estrategia",
+      "items": ["Entrevistas de usuario", "Usability Testing", "A/B Testing", "Card Sorting", "Empathy Mapping", "Diseño basado en datos"]
+    },
+    {
+      "category": "Técnico",
+      "items": ["Figma", "Git", "GitHub", "HTML5", "CSS3", "Tailwind CSS", "VS Code", "Amazon Rekognition (integración)"]
+    },
+    {
+      "category": "Analítica",
+      "items": ["Google Analytics", "Hotjar", "Microsoft Clarity", "Optimal Workshop"]
+    },
+    {
+      "category": "Accesibilidad",
+      "items": ["WCAG 2.1 / ADA"]
+    },
+    {
+      "category": "Colaboración",
+      "items": ["Equipos cross-funcionales", "Gestión de stakeholders", "Facilitación de workshops", "Agile / Scrum"]
+    },
+    {
+      "category": "Herramientas",
+      "items": ["Miro", "FigJam", "Adobe Creative Suite (XD, Ps, Ai, Id)", "Google Workspace"]
+    }
+  ],
+  "certifications": [
+    { "name": "Introduction to Agent Skills (versión MCP)", "issuer": "Anthropic", "date": "Abr 2026" },
+    { "name": "Introduction to Agent Skills", "issuer": "Anthropic", "date": "Abr 2026" },
+    { "name": "AI Fluency Framework & Foundations", "issuer": "Anthropic", "date": "Mar 2026" },
+    { "name": "Claude 101", "issuer": "Anthropic", "date": "Mar 2026" }
+  ],
+  "education": [
+    {
+      "degree": "Diseño Gráfico",
+      "institution": "Universidad Politécnica Experimental Antonio José de Sucre",
+      "dates": "2010–2014"
+    }
+  ],
+  "sectionTitles": {
+    "summary": "RESUMEN PROFESIONAL",
+    "experience": "EXPERIENCIA",
+    "skills": "HABILIDADES",
+    "certifications": "CERTIFICACIONES",
+    "education": "EDUCACIÓN",
+    "coreCompetencies": "COMPETENCIAS CLAVE",
+    "valuesAlignment": "ALINEACIÓN CON VALORES"
+  }
+}

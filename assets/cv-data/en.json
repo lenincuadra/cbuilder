@@ -1,0 +1,162 @@
+{
+  "language": "EN",
+  "name": "Lenin Cuadra",
+  "title": "Senior Product Designer · AI Adoption Lead",
+  "location": "Córdoba, Argentina · Open to Remote & Hybrid",
+  "links": {
+    "portfolio": "lenincuadra.com",
+    "github": "github.com/lenincuadra",
+    "linkedin": "linkedin.com/in/lenincuadra"
+  },
+  "contact": {
+    "email": "hi@lenincuadra.com",
+    "phone": "+549 351-376-6049"
+  },
+  "summary": "6 years of experience shipping end-to-end product design for SaaS, fintech, and EdTech products. Currently leading AI adoption across a 6-person design team, conducting discovery workshops, mapping capabilities, and driving workflow transformation. Proven track record of shipping AI-accelerated workflows: built a Figma-to-code component system using Claude Code + MCP that compressed a week of work into 2 days, enabling realistic sales demos, higher-fidelity user testing, and a path toward eliminating handoff friction. Fluent in design systems governance, cross-functional collaboration, and translating complex technical constraints into intuitive user experiences.",
+  "experience": [
+    {
+      "role": "Product Designer · AI Adoption Lead",
+      "company": "PSH",
+      "dates": "Mar 2024 – Present",
+      "context": [
+        "Leading AI integration strategy for a 6-designer team.",
+        "Client: Follett (EdTech, US market) - remote, English-speaking engagement."
+      ],
+      "bullets": [
+        "Led AI adoption initiative across a 6-person design team: conducted informal interviews and surveys to assess current capabilities, facilitated a discovery workshop to map needs per client context, and runs recurring demos to drive adoption of AI-powered workflows.",
+        "Initiated and proposed a GitHub-based Design System repository workflow: built a functional component library using Claude Code + Figma MCP, replicating a full product in code from Figma references in 2 days (vs. 1 week prior). Pitch approved; repo setup in progress.",
+        "Identified 4 high-value use cases for the code-first component system: (1) Sales demos with production-quality look & feel, (2) Higher-fidelity user testing uncovering real accessibility and behavior issues, (3) Stakeholder presentations with live-app fidelity, (4) Potential elimination of traditional design handoff.",
+        "Built a custom Figma plugin to batch-export images as .webp, reducing export time from ~1 hour per 12 images to under a minute.",
+        "300% increase in unique user subscriptions in a key feature following redesign of the Materials Adoption and Course Supplies flows.",
+        "Drive the design process from concept to implementation, including developer handoff, stakeholder alignment, and component documentation in Figma.",
+        "Collaborate with Product Managers to move features from ideation to delivery; participate in user interviews, note-taking, and product definition."
+      ]
+    },
+    {
+      "role": "Product Designer",
+      "company": "Flevo",
+      "dates": "Jan 2023 – Dec 2023",
+      "context": [
+        "Fintech startup focused on student loan access (B2C/B2B/B2B2C)."
+      ],
+      "bullets": [
+        "Redesigned KYC funnel end-to-end, increasing user acquisition by 50%+.",
+        "Led end-to-end design of product v3, introducing Dynamic Pricing based on debtor credit history analysis.",
+        "Redesigned SaaS WebApp (B2B) for institutions to manage student data and loan visibility.",
+        "Integrated Amazon Rekognition with backend team to automate document data extraction and autofill, reducing funnel drop-off.",
+        "Built and maintained a Design System in Figma using Atomic Design, aligned with the frontend's Tailwind CSS implementation. Developed the foundational 'cell' component for the B2B product table.",
+        "Designed checkout flows for 3 user types: Sellers, Students, and Custom payment button.",
+        "Created product marketing assets and investor presentation materials alongside CPO and COO."
+      ]
+    },
+    {
+      "role": "Product Designer",
+      "company": "Truenorth",
+      "dates": "Mar 2022 – Oct 2022",
+      "context": [
+        "B2B financial product design for SMEs and solopreneurs.",
+        "Remote, English-speaking engagement for US market."
+      ],
+      "bullets": [
+        "UI redesign of an embedded financial loan product; refactored the color system from brand manual to an accessible Design System (WCAG-compliant).",
+        "Rebranding of a fintech wallet; updated components, styles, and adapted mobile experience to Kiosk-screen sizes.",
+        "Created a dynamic color-filter Figma component applicable to any illustration in the system."
+      ]
+    },
+    {
+      "role": "UX/UI Designer",
+      "company": "Avaya",
+      "dates": "Jun 2021 – Mar 2022",
+      "context": [
+        "Refactoring of a communications SaaS application. via Incluit (now Avenga)."
+      ],
+      "bullets": [
+        "Ran discovery: sitemap of current-state, user interviews, empathy mapping, and UX team workshop for feature prioritization.",
+        "Designed from low-fi to high-fi prototypes; conducted 2 rounds of usability testing and iterated based on findings."
+      ]
+    },
+    {
+      "role": "Product Designer",
+      "company": "Naranja X",
+      "dates": "Jun 2020 – May 2021",
+      "context": [
+        "Fintech product design for B2B and B2C (6+ months); internal SaaS and marketing. via Incluit (now Avenga)."
+      ],
+      "bullets": [
+        "Designed a fintech product from 0 to 1: user flows, sitemaps, wireframes, hi-fi mockups, and Design System components.",
+        "Led research: usability tests, benchmarks, and card sorting.",
+        "Redesigned internal SaaS tool improving developer experience company-wide; used Hotjar + Google Analytics for data-driven decisions."
+      ]
+    },
+    {
+      "role": "UX/UI Designer",
+      "company": "Montironi",
+      "dates": "Aug 2019 – May 2020",
+      "context": [
+        "UX/UI design focused on lead generation for the Marketing team."
+      ],
+      "bullets": [
+        "221% increase in sales compared to Q1 of the previous year.",
+        "Design and validation using landing pages, web pages, and newsletters.",
+        "A/B testing of copies, images, and buttons.",
+        "Data-driven decisions using Google Analytics and Hotjar heatmaps."
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "category": "AI & Emerging Tools",
+      "items": ["Claude Code", "MCP (Figma)", "Figma AI", "ChatGPT", "AI-powered prototyping", "Prompt workflows", "Vibe coding"]
+    },
+    {
+      "category": "Product Design",
+      "items": ["End-to-end Product Design", "Design Systems", "Design Tokens", "Atomic Design", "Interaction Design", "Visual Design", "UX Writing"]
+    },
+    {
+      "category": "Research & Strategy",
+      "items": ["User Interviews", "Usability Testing", "A/B Testing", "Card Sorting", "Empathy Mapping", "Heuristic Evaluation", "Data-driven Design"]
+    },
+    {
+      "category": "Technical",
+      "items": ["Figma", "Git", "GitHub", "HTML5", "CSS3", "Tailwind CSS", "VS Code", "Amazon Rekognition (integration)"]
+    },
+    {
+      "category": "Analytics",
+      "items": ["Google Analytics", "Hotjar", "Microsoft Clarity", "Optimal Workshop"]
+    },
+    {
+      "category": "Accessibility",
+      "items": ["WCAG 2.1 / ADA compliance"]
+    },
+    {
+      "category": "Collaboration",
+      "items": ["Cross-functional teams", "Stakeholder management", "Workshop facilitation", "Agile / Scrum", "Design critique"]
+    },
+    {
+      "category": "Tools",
+      "items": ["Miro", "FigJam", "Adobe Creative Suite (XD, Ps, Ai, Id)", "Google Workspace"]
+    }
+  ],
+  "certifications": [
+    { "name": "Introduction to Agent Skills (MCP version)", "issuer": "Anthropic", "date": "Apr 2026" },
+    { "name": "Introduction to Agent Skills", "issuer": "Anthropic", "date": "Apr 2026" },
+    { "name": "AI Fluency Framework & Foundations", "issuer": "Anthropic", "date": "Mar 2026" },
+    { "name": "Claude 101", "issuer": "Anthropic", "date": "Mar 2026" }
+  ],
+  "education": [
+    {
+      "degree": "Graphic Design",
+      "institution": "Universidad Politécnica Experimental Antonio José de Sucre",
+      "dates": "2010–2014"
+    }
+  ],
+  "sectionTitles": {
+    "summary": "PROFESSIONAL SUMMARY",
+    "experience": "EXPERIENCE",
+    "skills": "SKILLS",
+    "certifications": "CERTIFICATIONS",
+    "education": "EDUCATION",
+    "coreCompetencies": "CORE COMPETENCIES",
+    "valuesAlignment": "VALUES ALIGNMENT"
+  }
+}
