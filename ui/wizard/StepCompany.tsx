@@ -14,14 +14,17 @@ export interface StepProps {
   spec?: import("@/core/spec/types").LinkSpec | null;
 }
 
-/** Step 1 — Empresa (required) + Fecha de aplicación (default hoy). */
+/**
+ * Step 1 — Empresa y contacto (+ fecha). At least one of empresa/contacto
+ * identifies the process: a recruiter can reach out before the company is known
+ * ("sé quién es pero no para qué empresa"). Empresa is required only later, to
+ * generate the CV (it names the delivery folder). Fecha defaults to hoy.
+ */
 export function StepCompany({ data, set }: StepProps) {
   return (
     <div className="space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="company">
-          Empresa <span className="text-destructive">*</span>
-        </Label>
+        <Label htmlFor="company">Empresa</Label>
         <Input
           id="company"
           autoFocus
@@ -29,6 +32,20 @@ export function StepCompany({ data, set }: StepProps) {
           value={data.company}
           onChange={(event) => set({ company: event.target.value })}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="who">Quién</Label>
+        <Input
+          id="who"
+          placeholder="Recruiter o contacto"
+          value={data.who}
+          onChange={(event) => set({ who: event.target.value })}
+        />
+        <p className="text-xs text-muted-foreground">
+          Registrá con al menos empresa o contacto. La empresa se puede completar
+          después — hace falta solo al generar el CV.
+        </p>
       </div>
 
       <div className="space-y-2">

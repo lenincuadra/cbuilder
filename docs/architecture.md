@@ -59,10 +59,12 @@ La regla de oro: **cv-builder ESCRIBE los links, el portfolio los RECIBE.** El
 ## Pipeline de generación
 
 Desde el wizard hasta los tres destinos del CV. `generateCv()` es puro (dados sus
-deps); `page.tsx#handleGenerate` maneja los efectos.
+deps); `page.tsx#handleGenerate` maneja los efectos. La lógica interna del wizard
+(orden de pasos, paso-gate de tailoring, formas de entrar: fresh/diferido/variante)
+vive en [`wizard.md`](wizard.md).
 
 ```
-Wizard (empresa, idioma, foco, opcionales)
+Wizard (empresa/contacto · opcionales · idioma/foco · modo)
    │
    ▼
 generateCv()  ── código único (colisión-checked) ── fillMaster() por idioma ── zip
@@ -140,7 +142,9 @@ preserva el `coverLetter` que ya haya quedado seteado en la fila (no lo pisa con
 
 Un proceso puede arrancar sin entregable (ej. un recruiter escribe y la charla
 empieza antes de mandar nada, o todavía no sabés qué te van a pedir). Todos los
-pasos previos a Confirmar ofrecen **"Registrar sin CV"** (con Empresa alcanza):
+pasos previos a Confirmar ofrecen **"Registrar sin CV"** (con **empresa o
+contacto** alcanza — un recruiter puede escribir antes de saber la empresa; la
+empresa se exige recién al generar el CV, que la usa en el nombre de carpeta):
 `buildPendingRow()` (`core/generateCv.ts`) crea la fila con un **código reservado**
 (mismo `generateCode`, o el ya reservado si se pasa uno explícito — ver abajo —
 chequeado contra colisiones) y `cvPending: true` — sin idioma, foco, links ni
@@ -152,8 +156,9 @@ temprano).
 
 Cuando el CV hace falta, la card Entrega del drawer abre el wizard en **modo
 diferido** (`PendingCvDrawer` + prop `pendingRow`): arranca en "Idioma y foco"
-(los pasos 1–2 viven en la fila, editables desde el panel) y confirma con el
-código ya reservado. `deferredGenerationFields()` actualiza la fila in-place:
+(los pasos 1–2 viven en la fila, editables desde el panel) —salvo que la fila no
+tenga empresa todavía, en cuyo caso arranca en "Empresa y contacto" para
+completarla (obligatoria para generar)— y confirma con el código ya reservado. `deferredGenerationFields()` actualiza la fila in-place:
 limpia el flag, aplica los campos del CV y agrega la update automática
 **"CV generado"** al timeline. La fecha de la fila (inicio del proceso) no cambia;
 la carta lleva la fecha del día de generación.
@@ -189,14 +194,15 @@ file store local. Se puede cambiar la implementación sin tocar `core/` ni `ui/`
 | Registro | `RegistryStore` | File store (`data/registry.json`) vía API + `ApiRegistryStore` | `SupabaseRegistryStore` — `getServerRegistryStore`. Incluye `milestones` (jsonb `{responded?, interview?, offer?, referral?}`, fechas `YYYY-MM-DD`) para el embudo AARRR |
 | Notas generales (lista) | `GeneralNotesStore` (`core/notes/types.ts`) | File store (`data/notes.json`) vía API — migra sola el documento único viejo a la primera nota | `SupabaseGeneralNotesStore` contra `general_notes_entries` — `getServerNotesStore` |
 | Links estables | `StableLinksStore` | File store (`data/stable-links.json`) vía API | `SupabaseStableLinksStore` — `getServerStableLinksStore` |
+| CV del portafolio (versión publicada) | `PortfolioCvStore` (`core/portfolioCv/types.ts`) | File store (`data/portfolio-cv.json`) vía API | `SupabasePortfolioCvStore` (tabla `portfolio_cv`) — `getServerPortfolioCvStore` |
 | Cover letters (templates) | `CoverLetterTemplatesStore` | File store (`data/cover-letter-templates.json`) vía API | `SupabaseCoverLetterTemplatesStore` — `getServerCoverLetterTemplatesStore` |
 | Preguntas de pre-screening | `ScreeningStore` (`core/screening/types.ts`) | File store (`data/screening-questions.json`) vía API | `SupabaseScreeningStore` — `getServerScreeningStore` |
 | Archivo de CVs (binarios) | `CvArchiveStore` (`lib/storage/cvArchive.ts`) | File store (`data/cvs/<carpeta>/`) vía API | `SupabaseCvArchiveStore` — Storage bucket privado `cvs` — `getServerCvArchiveStore` |
 
 Las factories usan un cliente admin compartido (`getSupabaseAdmin`, service
 key, server-only). Las tablas Supabase (`registry`, `general_notes_entries`,
-`stable_links`, `cover_letter_templates`, `screening_questions`) tienen RLS on
-sin policy → solo la service key entra.
+`stable_links`, `cover_letter_templates`, `screening_questions`, `portfolio_cv`)
+tienen RLS on sin policy → solo la service key entra.
 
 Notas de los file stores: **acceso serializado** (cola serial → read-modify-write
 atómico) + **escritura atómica** (tmp + rename), para no perder filas ni corromper
@@ -221,6 +227,7 @@ Supabase ([`supabase-setup.md`](supabase-setup.md)).
 | `/api/gdocs` | POST | Reenvía el `.docx` al webhook de Apps Script del usuario (501 si no configurado) |
 | `/api/stable-links` | GET/POST | Lista / agrega links estables (touchpoints permanentes) |
 | `/api/stable-links/[ref]` | DELETE | Quita un link estable del registro |
+| `/api/portfolio-cv` | GET/POST | Lee el estado de publicación del CV genérico / marca una versión publicada por idioma |
 | `/api/cover-letters` | GET/POST | Lista / crea templates de cover letter |
 | `/api/cover-letters/[id]` | PATCH/DELETE | Edita / borra un template |
 | `/api/screening` | GET/POST | Lista / crea preguntas de pre-screening (banco global) |
@@ -351,3 +358,23 @@ Versionado y workflow al editar: [`versioning.md`](versioning.md) §2.
   hyperlinks** (dejando el texto como plano) — hay que revalidar los 3
   placeholders y recopiar a `public/masters/`. Detalle en
   [`decisions.md`](decisions.md) → entradas de masters.
+
+## CV genérico del portafolio
+
+El CV público descargable del portafolio (ES/EN). No es un CV por-aplicación:
+`generatePortfolioCv` (`core/generatePortfolioCv.ts`) rellena el master con los 3
+links horneados bajo el **código reservado fijo `web-cv`** (sin foco), reusando
+`buildTrackedLinks` + `fillMaster` — la misma tubería que `generateCv`, pero sin
+mintear código, sin fila de registro y sin zip. Al ser un archivo estático subido
+a mano, todos los que lo descarguen comparten `web-cv`: se trackean los **clics**
+agregados en `/r/web-cvP|L|G` (vía go.html), no las personas; el evento de
+"descarga" en sí es del portafolio (otro repo).
+
+- La card **CV del portafolio** (`ui/PortfolioCvCard.tsx`) genera el `.docx` por
+  idioma (`Lenin_Cuadra_CV_{EN,ES}.docx`) para descargarlo y subirlo a mano.
+- El store `PortfolioCvStore` (`data/portfolio-cv.json` / tabla `portfolio_cv`)
+  guarda por idioma qué `MASTER_VERSION` está publicada. Cuando `MASTER_VERSION`
+  (`lib/version.ts`) supera esa versión, la card avisa **desactualizado** (el
+  master *es* la versión genérica, así que cualquier bump la deja vieja). "Marcar
+  publicado" registra la versión actual tras subir el archivo.
+- ⚠️ Depende de que el portafolio rutee la forma corta `/r/web-cv*` a `go.html`.

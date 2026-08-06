@@ -34,6 +34,15 @@ function codeRng(pairs: Array<[number, number]>): () => number {
 }
 
 describe("generateCv", () => {
+  it("throws when the company is empty (it names the delivery folder)", async () => {
+    await expect(
+      generateCv(
+        { company: "   ", languageChoice: "EN", date: new Date(2026, 5, 28) },
+        deps({ rng: fixedRng, now: fixedNow }),
+      ),
+    ).rejects.toThrow(/empresa/i);
+  });
+
   it("generates a single-language CV: one folder, one row, defaults applied", async () => {
     const result = await generateCv(
       { company: "GlobalLogic", languageChoice: "EN", date: new Date(2026, 5, 28) },
@@ -292,6 +301,17 @@ describe("buildPendingRow", () => {
       { spec: TEST_SPEC, existingCodes: [], rng: fixedRng, now: fixedNow },
     );
     expect(row.coverLetterDraft).toEqual(draft);
+  });
+
+  it("allows a contact-only draft with no company (empresa completed later)", () => {
+    const row = buildPendingRow(
+      { company: "", date: new Date(2026, 5, 28), who: "Jane Recruiter" },
+      { spec: TEST_SPEC, existingCodes: [], rng: fixedRng, now: fixedNow },
+    );
+    expect(row.company).toBe("");
+    expect(row.who).toBe("Jane Recruiter");
+    expect(row.status).toBe("Borrador");
+    expect(row.cvPending).toBe(true);
   });
 });
 

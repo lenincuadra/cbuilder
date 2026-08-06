@@ -47,8 +47,11 @@ const MODES: ModeOption[] = [
   },
 ];
 
-/** Step 1 — cómo se arma el cuerpo del CV. Se elige al principio del wizard. */
-export function StepMode({ data, set }: StepProps) {
+/**
+ * Step 4 — cómo se arma el cuerpo del CV. Va después de Opcionales, así el modo
+ * se elige sabiendo si hay una descripción del puesto (ATS la requiere).
+ */
+export function StepMode({ data, set, hasJd = false }: StepProps & { hasJd?: boolean }) {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
@@ -57,12 +60,15 @@ export function StepMode({ data, set }: StepProps) {
       <div className="space-y-2">
         {MODES.map((mode) => {
           const selected = data.mode === mode.value;
+          // ATS builds a CV from the JD, so it needs one entered in Opcionales.
+          const needsJd = mode.value === "ats" && !hasJd;
+          const disabled = mode.soon || needsJd;
           const Icon = mode.icon;
           return (
             <button
               key={mode.value}
               type="button"
-              disabled={mode.soon}
+              disabled={disabled}
               aria-pressed={selected}
               onClick={() => set({ mode: mode.value })}
               className={cn(
@@ -70,7 +76,7 @@ export function StepMode({ data, set }: StepProps) {
                 selected
                   ? "border-ring bg-accent/40 ring-1 ring-ring/40"
                   : "border-border hover:bg-accent/20",
-                mode.soon && "cursor-not-allowed opacity-60 hover:bg-transparent",
+                disabled && "cursor-not-allowed opacity-60 hover:bg-transparent",
               )}
             >
               <Icon
@@ -89,6 +95,11 @@ export function StepMode({ data, set }: StepProps) {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">{mode.description}</p>
+                {needsJd && (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-500">
+                    Necesitás pegar la descripción del puesto (paso Opcionales).
+                  </p>
+                )}
               </div>
             </button>
           );

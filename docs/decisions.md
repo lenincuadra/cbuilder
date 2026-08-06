@@ -1185,3 +1185,42 @@ vivo es la fuente de verdad sobre reservados (la spec original no lo tenía).
 ## Código en inglés, UI en español
 Identificadores/comentarios/commits en inglés; textos visibles al usuario en español
 (contenido de producto). Pedido explícito del usuario.
+
+## Borrador sin empresa: identidad = empresa **o** contacto
+"Registrar sin CV" pedía empresa obligatoria. Pero muchos procesos arrancan sin
+empresa conocida ("un recruiter me escribió, sé quién es pero no para qué empresa
+es el trabajo"). Ahora un borrador se identifica con **empresa o contacto (`who`)**
+—al menos uno—; la empresa se exige **solo al generar el CV**, porque es lo único
+que la necesita (nombre de carpeta `[IDIOMA]_[empresa]_[código]`). El campo Quién
+subió al paso "Empresa y contacto" para poder registrar desde ahí; la generación
+diferida de una fila sin empresa arranca en ese paso para completarla. `generateCv`
+tira error si la empresa está vacía (red de seguridad además del gate de UI).
+Trade-off: filas con `company` vacío en la tabla → la celda Empresa cae al contacto
+(itálica, muted) o "Sin empresa". Razón: el registro no debe bloquear; llevar el
+proceso a medias es el caso real, con o sin CV.
+
+## Orden del wizard: Modo al final (después de Opcionales)
+El paso "Modo de generación" (base/asistido/verbatim/ATS) estaba **primero**, pero
+3 de los 4 modos dependen de la descripción del puesto (asistido/verbatim la usan;
+ATS la exige), que se ingresa en Opcionales. Elegir la estrategia de tailoring
+antes de tener la JD —o la empresa— era al revés (y si elegías ATS quedabas
+trabado en Opcionales hasta pegar la JD). Se movió a **después de Idioma y foco**,
+lo más tarde antes del gate: 1. Empresa y contacto · 2. Opcionales · 3. Idioma y
+foco · 4. Modo · 5. [gate según modo] · 6. Confirmar. Beneficio: en el paso Modo se
+puede **deshabilitar ATS** (con aviso) cuando no hay JD, en vez de dejarte elegirlo
+y trabarte. Consecuencia: la generación diferida (arranca en Idioma y foco) ahora
+**pasa por el paso Modo** — antes lo salteaba y quedaba en base; ahora un CV
+diferido también se puede tailorear (default base). Pedido del usuario.
+
+## CV genérico del portafolio: código fijo `web-cv` + aviso de obsoleto
+El portafolio publica un CV descargable (ES/EN). cbuilder ahora lo **genera** con
+los 3 links de tracking horneados bajo el reservado fijo `web-cv` (`generatePortfolioCv`,
+reusa `buildTrackedLinks` + `fillMaster`) y **avisa** cuando quedó desactualizado.
+Decisiones: (1) **archivo estático, código compartido** — Lenin lo sube a mano, así
+que todos los que lo descarguen comparten `web-cv`: se trackean los clics agregados,
+no las personas (un código único por descarga exigiría generación dinámica en el
+portafolio, otro repo, cambio grande — descartado). (2) **El master *es* la versión
+genérica**, así que cualquier bump de `MASTER_VERSION` la deja vieja; se guarda por
+idioma la versión publicada (`PortfolioCvStore`) y se marca "publicado" tras subir.
+(3) El evento "descarga" es del portafolio (fuera de alcance); cbuilder solo hornea
+los links. Depende de que el portafolio rutee la forma corta `/r/web-cv*`.

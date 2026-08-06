@@ -58,9 +58,12 @@ export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditF
   const [jobContext, setJobContext] = useState(row.jobContext ?? "");
   const [saving, setSaving] = useState(false);
 
-  const companyOk = company.trim() !== "";
+  // A process is identified by empresa OR contacto — empresa becomes required
+  // only at CV generation (see the wizard). Keep at least one so the row isn't
+  // anonymous.
+  const identityOk = company.trim() !== "" || who.trim() !== "";
   const emailOk = channel !== "Email" || EMAIL_RE.test(email.trim());
-  const canSave = companyOk && emailOk;
+  const canSave = identityOk && emailOk;
 
   async function save() {
     if (!canSave) return;
@@ -87,14 +90,15 @@ export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditF
       <DrawerBody>
         <div className="flex flex-col gap-3 rounded-lg border p-3">
           <div className="space-y-1.5">
-            <Label htmlFor="edit-company">
-              Empresa <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="edit-company">Empresa</Label>
             <Input
               id="edit-company"
               value={company}
               onChange={(event) => setCompany(event.target.value)}
             />
+            <p className="text-xs text-muted-foreground">
+              Empresa o contacto (al menos uno). Hace falta para generar el CV.
+            </p>
           </div>
 
           <div className="space-y-1.5">
