@@ -25,6 +25,7 @@ cambiar un flow visible al usuario, actualizá su tabla acá.
 | [Generar cover letter (opcional, en Confirmar o después del CV)](#10-generar-cover-letter-opcional-en-confirmar-o-después-del-cv) | Cover letter |
 | [Marcar hitos del proceso](#11-marcar-hitos-del-proceso) | Seguimiento |
 | [Embudo AARRR](#12-embudo-aarrr) | Analítica |
+| [Actualizar el CV del portafolio](#13-actualizar-el-cv-del-portafolio) | CV genérico |
 
 ## Nueva aplicación (generar un CV)
 
@@ -45,8 +46,9 @@ generación"](architecture.md#pipeline-de-generación).
 
 Un proceso que arranca sin entregable (ej. un recruiter escribe primero, o
 todavía no sabés qué te van a pedir). **"Registrar sin CV" está en el footer
-de todos los pasos previos a Confirmar** — con Empresa alcanza; guarda todo lo
-completado hasta ahí. Tabla completa en
+de todos los pasos previos a Confirmar** — con empresa **o** contacto alcanza
+(la empresa se exige recién al generar el CV); guarda todo lo completado hasta
+ahí. Tabla completa en
 [`architecture.md` → "Registrar sin
 CV"](architecture.md#registrar-sin-cv-generación-diferida).
 
@@ -202,3 +204,16 @@ incluidas.
 | 2 | Click → drawer con el gráfico de barras horizontales decrecientes (A/A/A/R/R/R), **apiladas por Estado** (verde/ámbar/rojo/gris) | `FunnelChart` (recharts vía `components/ui/chart.tsx`), cargado lazy al abrir; en desktop el drawer se ensancha a 2 columnas (**leyenda a la izquierda, gráfico a la derecha**), apilado en mobile |
 | 3 | Leer cada etapa: label, conteo, % del total, definición de marketing y su traducción al job hunt, y entre etapas el % de conversión | Anotaciones HTML desde `FUNNEL_STAGES`; Awareness = todas las filas, Acquisition = `status !== "Borrador"`, el resto = hitos (conteo acumulativo, ver [`architecture.md`](architecture.md)); **Aceptado cuenta en todas las etapas** (llega al final) |
 | 4 | Leyenda de colores: Aceptado (verde) · Activo (ámbar) · Rechazado (rojo) · Borrador (gris) | Cada barra se apila por el Estado de las filas que alcanzaron esa etapa (`FunnelStage.byStatus`); el gris sólo aparece en Awareness |
+
+## 13. Actualizar el CV del portafolio
+
+El CV público (ES/EN) que se descarga desde el portafolio, con tracking. Detalle
+de sistema en [`architecture.md` → "CV genérico del
+portafolio"](architecture.md#cv-genérico-del-portafolio).
+
+| # | Acción Hecha | Dónde/Qué sucede por detrás |
+|---|---|---|
+| 1 | Card **"CV del portafolio"** (columna derecha). Si un master cambió, muestra ícono de aviso + "Desactualizado" | Compara `MASTER_VERSION` (`lib/version.ts`) con la versión publicada por idioma (`PortfolioCvStore`) |
+| 2 | Click → drawer con una fila por idioma (EN/ES): master actual vs. publicada, estado al día/desactualizado | `usePortfolioCv` lee `data/portfolio-cv.json` / tabla `portfolio_cv` |
+| 3 | **"Generar EN/ES"** → descarga `Lenin_Cuadra_CV_{EN,ES}.docx` con los 3 links `web-cv` horneados | `generatePortfolioCv` (`buildTrackedLinks("web-cv")` + `fillMaster`) client-side; sin fila de registro, sin código nuevo |
+| 4 | Subir ese `.docx` al portafolio (manual, otro repo) → **"Marcar publicado v{N}"** | `setPublished(idioma, MASTER_VERSION)`; limpia el aviso de desactualizado |

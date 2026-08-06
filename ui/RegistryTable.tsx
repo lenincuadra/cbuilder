@@ -259,7 +259,20 @@ export function RegistryTable({
                       )}
                     </span>
                   </TableCell>
-                  <TableCell className="truncate font-medium">{row.company}</TableCell>
+                  <TableCell className="truncate font-medium">
+                    {row.company ? (
+                      row.company
+                    ) : row.who ? (
+                      <span
+                        className="font-normal italic text-muted-foreground"
+                        title={`Contacto: ${row.who} · sin empresa`}
+                      >
+                        {row.who}
+                      </span>
+                    ) : (
+                      <span className="font-normal text-muted-foreground">Sin empresa</span>
+                    )}
+                  </TableCell>
                   <TableCell className="truncate" title={row.role}>
                     {row.role}
                   </TableCell>

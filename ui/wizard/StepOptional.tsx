@@ -135,16 +135,6 @@ export function StepOptional({ data, set, container }: StepProps) {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="who">Quién</Label>
-        <Input
-          id="who"
-          placeholder="Recruiter o contacto"
-          value={data.who}
-          onChange={(event) => set({ who: event.target.value })}
-        />
-      </div>
-
-      <div className="space-y-2">
         <Label htmlFor="jobUrl">Link del puesto</Label>
         <div className="flex gap-2">
           <Input

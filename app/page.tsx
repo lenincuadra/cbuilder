@@ -26,6 +26,7 @@ import { FunnelCard } from "@/ui/FunnelCard";
 import { GenerateCard } from "@/ui/GenerateCard";
 import { GeneralNotesCard } from "@/ui/GeneralNotesCard";
 import { PendingCvDrawer } from "@/ui/PendingCvDrawer";
+import { PortfolioCvCard } from "@/ui/PortfolioCvCard";
 import { ScreeningCard } from "@/ui/ScreeningCard";
 import { StableLinksCard } from "@/ui/StableLinksCard";
 import { RegistryTable } from "@/ui/RegistryTable";
@@ -426,6 +427,7 @@ export default function Home() {
             onEnsureRow={ensureDraftRow}
           />
           <GeneralNotesCard />
+          <PortfolioCvCard />
           <StableLinksCard />
           <CoverLettersCard store={coverLetters} rows={rows} onOpenRow={openGeneratedRow} />
           <ScreeningCard store={screening} rows={rows} />

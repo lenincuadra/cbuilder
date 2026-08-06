@@ -1,10 +1,11 @@
 -- cv-builder — run this in the Supabase SQL editor (prod after merges that touch schema).
--- schema_version: 11 (registry + notes + stable_links + cover_letter_templates
+-- schema_version: 12 (registry + notes + stable_links + cover_letter_templates
 --                     + screening_questions + cvs bucket + cv_pending/delivery_files
 --                     + Borrador status + cover_letter_draft/job_context
 --                     + screening_questions.draft + general_notes_entries
 --                     + drive_letter_docs + milestones
---                     + cv_mode + parsed_jd + verified_claims + ats_overrides)
+--                     + cv_mode + parsed_jd + verified_claims + ats_overrides
+--                     + portfolio_cv)
 -- Bump schema_version when this file changes; see docs/versioning.md §3.
 -- Columns map to RegistryRow (camelCase) via snake_case; the app converts them.
 
@@ -115,6 +116,16 @@ create index if not exists screening_questions_created_at_idx
   on public.screening_questions (created_at);
 alter table public.screening_questions enable row level security;
 
+-- Portfolio CV: which master version of the public, downloadable CV is currently
+-- live on the portfolio, per language. One row per language ('EN'|'ES'). Drives
+-- the "portfolio CV desactualizado" flag when a master bumps past this version.
+create table if not exists public.portfolio_cv (
+  language     text primary key,
+  version      integer not null,
+  published_at timestamptz not null default now()
+);
+alter table public.portfolio_cv enable row level security;
+
 -- All tables: same privacy model as registry — RLS on, NO policy, reached only
 -- via the service role key from the server.
 
@@ -141,6 +152,8 @@ insert into storage.buckets (id, name, public)
 --   alter table public.registry add column if not exists verified_claims jsonb;
 --   -- schema_version 11: ats_overrides (ATS máximo mode — JD-tailored content)
 --   alter table public.registry add column if not exists ats_overrides jsonb;
+--   -- schema_version 12: portfolio_cv table (new table — the create-if-not-exists
+--   -- above is enough; nothing to alter).
 --   -- Add the 'Aceptado' outcome status (funnel close-out):
 --   alter table public.registry drop constraint if exists registry_status_check;
 --   alter table public.registry add constraint registry_status_check

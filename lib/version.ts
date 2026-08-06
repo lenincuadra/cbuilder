@@ -3,8 +3,9 @@ import packageJson from "../package.json";
 /** Bump with package.json — see docs/versioning.md §1. */
 export const APP_VERSION = packageJson.version;
 
-/** Bump when supabase/schema.sql changes — see docs/versioning.md §3. */
-export const SCHEMA_VERSION = 7;
+/** Bump when supabase/schema.sql changes — see docs/versioning.md §3. Mirrors the
+ * schema_version header in supabase/schema.sql (12 as of the portfolio_cv table). */
+export const SCHEMA_VERSION = 12;
 
 /** Highest CV master vNN in assets/ — see docs/versioning.md §2. */
 export const MASTER_VERSION = 15;

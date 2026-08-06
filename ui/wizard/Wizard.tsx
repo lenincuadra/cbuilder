@@ -61,10 +61,10 @@ type ConfirmMode =
   | { kind: "screening-new" }
   | { kind: "screening-edit"; entry: ScreeningQuestion }
   | { kind: "screening-suggest"; entry: ScreeningQuestion };
-const STEP_TITLES_BASE = ["Modo", "Empresa y fecha", "Opcionales", "Idioma y foco", "Confirmar"];
-const STEP_TITLES_ASSISTED = ["Modo", "Empresa y fecha", "Opcionales", "Idioma y foco", "Resumen IA", "Confirmar"];
-const STEP_TITLES_VERBATIM = ["Modo", "Empresa y fecha", "Opcionales", "Idioma y foco", "Verificar claims", "Confirmar"];
-const STEP_TITLES_ATS = ["Modo", "Empresa y fecha", "Opcionales", "Idioma y foco", "Armar CV (ATS)", "Confirmar"];
+const STEP_TITLES_BASE = ["Modo", "Empresa y contacto", "Opcionales", "Idioma y foco", "Confirmar"];
+const STEP_TITLES_ASSISTED = ["Modo", "Empresa y contacto", "Opcionales", "Idioma y foco", "Resumen IA", "Confirmar"];
+const STEP_TITLES_VERBATIM = ["Modo", "Empresa y contacto", "Opcionales", "Idioma y foco", "Verificar claims", "Confirmar"];
+const STEP_TITLES_ATS = ["Modo", "Empresa y contacto", "Opcionales", "Idioma y foco", "Armar CV (ATS)", "Confirmar"];
 
 /**
  * Fresh wizard state. With a pending row (deferred generation), steps 1–2 come
@@ -169,10 +169,12 @@ export function Wizard({
   container,
 }: WizardProps) {
   // Fresh flow starts at Modo (1); deferred generation skips Modo/Empresa/
-  // Opcionales (their data lives on the row) and starts at Idioma y foco (4).
+  // Opcionales (their data lives on the row) and starts at Idioma y foco (4) —
+  // unless the row has no company yet (registered as a contact-only draft), in
+  // which case it starts at Empresa (2) so the now-required company can be added.
   // "Generate another CV" (variantMode) seeds from the row but starts at Modo,
   // so a different mode can be chosen for the same application.
-  const startStep = variantMode ? 1 : pendingRow ? 4 : 1;
+  const startStep = variantMode ? 1 : pendingRow ? (pendingRow.company.trim() === "" ? 2 : 4) : 1;
   const [step, setStep] = useState(startStep);
   const [data, setData] = useState<WizardData>(() => initialData(pendingRow));
   const [previewCode, setPreviewCode] = useState<string | null>(null);
@@ -197,15 +199,18 @@ export function Wizard({
   // Confirm step index depends on mode (5 for base/assisted, 6 for verbatim).
   const confirmStep = totalSteps;
 
-  // Empresa is the only blocking field — everything else can be completed
-  // later from the detail panel (see docs/decisions.md → "Registro nunca
-  // bloqueante").
-  const companyValid = data.company.trim() !== "";
-  // Step 2 gates on company name. Step 5 extra-step gates on the respective
-  // mode's data being initialised (happens on StepVerify / StepAssisted mount).
+  // Registering never blocks on the CV: a process is identified by empresa OR
+  // contacto (a recruiter can reach out before the company is known). Empresa
+  // becomes required only at CV generation — see docs/decisions.md → "Registro
+  // nunca bloqueante".
+  const identityValid = data.company.trim() !== "" || data.who.trim() !== "";
+  // Empresa alone is required to generate the CV (it names the delivery folder).
+  const companyForGen = data.company.trim() !== "";
+  // Step 2 gates on identity (empresa o contacto). Step 5 extra-step gates on
+  // the respective mode's data being initialised (StepVerify / StepAssisted).
   const canAdvance =
     step === 2
-      ? companyValid
+      ? identityValid
       : // ATS mode: the JD is mandatory — can't leave Opcionales without it.
         step === 3 && data.mode === "ats"
         ? hasJd
@@ -436,6 +441,12 @@ export function Wizard({
               container={container}
             />
           )}
+          {step === confirmStep && previewCode && !companyForGen && (
+            <p className="mt-3 text-xs text-amber-600 dark:text-amber-500">
+              Falta la empresa. Volvé al paso Empresa y contacto para completarla —
+              hace falta para generar el CV.
+            </p>
+          )}
         </div>
       </DrawerBody>
 
@@ -466,15 +477,15 @@ export function Wizard({
 
         <div className="flex items-center gap-2">
           {/* Fork: register the process now, generate the CV later. Available
-              from step 1 (Empresa is the only requirement) on every step
-              before Confirmar — registering is never gated on the CV path. */}
+              on every step before Confirmar — registering only needs empresa OR
+              contacto, never the CV path. */}
           {step < confirmStep && onSavePending && (
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={handleSavePending}
-              disabled={!companyValid || savingPending || generating}
+              disabled={!identityValid || savingPending || generating}
             >
               {savingPending ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -490,7 +501,13 @@ export function Wizard({
               <ChevronRight className="size-4" />
             </Button>
           ) : (
-            <Button type="button" size="sm" onClick={handleGenerate} disabled={generating}>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleGenerate}
+              disabled={generating || !companyForGen}
+              title={companyForGen ? undefined : "Completá la empresa para generar el CV"}
+            >
               {generating ? <Loader2 className="size-4 animate-spin" /> : null}
               Generar CV
             </Button>

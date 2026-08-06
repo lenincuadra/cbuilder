@@ -113,6 +113,12 @@ export async function generateCv(
   input: GenerateCvInput,
   deps: GenerateCvDeps,
 ): Promise<GenerateCvResult> {
+  // Empresa is optional while a process is just a draft (a recruiter reached
+  // out), but generating the CV needs it: it names the delivery folder
+  // [IDIOMA]_[empresa]_[código]. The UI gates this too — this is the safety net.
+  if (input.company.trim() === "") {
+    throw new Error("Completá la empresa para generar el CV.");
+  }
   const code =
     input.code ??
     generateCode({
