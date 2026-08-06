@@ -194,6 +194,15 @@ export interface RegistryRow {
 export type EditableFields = Partial<Omit<RegistryRow, "code" | "createdAt">>;
 
 /**
+ * Row's display name: the empresa, or the contacto (`who`) when there's no
+ * empresa yet (a contact-only draft — the two are interchangeable as the label),
+ * or a neutral fallback. Used by the detail drawer title and delete confirmation.
+ */
+export function displayName(row: Pick<RegistryRow, "company" | "who">): string {
+  return row.company.trim() || row.who?.trim() || "Sin empresa";
+}
+
+/**
  * Storage abstraction for the registry. Local implementation now,
  * Supabase later — without touching core/ or ui/.
  */

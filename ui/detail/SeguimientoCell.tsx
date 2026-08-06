@@ -1,6 +1,6 @@
 "use client";
 
-import { ClockAlert, FileChartLine, FileClock, StickyNote } from "lucide-react";
+import { ClockAlert, FileClock, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { RegistryRow } from "@/core/registry/types";
@@ -38,24 +38,24 @@ function PendingCvIcon() {
 }
 
 /**
- * Seguimiento column cell. Icons reflect content — sticky-note (notes) and/or
- * file-chart (updates) — and each opens the panel on its tab; a 🚩 after them
- * means at least one update is flagged; an amber clock-alert (front) means no
- * activity for 2+ weeks; a muted file-clock (last, so "Agregar" stays
- * left-aligned) means the CV is pending. With no content, an "Agregar" link.
+ * Seguimiento column cell. A sticky-note icon (notes, opens its tab) and a 🚩
+ * when an update is flagged; an amber clock-alert (front) means no activity for
+ * 2+ weeks; a muted file-clock (last, so "Agregar" stays left-aligned) means the
+ * CV is pending. With no notes/flag, an "Agregar" link. (The "ver actualizaciones"
+ * shortcut was dropped: every process now carries updates, so it stopped
+ * differentiating rows — open the row to see them.)
  *
  * Only the icons/link stop propagation: empty space falls through to the row.
  */
 export function SeguimientoCell({ row, onOpen }: SeguimientoCellProps) {
   const hasNotes = Boolean(row.notes?.trim());
-  const hasUpdates = Boolean(row.updates?.length);
   const hasFlag = Boolean(row.updates?.some((update) => update.flag));
   const stale = isStale(row, new Date());
 
   return (
     <div className="flex h-8 items-center gap-0.5">
       {stale && <StaleAlert />}
-      {!hasNotes && !hasUpdates ? (
+      {!hasNotes && !hasFlag ? (
         <Button
           variant="link"
           size="sm"
@@ -82,21 +82,6 @@ export function SeguimientoCell({ row, onOpen }: SeguimientoCellProps) {
               }}
             >
               <StickyNote className="size-4 fill-primary/30 text-primary" />
-            </Button>
-          )}
-          {hasUpdates && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              title="Ver actualizaciones"
-              aria-label="Ver actualizaciones"
-              onClick={(event) => {
-                event.stopPropagation();
-                onOpen("updates");
-              }}
-            >
-              <FileChartLine className="size-4 text-primary" />
             </Button>
           )}
           {hasFlag && (

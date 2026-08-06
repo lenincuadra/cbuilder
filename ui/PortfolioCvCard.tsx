@@ -115,14 +115,17 @@ function PortfolioCvManager({ store }: { store: UsePortfolioCv }) {
                   )}
                   Generar {language}
                 </Button>
-                <Button
-                  size="sm"
-                  variant={stale ? "default" : "ghost"}
-                  onClick={() => markPublished(language)}
-                  disabled={busy !== null}
-                >
-                  Marcar publicado v{MASTER_VERSION}
-                </Button>
+                {/* Only meaningful while stale — once marked publicado it's "Al
+                    día", so it hides until a master bump makes it stale again. */}
+                {stale && (
+                  <Button
+                    size="sm"
+                    onClick={() => markPublished(language)}
+                    disabled={busy !== null}
+                  >
+                    Marcar publicado v{MASTER_VERSION}
+                  </Button>
+                )}
               </div>
             </div>
           );
