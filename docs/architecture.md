@@ -59,7 +59,9 @@ La regla de oro: **cv-builder ESCRIBE los links, el portfolio los RECIBE.** El
 ## Pipeline de generación
 
 Desde el wizard hasta los tres destinos del CV. `generateCv()` es puro (dados sus
-deps); `page.tsx#handleGenerate` maneja los efectos.
+deps); `page.tsx#handleGenerate` maneja los efectos. La lógica interna del wizard
+(orden de pasos, paso-gate de tailoring, formas de entrar: fresh/diferido/variante)
+vive en [`wizard.md`](wizard.md).
 
 ```
 Wizard (empresa/contacto · opcionales · idioma/foco · modo)

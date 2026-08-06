@@ -7,6 +7,7 @@ App web que genera el CV de Lenin Cuadra con tracking, fase 2 (app real).
 - **`docs/architecture.md`**: mapa del "qué/cómo" (pipeline de generación, capas de storage, rutas API, modelo de tracking). Leelo para orientarte antes de tocar el flujo de generación, storage o sinks; actualizalo si agregás/cambiás una pieza de la arquitectura.
 - **`docs/decisions.md`**: log de decisiones (el "por qué", trade-offs y reglas que cambiaron). Leelo antes de tomar/revertir decisiones de producto o arquitectura, y agregá una entrada cuando tomes una decisión no obvia.
 - **`docs/flows.md`**: catálogo único de los flows a altura de uso (qué hace el usuario, paso a paso, en tablas). Linkea a `architecture.md` para el detalle de sistema — no duplica. Al agregar/cambiar un flow visible al usuario, actualizá su tabla ahí.
+- **`docs/wizard.md`**: la máquina de pasos del wizard de generación (orden, paso-gate de tailoring, formas de entrar: fresh/diferido/variante). Leelo antes de tocar el flujo del wizard o el orden de sus pasos.
 - El pedido concreto de esta fase está en `docs/claude-code-prompt-fase2.md`.
 - Los CV master están en `assets/` (EN y ES). No los modifiques salvo que se pida explícitamente.
 
