@@ -31,9 +31,12 @@ cambiar un flow visible al usuario, actualizá su tabla acá.
 
 El flow principal — la card "Nueva aplicación" registra el inicio de un
 proceso y (opcionalmente ahí mismo) genera el CV trackeado; el CTA final del
-wizard es "Generar CV". Wizard de **4 pasos** (Empresa y fecha · Opcionales ·
-Idioma y foco · Confirmar) donde **nada bloquea salvo Empresa**: el email
-inválido avisa y se omite (nunca se guarda roto). La carta y las preguntas
+wizard es "Generar CV". Wizard de **5 pasos** (Empresa y contacto · Opcionales ·
+Idioma y foco · Modo · Confirmar; +1 paso-gate según el modo) donde **nada
+bloquea salvo empresa o contacto** (la empresa se exige recién para generar el
+CV). El **Modo** va después de Opcionales: los modos tailored dependen de la
+descripción del puesto (ATS la exige), así que se elige sabiendo si hay JD. El
+email inválido avisa y se omite (nunca se guarda roto). La carta y las preguntas
 son opcionales, ya no pasos dedicados — viven como acciones opcionales al
 final de Confirmar (mismas secciones que el detalle post-generación, ver
 [flow 10](#10-generar-cover-letter-opcional-en-confirmar-o-después-del-cv) y

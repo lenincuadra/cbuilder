@@ -1199,6 +1199,19 @@ Trade-off: filas con `company` vacío en la tabla → la celda Empresa cae al co
 (itálica, muted) o "Sin empresa". Razón: el registro no debe bloquear; llevar el
 proceso a medias es el caso real, con o sin CV.
 
+## Orden del wizard: Modo al final (después de Opcionales)
+El paso "Modo de generación" (base/asistido/verbatim/ATS) estaba **primero**, pero
+3 de los 4 modos dependen de la descripción del puesto (asistido/verbatim la usan;
+ATS la exige), que se ingresa en Opcionales. Elegir la estrategia de tailoring
+antes de tener la JD —o la empresa— era al revés (y si elegías ATS quedabas
+trabado en Opcionales hasta pegar la JD). Se movió a **después de Idioma y foco**,
+lo más tarde antes del gate: 1. Empresa y contacto · 2. Opcionales · 3. Idioma y
+foco · 4. Modo · 5. [gate según modo] · 6. Confirmar. Beneficio: en el paso Modo se
+puede **deshabilitar ATS** (con aviso) cuando no hay JD, en vez de dejarte elegirlo
+y trabarte. Consecuencia: la generación diferida (arranca en Idioma y foco) ahora
+**pasa por el paso Modo** — antes lo salteaba y quedaba en base; ahora un CV
+diferido también se puede tailorear (default base). Pedido del usuario.
+
 ## CV genérico del portafolio: código fijo `web-cv` + aviso de obsoleto
 El portafolio publica un CV descargable (ES/EN). cbuilder ahora lo **genera** con
 los 3 links de tracking horneados bajo el reservado fijo `web-cv` (`generatePortfolioCv`,

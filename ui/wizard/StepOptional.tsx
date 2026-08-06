@@ -25,7 +25,7 @@ export const CHANNEL_OPTIONS: IconSelectOption<string>[] = [
   })),
 ];
 
-/** Step 3 — Optional fields: rol, canal, quién, link del puesto, descripción. */
+/** Step 2 — Optional fields: rol, canal, email, link del puesto, descripción. */
 export function StepOptional({ data, set, container }: StepProps) {
   const [detecting, setDetecting] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);

@@ -66,7 +66,7 @@ function SummaryRow({
   );
 }
 
-/** Step 4 — Confirm. Shows a summary, a preview of the folder name(s) to be
+/** Last step — Confirm. Shows a summary, a preview of the folder name(s) to be
  *  created, and — at the end — the optional cover letter/preguntas actions
  *  (same sections as the row's post-generation detail view). */
 export function StepConfirm({

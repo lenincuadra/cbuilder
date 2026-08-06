@@ -62,7 +62,7 @@ Desde el wizard hasta los tres destinos del CV. `generateCv()` es puro (dados su
 deps); `page.tsx#handleGenerate` maneja los efectos.
 
 ```
-Wizard (empresa, idioma, foco, opcionales)
+Wizard (empresa/contacto · opcionales · idioma/foco · modo)
    │
    ▼
 generateCv()  ── código único (colisión-checked) ── fillMaster() por idioma ── zip
