@@ -200,8 +200,7 @@ function LinkForm({
 }
 
 /** Manager: the saved links (click one to edit) with the add action pinned in the footer. */
-function StableLinksManager() {
-  const store = useStableLinks();
+function StableLinksManager({ store }: { store: UseStableLinks }) {
   const { links, remove } = store;
   const { spec } = useSpec();
   const base = spec?.base ?? "";
@@ -283,6 +282,7 @@ function StableLinksManager() {
  * in a drawer — the shared PanelCard pattern.
  */
 export function StableLinksCard() {
+  const store = useStableLinks();
   return (
     <PanelCard
       title="Links estables"
@@ -292,11 +292,12 @@ export function StableLinksCard() {
           icon={Link2}
           title="Links estables"
           description="Links de perfiles fijos: LinkedIn, Behance, etc."
+          count={store.links.length}
           onOpen={open}
         />
       )}
     >
-      {() => <StableLinksManager />}
+      {() => <StableLinksManager store={store} />}
     </PanelCard>
   );
 }
