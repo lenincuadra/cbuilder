@@ -34,3 +34,16 @@ export const REACH_OPTIONS: IconSelectOption<ReachType>[] = REACH_VALUES.map((va
   const { name, Icon, color } = REACH_META[value];
   return { value, label: name, icon: <Icon className={cn("size-4", color)} /> };
 });
+
+/** Sentinel for "sin definir" in the edit form's Reach select (like CHANNEL_OMIT). */
+export const REACH_OMIT = "__reach_omit__";
+
+/**
+ * Reach options for the edit form: a clearable "Sin definir" up front, so an
+ * existing row's reach can be set, changed or cleared (unlike the wizard, which
+ * defaults to outbound and always picks one).
+ */
+export const REACH_EDIT_OPTIONS: IconSelectOption<string>[] = [
+  { value: REACH_OMIT, label: "Sin definir" },
+  ...REACH_OPTIONS,
+];

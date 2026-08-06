@@ -14,11 +14,13 @@ import {
   DEFAULT_ROLE,
   type Channel,
   type EditableFields,
+  type ReachType,
   type RegistryRow,
 } from "@/core/registry/types";
 import { languageLabel } from "@/core/types";
 import { DrawerFormFooter } from "@/ui/DrawerFormFooter";
 import { IconSelect } from "@/ui/IconSelect";
+import { REACH_EDIT_OPTIONS, REACH_OMIT } from "@/ui/reachMeta";
 import { DatePicker } from "@/ui/wizard/DatePicker";
 import { CHANNEL_OPTIONS } from "@/ui/wizard/StepOptional";
 import { CHANNEL_OMIT } from "@/ui/wizard/types";
@@ -51,6 +53,7 @@ export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditF
   const [company, setCompany] = useState(row.company);
   const [role, setRole] = useState(row.role);
   const [channel, setChannel] = useState<Channel | "">(row.channel ?? "");
+  const [reach, setReach] = useState<ReachType | "">(row.reach ?? "");
   const [email, setEmail] = useState(row.email ?? "");
   const [date, setDate] = useState<Date>(parseDate(row.date));
   const [who, setWho] = useState(row.who ?? "");
@@ -73,6 +76,7 @@ export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditF
         company: company.trim(),
         role: cleaned(role) ?? DEFAULT_ROLE,
         channel: channel === "" ? undefined : channel,
+        reach: reach === "" ? undefined : reach,
         email: channel === "Email" ? cleaned(email) : undefined,
         date: toISODate(date),
         who: cleaned(who),
@@ -116,6 +120,18 @@ export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditF
               value={channel === "" ? CHANNEL_OMIT : channel}
               onChange={(value) => setChannel(value === CHANNEL_OMIT ? "" : (value as Channel))}
               options={CHANNEL_OPTIONS}
+              container={portalContainer}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-reach">Reach</Label>
+            <IconSelect
+              id="edit-reach"
+              aria-label="Reach"
+              value={reach === "" ? REACH_OMIT : reach}
+              onChange={(value) => setReach(value === REACH_OMIT ? "" : (value as ReachType))}
+              options={REACH_EDIT_OPTIONS}
               container={portalContainer}
             />
           </div>
