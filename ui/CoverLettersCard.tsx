@@ -350,6 +350,7 @@ export function CoverLettersCard({ store, rows, onOpenRow }: CoverLettersCardPro
           icon={Mail}
           title="Cover letters"
           description="Templates reutilizables + cartas enviadas."
+          count={store.templates.length}
           onOpen={open}
         />
       )}

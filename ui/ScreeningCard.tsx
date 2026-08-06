@@ -283,6 +283,7 @@ export function ScreeningCard({ store, rows }: ScreeningCardProps) {
           icon={MessageCircleQuestion}
           title="Preguntas"
           description="Respuestas de pre-screening, reutilizables."
+          count={store.entries.length}
           onOpen={open}
         />
       )}

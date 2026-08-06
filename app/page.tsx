@@ -413,7 +413,7 @@ export default function Home() {
             pantalla — 1 col en la columna angosta (lg), 3 en fila (o wrap con igual
             tamaño) cuando la tabla las empuja abajo, 1 apilada en mobile. `items-stretch`
             (default) + `h-full` en la cara de la card las mantiene del mismo alto. */}
-        <aside className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-5 lg:sticky lg:top-6 lg:self-start">
+        <aside className="order-first grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-5 lg:order-none lg:sticky lg:top-6 lg:self-start">
           <GenerateCard
             spec={spec}
             existingCodes={existingCodes}

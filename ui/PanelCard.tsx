@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { X, type LucideIcon } from "lucide-react";
+import { ChevronRight, X, type LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,14 +12,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 import { keepDrawerOnDialogInteraction } from "@/ui/ConfirmDelete";
 import { useIsMobile } from "@/ui/useIsMobile";
@@ -107,12 +99,14 @@ export function PanelCardFace({
   icon: Icon,
   title,
   description,
+  count,
   onOpen,
   cta,
 }: {
   icon: LucideIcon;
   title: string;
   description: string;
+  count?: number;
   onOpen?: () => void;
   cta?: ReactNode;
 }) {
@@ -138,17 +132,16 @@ export function PanelCardFace({
           "cursor-pointer transition-colors hover:border-ring/40 hover:bg-accent/30",
       )}
     >
-      <CardContent className="flex flex-1 items-center justify-center py-6">
-        <Empty className="border-0 p-0">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Icon />
-            </EmptyMedia>
-            <EmptyTitle>{title}</EmptyTitle>
-            <EmptyDescription>{description}</EmptyDescription>
-          </EmptyHeader>
-          {cta && <EmptyContent>{cta}</EmptyContent>}
-        </Empty>
+      <CardContent className="flex items-center gap-3 px-3 py-0.5">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted">
+          <Icon className="size-5" />
+        </div>
+        <span className="flex-1 text-sm font-medium">{title}</span>
+        {count !== undefined && (
+          <span className="text-xs text-muted-foreground">{count}</span>
+        )}
+        {clickable && <ChevronRight className="size-4 shrink-0 text-muted-foreground" />}
+        {cta}
       </CardContent>
     </Card>
   );

@@ -236,6 +236,7 @@ export function GeneralNotesCard() {
           icon={NotebookPen}
           title="Notas generales"
           description="Notas del proceso, no atadas a una fila."
+          count={store.notes.length}
           onOpen={open}
         />
       )}
