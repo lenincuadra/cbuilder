@@ -20,6 +20,7 @@ import {
   type Channel,
   type CvMode,
   type EditableFields,
+  type ReachType,
   type RegistryRow,
 } from "./registry/types";
 
@@ -48,6 +49,8 @@ export interface GenerateCvInput {
   atsOverrides?: CvContentOverrides;
   notes?: string;
   status?: ApplicationStatus;
+  /** How the process started: inbound (they reached out) vs outbound (Lenin did). */
+  reach?: ReachType;
   /** Portfolio focus profile id (from the spec) baked into the CV's tracked links. */
   focus?: string;
   /** How the CV body was tailored (see `CvMode`). Persisted as a faithful record. */
@@ -192,6 +195,7 @@ export async function generateCv(
     date: toISODate(input.date),
     notes: cleaned(input.notes),
     status: input.status ?? DEFAULT_STATUS,
+    reach: input.reach,
     who: cleaned(input.who),
     jobUrl: cleaned(input.jobUrl),
     jobContext: cleaned(input.jobContext),
@@ -219,6 +223,8 @@ export interface PendingRowInput {
   company: string;
   date: Date;
   role?: string;
+  /** How the process started: inbound (they reached out) vs outbound (Lenin did). */
+  reach?: ReachType;
   who?: string;
   channel?: Channel;
   /** Email applied to — validated caller-side; an invalid one is omitted, never stored. */
@@ -281,6 +287,7 @@ export function buildPendingRow(input: PendingRowInput, deps: PendingRowDeps): R
     // Not yet sent — distinct from DEFAULT_STATUS ("Activo"), which implies a
     // real submitted application. Flips to Activo in deferredGenerationFields.
     status: "Borrador",
+    reach: input.reach,
     who: cleaned(input.who),
     jobUrl: cleaned(input.jobUrl),
     jobContext: cleaned(input.jobContext),

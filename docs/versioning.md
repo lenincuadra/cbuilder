@@ -197,11 +197,12 @@ tiene `SUPABASE_*`).
 | **3** | `screening_questions`, bucket `cvs`, columnas `cv_pending` / `delivery_files` |
 | **4–11** | ver el header de `supabase/schema.sql` (Borrador, `cover_letter_draft`/`job_context`, `general_notes_entries`, `drive_letter_docs`, `milestones`, `cv_mode`/`parsed_jd`, `verified_claims`, `ats_overrides`) |
 | **12** | tabla `portfolio_cv` (versión publicada del CV genérico por idioma) |
+| **13** | columna `registry.reach` (inbound / outbound) |
 
 (Ajustá esta tabla cuando subas la versión.) La fuente de verdad del número es el
 header de `supabase/schema.sql`; `lib/version.ts` (`SCHEMA_VERSION`) lo espeja.
 **Nota**: `SCHEMA_VERSION` venía desincronizado (quedó en 7 mientras el header ya
-estaba en 11) — se realineó a **12** junto con esta tabla.
+estaba en 11) — se realineó a **13** (última: `registry.reach`).
 
 ### Decisiones futuras
 

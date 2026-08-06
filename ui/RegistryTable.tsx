@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Crosshair, Dot, Inbox, Send, type LucideIcon } from "lucide-react";
+import { Crosshair, Dot, HeartHandshake, Inbox, Send, type LucideIcon } from "lucide-react";
 
 import {
   Empty,
@@ -30,6 +30,7 @@ import { ArrowToTarget } from "@/ui/animations/ArrowToTarget";
 import { RowDetailDrawer, type DetailTab } from "@/ui/detail/RowDetailDrawer";
 import { FocusIcon } from "@/ui/FocusIcon";
 import { SeguimientoCell } from "@/ui/detail/SeguimientoCell";
+import { ReachToggle } from "@/ui/ReachToggle";
 import { StatusToggle } from "@/ui/StatusToggle";
 import type { UseScreening } from "@/ui/useScreening";
 import { useSpec } from "@/ui/useSpec";
@@ -50,6 +51,8 @@ type Column = {
   headClass?: string;
 };
 const COLUMNS: Column[] = [
+  // Reach (inbound/outbound) — icon-only header (heart-handshake), set inline.
+  { label: "Reach", width: "w-[5%]", icon: HeartHandshake },
   { label: "Código", width: "w-[11%]" },
   // Foco's icons are white (foreground): they mark row state, not secondary
   // text. Right-aligned with no right padding so the icon sits one cell
@@ -61,8 +64,8 @@ const COLUMNS: Column[] = [
     iconClass: "text-foreground",
     headClass: "pr-0 text-right",
   },
-  { label: "Empresa", width: "w-[17%]" },
-  { label: "Rol", width: "w-[20%]" },
+  { label: "Empresa", width: "w-[15%]" },
+  { label: "Rol", width: "w-[17%]" },
   { label: "Canal", width: "w-[8%]", icon: Send },
   { label: "Fecha", width: "w-[11%]" },
   { label: "Estado", width: "w-[11%]" },
@@ -243,6 +246,12 @@ export function RegistryTable({
                   onClick={() => openDetail(row.code)}
                   className="cursor-pointer"
                 >
+                  <TableCell className="text-center">
+                    <ReachToggle
+                      reach={row.reach}
+                      onSetReach={(reach) => onUpdate(row.code, { reach })}
+                    />
+                  </TableCell>
                   <TableCell className="truncate">
                     <CodeCell code={row.code} />
                   </TableCell>

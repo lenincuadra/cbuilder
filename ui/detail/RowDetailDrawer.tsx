@@ -34,7 +34,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateLong } from "@/core/dates";
 import type { CoverLetterTemplate } from "@/core/coverLetter/types";
-import type { EditableFields, RegistryRow } from "@/core/registry/types";
+import { displayName, type EditableFields, type RegistryRow } from "@/core/registry/types";
 import { languageLabel } from "@/core/types";
 import type { ScreeningQuestion } from "@/core/screening/types";
 import { ConfirmDelete, keepDrawerOnDialogInteraction } from "@/ui/ConfirmDelete";
@@ -226,7 +226,7 @@ export function RowDetailDrawer({
             </Button>
           </div>
 
-          <DrawerTitle>{row?.company}</DrawerTitle>
+          <DrawerTitle>{row ? displayName(row) : ""}</DrawerTitle>
           {/* Meta row: code + status (left), row navigation (right). -mr-16 cancels
               the header's pr-20 (which only reserves space for the menu/close on the
               row above) so the nav sits flush with the body's right edge. */}
@@ -488,7 +488,7 @@ export function RowDetailDrawer({
           title="Borrar registro"
           description={
             <>
-              Se va a borrar la aplicación a <strong>{row.company}</strong>
+              Se va a borrar la aplicación a <strong>{displayName(row)}</strong>
               {row.role ? <> · {row.role}</> : null} (código{" "}
               <span className="font-mono">{row.code}</span>, {formatDateLong(row.date)}). Esta
               acción no se puede deshacer.

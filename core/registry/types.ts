@@ -15,6 +15,14 @@ export const CHANNELS = [
 export type Channel = (typeof CHANNELS)[number];
 
 /**
+ * How the process started: `inbound` (a recruiter/contact reached out to Lenin)
+ * or `outbound` (Lenin reached out — applied, messaged, etc.). Shown as the
+ * first table column ("Reach"). Optional and freely editable — pure metadata,
+ * not baked into the CV.
+ */
+export type ReachType = "inbound" | "outbound";
+
+/**
  * "Borrador" is system-derived (mirrors `cvPending`), never manually set —
  * it's what a row is while registered but not yet sent (via "Guardar sin CV"
  * or an AI cover-letter draft started mid-wizard). It flips to "Activo" the
@@ -85,8 +93,8 @@ export type Milestones = Partial<Record<MilestoneKey, string>>;
 
 /**
  * One registry row per application.
- * The table shows 7 columns (code, company, role, channel, date, notes, status);
- * the remaining fields are captured for the audit trail but not displayed.
+ * Fields shown as table columns: reach, code, company, role, channel, date,
+ * notes (Seguimiento) and status; the rest are captured for the audit trail.
  */
 export interface RegistryRow {
   /** Tracking code — unique, primary key. */
@@ -101,6 +109,11 @@ export interface RegistryRow {
   date: string;
   notes?: string;
   status: ApplicationStatus;
+  /**
+   * How the process started — inbound (they reached out) vs outbound (Lenin
+   * did). Shown as the first table column ("Reach"). Optional, freely editable.
+   */
+  reach?: ReachType;
   // --- captured but not shown as table columns ---
   /** Recruiter or contact. */
   who?: string;
@@ -192,6 +205,15 @@ export interface RegistryRow {
  * tracking code (identity, already baked into the sent CV) and createdAt.
  */
 export type EditableFields = Partial<Omit<RegistryRow, "code" | "createdAt">>;
+
+/**
+ * Row's display name: the empresa, or the contacto (`who`) when there's no
+ * empresa yet (a contact-only draft — the two are interchangeable as the label),
+ * or a neutral fallback. Used by the detail drawer title and delete confirmation.
+ */
+export function displayName(row: Pick<RegistryRow, "company" | "who">): string {
+  return row.company.trim() || row.who?.trim() || "Sin empresa";
+}
 
 /**
  * Storage abstraction for the registry. Local implementation now,

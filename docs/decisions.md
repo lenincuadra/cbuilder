@@ -1199,6 +1199,17 @@ Trade-off: filas con `company` vacío en la tabla → la celda Empresa cae al co
 (itálica, muted) o "Sin empresa". Razón: el registro no debe bloquear; llevar el
 proceso a medias es el caso real, con o sin CV.
 
+## Columna "Reach": inbound vs outbound
+Primera columna de la tabla (antes de Código), con icono de header heart-handshake.
+Marca cómo arrancó el proceso: **inbound** (te contactaron — imán, verde) vs
+**outbound** (contactaste vos — megáfono, azul). Es metadata pura (no se hornea en
+el CV), persistida en `registry.reach` (schema_version 13). Se setea en **tres**
+lados: al crear (paso "Empresa y contacto" del wizard, **default outbound** por ser
+lo más común), **inline desde la tabla** (toggle tipo `StatusToggle`; re-elegir el
+activo lo limpia) y desde el **form de Editar** (con "Sin definir" para limpiar),
+así cubre también las filas existentes. Metadata e iconos compartidos en
+`ui/reachMeta.tsx`.
+
 ## Orden del wizard: Modo al final (después de Opcionales)
 El paso "Modo de generación" (base/asistido/verbatim/ATS) estaba **primero**, pero
 3 de los 4 modos dependen de la descripción del puesto (asistido/verbatim la usan;
