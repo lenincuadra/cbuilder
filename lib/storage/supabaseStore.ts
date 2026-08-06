@@ -5,6 +5,7 @@ import type {
   CvMode,
   EditableFields,
   Milestones,
+  ReachType,
   RegistryRow,
   RegistryStore,
   StatusUpdate,
@@ -49,6 +50,7 @@ interface RegistryRowDb {
   parsed_jd: ParsedJd | null;
   verified_claims: VerifiedClaims | null;
   ats_overrides: CvContentOverrides | null;
+  reach: string | null;
 }
 
 export function dbToRow(db: RegistryRowDb): RegistryRow {
@@ -85,6 +87,7 @@ export function dbToRow(db: RegistryRowDb): RegistryRow {
     parsedJd: db.parsed_jd ?? undefined,
     verifiedClaims: db.verified_claims ?? undefined,
     atsOverrides: db.ats_overrides ?? undefined,
+    reach: (db.reach ?? undefined) as ReachType | undefined,
   };
 }
 
@@ -123,6 +126,7 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
     parsed_jd: row.parsedJd ?? null,
     verified_claims: row.verifiedClaims ?? null,
     ats_overrides: row.atsOverrides ?? null,
+    reach: row.reach ?? null,
   };
 }
 
@@ -156,6 +160,7 @@ export function editableToDb(fields: EditableFields): Partial<RegistryRowDb> {
   if ("parsedJd" in fields) out.parsed_jd = fields.parsedJd ?? null;
   if ("verifiedClaims" in fields) out.verified_claims = fields.verifiedClaims ?? null;
   if ("atsOverrides" in fields) out.ats_overrides = fields.atsOverrides ?? null;
+  if ("reach" in fields) out.reach = fields.reach ?? null;
   return out;
 }
 

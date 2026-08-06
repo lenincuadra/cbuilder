@@ -1199,6 +1199,15 @@ Trade-off: filas con `company` vacío en la tabla → la celda Empresa cae al co
 (itálica, muted) o "Sin empresa". Razón: el registro no debe bloquear; llevar el
 proceso a medias es el caso real, con o sin CV.
 
+## Columna "Reach": inbound vs outbound
+Primera columna de la tabla (antes de Código), con icono de header heart-handshake.
+Marca cómo arrancó el proceso: **inbound** (te contactaron — imán, verde) vs
+**outbound** (contactaste vos — megáfono, azul). Es metadata pura (no se hornea en
+el CV), opcional y editable **inline desde la tabla** (toggle tipo `StatusToggle`;
+re-elegir el activo lo limpia). Persistida en `registry.reach` (schema_version 13).
+Se seteó como toggle en la celda (no un paso del wizard) para que funcione en las
+filas existentes sin re-tocar el flujo de creación.
+
 ## Orden del wizard: Modo al final (después de Opcionales)
 El paso "Modo de generación" (base/asistido/verbatim/ATS) estaba **primero**, pero
 3 de los 4 modos dependen de la descripción del puesto (asistido/verbatim la usan;
