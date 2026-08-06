@@ -2,6 +2,8 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { IconSelect } from "@/ui/IconSelect";
+import { REACH_OPTIONS } from "@/ui/reachMeta";
 import { DatePicker } from "./DatePicker";
 import type { WizardData } from "./types";
 
@@ -20,7 +22,7 @@ export interface StepProps {
  * ("sé quién es pero no para qué empresa"). Empresa is required only later, to
  * generate the CV (it names the delivery folder). Fecha defaults to hoy.
  */
-export function StepCompany({ data, set }: StepProps) {
+export function StepCompany({ data, set, container }: StepProps) {
   return (
     <div className="space-y-5">
       <div className="space-y-2">
@@ -45,6 +47,21 @@ export function StepCompany({ data, set }: StepProps) {
         <p className="text-xs text-muted-foreground">
           Registrá con al menos empresa o contacto. La empresa se puede completar
           después — hace falta solo al generar el CV.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="reach">Reach</Label>
+        <IconSelect
+          id="reach"
+          aria-label="Reach"
+          value={data.reach}
+          onChange={(reach) => set({ reach })}
+          options={REACH_OPTIONS}
+          container={container}
+        />
+        <p className="text-xs text-muted-foreground">
+          Outbound: aplicaste o escribiste vos. Inbound: te contactaron.
         </p>
       </div>
 

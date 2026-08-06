@@ -1,7 +1,7 @@
 import type { CvMode } from "@/core/registry/types";
 import type { AtsSelections } from "@/core/cvData/tailor";
 import type { ParsedJd, VerifiedClaims } from "@/core/jdParse/types";
-import type { Channel } from "@/core/registry/types";
+import type { Channel, ReachType } from "@/core/registry/types";
 import { languagesFor, type Language, type LanguageChoice } from "@/core/types";
 
 export { languagesFor };
@@ -25,6 +25,8 @@ export interface WizardData {
   /** Email applied to — required when channel is "Email". */
   email: string;
   who: string;
+  /** How the process started — defaults to "outbound" (the common case). */
+  reach: ReachType;
   jobUrl: string;
   /**
    * Free-text requirements/highlights from the posting — extra grounding for

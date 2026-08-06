@@ -147,6 +147,7 @@ export default function Home() {
         const fields: EditableFields = {
           company: built.company,
           role: built.role,
+          reach: built.reach,
           channel: built.channel,
           email: built.email,
           who: built.who,
@@ -191,6 +192,7 @@ export default function Home() {
         company: data.company,
         date: data.date,
         role: data.role,
+        reach: data.reach,
         who: data.who,
         channel: data.channel === "" ? undefined : data.channel,
         email: data.email,

@@ -10,7 +10,7 @@ ver [`architecture.md`](architecture.md) → "Pipeline de generación".
 
 | # | Paso | Componente | Recopila | Gate para avanzar (`canAdvance`) |
 |---|---|---|---|---|
-| 1 | Empresa y contacto | `StepCompany` | empresa, contacto (`who`), fecha | **empresa o contacto** (`identityValid`) |
+| 1 | Empresa y contacto | `StepCompany` | empresa, contacto (`who`), reach (default outbound), fecha | **empresa o contacto** (`identityValid`) |
 | 2 | Opcionales | `StepOptional` | rol, canal, email, jobUrl, jobContext + **JD** (Detectar/Analizar) | — |
 | 3 | Idioma y foco | `StepLanguage` | idioma (EN/ES/Ambos), foco del portfolio | — |
 | 4 | Modo | `StepMode` | modo (base/asistido/verbatim/ATS) | ATS exige JD (si no, deshabilitado) |

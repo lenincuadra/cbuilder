@@ -1,6 +1,6 @@
 "use client";
 
-import { HeartHandshake, Magnet, Megaphone, type LucideIcon } from "lucide-react";
+import { HeartHandshake } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -10,22 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { ReachType } from "@/core/registry/types";
 import { cn } from "@/lib/utils";
-
-/** Icon, color and label per reach direction (opposite pair). */
-const REACH_META: Record<ReachType, { label: string; Icon: LucideIcon; color: string }> = {
-  inbound: {
-    label: "Inbound — te contactaron",
-    Icon: Magnet,
-    color: "text-green-600 dark:text-green-500",
-  },
-  outbound: {
-    label: "Outbound — contactaste vos",
-    Icon: Megaphone,
-    color: "text-blue-600 dark:text-blue-500",
-  },
-};
-
-const REACH_VALUES = Object.keys(REACH_META) as ReachType[];
+import { REACH_META, REACH_VALUES } from "@/ui/reachMeta";
 
 export interface ReachToggleProps {
   reach?: ReachType;
@@ -48,8 +33,8 @@ export function ReachToggle({ reach, onSetReach }: ReachToggleProps) {
         render={
           <button
             type="button"
-            title={current ? current.label : "Definir reach (inbound / outbound)"}
-            aria-label={current ? current.label : "Definir reach"}
+            title={current ? current.hint : "Definir reach (inbound / outbound)"}
+            aria-label={current ? current.hint : "Definir reach"}
             // Stop the row's click-to-open from firing when used inside the table.
             onClick={(event) => event.stopPropagation()}
             className="inline-flex cursor-pointer items-center justify-center"
@@ -58,9 +43,15 @@ export function ReachToggle({ reach, onSetReach }: ReachToggleProps) {
       >
         <CurrentIcon className={cn("size-4", current ? current.color : "text-muted-foreground/50")} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" onClick={(event) => event.stopPropagation()}>
+      {/* min-w-40 overrides the default anchor-width popup (the trigger is a tiny
+          icon, so it'd otherwise clamp to min-w-32 and wrap). */}
+      <DropdownMenuContent
+        align="start"
+        className="min-w-40"
+        onClick={(event) => event.stopPropagation()}
+      >
         {REACH_VALUES.map((value) => {
-          const { label, Icon, color } = REACH_META[value];
+          const { name, Icon, color } = REACH_META[value];
           return (
             <DropdownMenuCheckboxItem
               key={value}
@@ -68,7 +59,7 @@ export function ReachToggle({ reach, onSetReach }: ReachToggleProps) {
               onCheckedChange={(checked) => onSetReach(checked ? value : undefined)}
             >
               <Icon className={cn("size-4", color)} />
-              {label}
+              {name}
             </DropdownMenuCheckboxItem>
           );
         })}

@@ -1203,10 +1203,11 @@ proceso a medias es el caso real, con o sin CV.
 Primera columna de la tabla (antes de Código), con icono de header heart-handshake.
 Marca cómo arrancó el proceso: **inbound** (te contactaron — imán, verde) vs
 **outbound** (contactaste vos — megáfono, azul). Es metadata pura (no se hornea en
-el CV), opcional y editable **inline desde la tabla** (toggle tipo `StatusToggle`;
-re-elegir el activo lo limpia). Persistida en `registry.reach` (schema_version 13).
-Se seteó como toggle en la celda (no un paso del wizard) para que funcione en las
-filas existentes sin re-tocar el flujo de creación.
+el CV), persistida en `registry.reach` (schema_version 13). Se setea en **dos**
+lados: al crear (paso "Empresa y contacto" del wizard, **default outbound** por ser
+lo más común) y también **inline desde la tabla** (toggle tipo `StatusToggle`;
+re-elegir el activo lo limpia), así cubre también las filas existentes. Metadata e
+iconos compartidos en `ui/reachMeta.tsx` (toggle e IconSelect del wizard).
 
 ## Orden del wizard: Modo al final (después de Opcionales)
 El paso "Modo de generación" (base/asistido/verbatim/ATS) estaba **primero**, pero
