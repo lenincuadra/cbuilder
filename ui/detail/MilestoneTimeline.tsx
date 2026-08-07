@@ -24,9 +24,16 @@ import { IconSelect } from "@/ui/IconSelect";
 import { statusBadgeClass } from "@/ui/StatusToggle";
 import { DatePicker } from "@/ui/wizard/DatePicker";
 
-/** ES label per milestone, from the funnel stage list (single source of truth). */
+/**
+ * ES label per milestone, from the funnel stage list (single source of truth).
+ * Prefers a stage's `timelineLabel` when set, so the timeline can read differently
+ * from the funnel (e.g. "CV compartido" here vs "CV enviado" as the Acquisition
+ * stage) — the first hito's title then fits inbound and outbound alike.
+ */
 const MILESTONE_LABELS = Object.fromEntries(
-  FUNNEL_STAGES.flatMap((stage) => (stage.milestone ? [[stage.milestone, stage.label]] : [])),
+  FUNNEL_STAGES.flatMap((stage) =>
+    stage.milestone ? [[stage.milestone, stage.timelineLabel ?? stage.label]] : [],
+  ),
 ) as Record<MilestoneKey, string>;
 
 /**
@@ -394,6 +401,7 @@ export function MilestoneTimeline({
                         <DatePicker
                           value={new Date(`${current[key] ?? earliestDate}T00:00:00`)}
                           onChange={(date) => setMilestoneDate(key, date)}
+                          container={container}
                         />
                       </div>
                       <Button

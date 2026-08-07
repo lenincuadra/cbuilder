@@ -217,14 +217,17 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
   **inactivos se deshabilitan** hasta guardar/cancelar y el activo queda marcado — se
   ve dónde estás parado.
 - Seguimiento: tabs **Notas** (markdown) y **Actualizaciones** (timeline, tope 12, más
-  reciente abajo). Cada actualización es un item
-  **editable** (texto, fecha/hora, flag). El **flag 🚩** marca algo por hacer/importante:
-  se muestra en el item y, en la celda de Seguimiento, tras los íconos. La celda muestra
-  íconos según contenido, o un link "Agregar" si está vacía. Íconos de **estado de la
-  fila** (tooltip, no clickeables): `ClockAlert` ámbar al frente (sin actividad 2+
-  semanas) y `FileClock` muted **al final** (CV pendiente de generar — el CTA "Generar
-  CV" vive en la card Entrega del panel de detalle), para que el link "Agregar" quede
-  siempre a la izquierda.
+  reciente abajo). Cada actualización es un item **editable** (texto, fecha/hora, flag). El
+  **flag 🚩** marca algo por hacer/importante: se muestra en el item y en la celda.
+- **Celda de Seguimiento (lógica de negocio)**: es un **resumen read-only, solo íconos** — no
+  tiene call-to-action (el link "Agregar" se **quitó**: solo abría Notas, un slice angosto del
+  seguimiento, y duplicaba el click de la propia fila). Orden fijo: primero los indicadores de
+  **contenido** — sticky-note (hay `notes`; click abre el tab **Notas**, único que hace
+  `stopPropagation`) y 🚩 (algún update flaggeado) —, después los de **estado de la fila**
+  (tooltip, no clickeables): `ClockAlert` ámbar (sin actividad 2+ semanas, `core/staleness.ts`)
+  y `FileClock` muted (CV pendiente de generar — el CTA "Generar CV" vive en la card Entrega del
+  panel). Si la fila no tiene ninguno, la celda queda **vacía** y el click cae al row (abre
+  Detalles) — que es también cómo se agregan notas/actualizaciones. Ref: `ui/detail/SeguimientoCell.tsx`.
 - Referencias: `ui/RegistryTable.tsx`, `ui/detail/*`.
 
 ## Charts

@@ -19,14 +19,20 @@ function PopoverContent({
   alignOffset = 0,
   side = "bottom",
   sideOffset = 4,
+  container,
   ...props
 }: PopoverPrimitive.Popup.Props &
   Pick<
     PopoverPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
-  >) {
+  > & {
+    // Portal target — pass the drawer node so the popup keeps its pointer-events /
+    // focus scope. A popup portaled to <body> gets vaul's `pointer-events: none`
+    // and its interactions die (matches the DropdownMenu/Select container pattern).
+    container?: PopoverPrimitive.Portal.Props["container"]
+  }) {
   return (
-    <PopoverPrimitive.Portal>
+    <PopoverPrimitive.Portal container={container}>
       <PopoverPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}

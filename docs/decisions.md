@@ -10,6 +10,59 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Se quita el link "Agregar" de la celda Seguimiento (2026-08-07)
+**Decisión**: la celda de la columna **Seguimiento** deja de mostrar el link "Agregar" (el
+empty state que abría el tab Notas). Pasa a ser un **resumen read-only de solo íconos**:
+contenido (sticky-note de `notes`, 🚩 de flag) + estado de la fila (`ClockAlert` stale,
+`FileClock` CV pendiente). Si no hay ninguno, la celda queda vacía y el click cae al row. La
+lógica de negocio de la celda vive en `docs/DESIGN.md` → "Tabla del registro".
+
+**Contexto/razón**:
+- **Ya no cumplía su propósito**: "Agregar" solo abría **Notas**, un slice angosto del
+  seguimiento (el grueso son las **Actualizaciones**/hitos). Como atajo sesgaba hacia notas y
+  competía con la fila clickeable, que ya abre el detalle. La celda queda como lo que es: un
+  semáforo de estado, sin ruido de CTA.
+- **Anotar sigue a un click**: abrir la fila (o el ícono de notas) lleva a Notas/Actualizaciones;
+  no se pierde capacidad, se pierde un atajo redundante.
+- **Orden de íconos**: contenido (notas, flag) → estado (stale, pendiente). Antes el orden se
+  forzaba para que "Agregar" quedara a la izquierda; sin el link, esa restricción desaparece.
+
+## Timeline: el hito `sent` se lee "CV compartido" (el funnel sigue "CV enviado") (2026-08-07)
+**Decisión**: el primer hito del stepper de Seguimiento (`MilestoneTimeline`) muestra
+**"CV compartido"** en vez de "CV enviado". El embudo AARRR mantiene "CV enviado" como label
+de Acquisition. Se implementa con un campo opcional `timelineLabel` en `FunnelStageSpec`
+(`core/funnel.ts`); `MILESTONE_LABELS` usa `timelineLabel ?? label`.
+
+**Contexto/razón**:
+- **"Enviado" leía como outbound**: como primer punto del proceso sonaba a que Lenin siempre
+  arranca el contacto. En inbound el CV igual sale (le respondés al recruiter con él), pero
+  "compartido" no implica quién inició — la dirección ya la marca la columna **Reach**
+  (inbound/outbound). No hace falta un hito nuevo "te contactaron": ese momento ya es la etapa
+  **Awareness** (fila registrada) del embudo.
+- **Divergencia intencional funnel vs timeline**: el embudo es vocabulario de growth (AARRR:
+  Acquisition = "CV enviado", con su drawer educativo); el timeline es la vista operativa.
+  `timelineLabel` deja que difieran sin romper la fuente de verdad única (`FUNNEL_STAGES`) ni el
+  conteo del funnel (que sigue leyendo `label`/`milestones`).
+- **Cero cambio de datos/lógica**: el hito sigue siendo `sent`, auto-marcado al generar el CV;
+  solo cambia el texto en la UI del timeline.
+
+## Regla: la IA nunca usa em-dash (—) (2026-08-07)
+**Decisión**: todo lo que la app genera con IA (cover letter, summary del CV, respuestas de
+screening, y el JSON de ATS/values) sale **sin em-dashes**. Doble mecanismo: (1) instrucción
+explícita en los prompts (`VOICE_PREAMBLE` + system del ATS en `core/ai/prompt.ts`), y (2) un
+sanitizer determinístico `stripEmDashes` (`core/ai/sanitize.ts`) aplicado a la salida en las 5
+rutas `/api/ai/*` — reemplaza `—` (con el espacio que lo rodea) por ` - `.
+
+**Contexto/razón**:
+- **El em-dash es un "AI tell"**: delata que el texto salió de un modelo. El prompt solo no
+  alcanza (los modelos lo emiten igual), así que el sanitizer es la garantía dura; el prompt
+  reduce sustituciones raras haciendo que el modelo reformule natural.
+- **Solo em-dash, no en-dash**: el en-dash (–) se deja para rangos/fechas ("2020–2023"). El
+  sanitizer consume solo whitespace horizontal, así no colapsa saltos de párrafo.
+- **De-modelado en los prompts**: se sacaron los em-dashes que los propios prompts usaban (no
+  tiene sentido pedir que no los use mientras el prompt los modela). El `jd-parse` queda fuera:
+  extrae data estructurada del posting, no genera prosa que Lenin manda.
+
 ## CV tailoreado por JD: 3 modos elegibles en el wizard (2026-07-27)
 Nueva fase (fase 3): tailorear el **cuerpo del CV** por job description, no solo la carta y el
 tracking. La guía de `docs/job-strategy/` (título alineado, keywords verbatim, estructura

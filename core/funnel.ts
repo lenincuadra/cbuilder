@@ -14,6 +14,14 @@ export interface FunnelStageSpec {
   name: string;
   /** Job-hunt label (ES, product copy). */
   label: string;
+  /**
+   * Label the process timeline (MilestoneTimeline) uses instead of `label`, when
+   * a stage should read differently there than in the funnel. The funnel keeps
+   * its growth vocabulary (`label`, e.g. "CV enviado" = Acquisition); the timeline
+   * uses this when set so the first hito's title fits inbound and outbound alike.
+   * Falls back to `label`.
+   */
+  timelineLabel?: string;
   /** What the stage means in growth marketing (ES, educational copy). */
   marketing: string;
   /** Its translation to the job hunt (ES, educational copy). */
@@ -36,6 +44,9 @@ export const FUNNEL_STAGES: readonly FunnelStageSpec[] = [
     letter: "A",
     name: "Acquisition",
     label: "CV enviado",
+    // Timeline reads neutral on who initiated: in inbound the CV still ships (you
+    // reply with it), in outbound you send it first. Direction lives in `reach`.
+    timelineLabel: "CV compartido",
     marketing: "¿Cuántos visitan tu sitio? El primer contacto real con tu producto.",
     jobHunt: "Aplicaciones donde el CV efectivamente salió: la empresa ya te tiene en la mano.",
     milestone: "sent",

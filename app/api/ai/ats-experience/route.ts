@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { buildAtsExperiencePrompt, type ExperienceVariant } from "@/core/ai/prompt";
+import { stripEmDashes } from "@/core/ai/sanitize";
 import { DEFAULT_AI_MODEL, isAiModel } from "@/core/ai/models";
 import { cvDataFor } from "@/core/cvData";
 import type { ThematicGroup } from "@/core/cvData/docx";
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
       messages: [{ role: "user", content: user }],
     });
     const textBlock = message.content.find((b) => b.type === "text");
-    const raw = textBlock && "text" in textBlock ? textBlock.text : "";
+    const raw = textBlock && "text" in textBlock ? stripEmDashes(textBlock.text) : "";
     const arr = extractJsonArray(raw);
     if (variant === "thematic") {
       return NextResponse.json({ variant, thematic: parseThematic(arr), model });

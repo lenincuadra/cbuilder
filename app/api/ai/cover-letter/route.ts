@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { buildContextBlock, buildCoverLetterPrompt } from "@/core/ai/prompt";
 import { DEFAULT_AI_MODEL, isAiModel } from "@/core/ai/models";
+import { stripEmDashes } from "@/core/ai/sanitize";
 import type { ParsedJd } from "@/core/jdParse/types";
 import type { Language } from "@/core/types";
 import { readProfileBackground } from "@/lib/storage/profileContext";
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
           messages: [{ role: "user", content: user }],
         });
         const text = message.content.find((block) => block.type === "text");
-        return [language, text && "text" in text ? text.text.trim() : ""] as const;
+        return [language, text && "text" in text ? stripEmDashes(text.text.trim()) : ""] as const;
       }),
     );
     const bodies = Object.fromEntries(entries) as Partial<Record<Language, string>>;
