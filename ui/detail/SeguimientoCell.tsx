@@ -38,14 +38,18 @@ function PendingCvIcon() {
 }
 
 /**
- * Seguimiento column cell. A sticky-note icon (notes, opens its tab) and a 🚩
- * when an update is flagged; an amber clock-alert (front) means no activity for
- * 2+ weeks; a muted file-clock (last, so "Agregar" stays left-aligned) means the
- * CV is pending. With no notes/flag, an "Agregar" link. (The "ver actualizaciones"
- * shortcut was dropped: every process now carries updates, so it stopped
- * differentiating rows — open the row to see them.)
+ * Seguimiento column cell: a compact, read-only status summary of the row's
+ * follow-up — icons only, no call to action. Content indicators come first: a
+ * sticky-note (the row has notes; click opens the Notas tab) and a 🚩 (an update
+ * is flagged). Then row-status alerts trail: an amber clock-alert (no activity for
+ * 2+ weeks) and a muted file-clock (CV still pending). When the row has none of
+ * these the cell is empty; clicking it (like any cell) falls through to open the
+ * row's detail panel — which is also how you add notes/updates now.
  *
- * Only the icons/link stop propagation: empty space falls through to the row.
+ * (The old "Agregar" link was dropped: it only opened Notas, a narrow slice of
+ * the follow-up, and duplicated the row's own click. See docs/decisions.md.)
+ *
+ * Only the note icon stops propagation; everything else falls through to the row.
  */
 export function SeguimientoCell({ row, onOpen }: SeguimientoCellProps) {
   const hasNotes = Boolean(row.notes?.trim());
@@ -54,48 +58,31 @@ export function SeguimientoCell({ row, onOpen }: SeguimientoCellProps) {
 
   return (
     <div className="flex h-8 items-center gap-0.5">
-      {stale && <StaleAlert />}
-      {!hasNotes && !hasFlag ? (
+      {hasNotes && (
         <Button
-          variant="link"
-          size="sm"
-          className="h-8 px-0"
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          title="Ver notas"
+          aria-label="Ver notas"
           onClick={(event) => {
             event.stopPropagation();
             onOpen("notas");
           }}
         >
-          Agregar
+          <StickyNote className="size-4 fill-primary/30 text-primary" />
         </Button>
-      ) : (
-        <>
-          {hasNotes && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              title="Ver notas"
-              aria-label="Ver notas"
-              onClick={(event) => {
-                event.stopPropagation();
-                onOpen("notas");
-              }}
-            >
-              <StickyNote className="size-4 fill-primary/30 text-primary" />
-            </Button>
-          )}
-          {hasFlag && (
-            <span
-              className="flex size-8 items-center justify-center text-base leading-none"
-              title="Tiene pendientes marcados"
-              aria-label="Tiene pendientes marcados"
-            >
-              🚩
-            </span>
-          )}
-        </>
       )}
-      {/* Last, so the "Agregar" link stays left-aligned across rows. */}
+      {hasFlag && (
+        <span
+          className="flex size-8 items-center justify-center text-base leading-none"
+          title="Tiene pendientes marcados"
+          aria-label="Tiene pendientes marcados"
+        >
+          🚩
+        </span>
+      )}
+      {stale && <StaleAlert />}
       {row.cvPending && <PendingCvIcon />}
     </div>
   );

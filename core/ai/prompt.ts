@@ -6,10 +6,12 @@ import type { Language } from "@/core/types";
 /** Shared instructions every AI draft follows, regardless of what it's drafting. */
 const VOICE_PREAMBLE =
   "You draft job-application material on behalf of Lenin Cuadra, a Senior Product " +
-  "Designer. Use ONLY the facts in the context below — never invent employers, " +
+  "Designer. Use ONLY the facts in the context below; never invent employers, " +
   "metrics, tools, or projects. First person, confident, concise: lead with " +
   "outcomes, not adjectives. This draft is a starting point Lenin edits before " +
-  "sending — prefer a strong, specific first pass over a safe, generic one.";
+  "sending, so prefer a strong, specific first pass over a safe, generic one. " +
+  "Never use em-dashes (the — character); write with commas, colons, parentheses, " +
+  "or separate sentences instead.";
 
 /**
  * Focus-specific case studies + proof points from the portfolio spec, in the
@@ -94,7 +96,7 @@ export function buildCoverLetterPrompt(input: CoverLetterPromptInput): {
   const languageName = language === "EN" ? "English" : "Spanish";
   const greeting = who?.trim()
     ? `Address it to ${who.trim()}.`
-    : `No named contact — use a generic professional greeting (not "To Whom It May Concern").`;
+    : `No named contact: use a generic professional greeting (not "To Whom It May Concern").`;
 
   let p2hint = "";
   if (parsedJd) {
@@ -116,17 +118,18 @@ export function buildCoverLetterPrompt(input: CoverLetterPromptInput): {
       `Write the body of a cover letter (greeting through sign-off, no letterhead) for an ` +
       `application to ${company} for the role "${role}". ${greeting} Write in ${languageName}. ` +
       `Use EXACTLY 5 paragraphs in this order:\n` +
-      `1. Hook — genuine enthusiasm for THIS company specifically; mention their mission, ` +
+      `1. Hook: genuine enthusiasm for THIS company specifically; mention their mission, ` +
       `a product, or a challenge they face. Not generic.\n` +
-      `2. Technical Match — relevant technical skills using their exact terminology; keep it ` +
+      `2. Technical Match: relevant technical skills using their exact terminology; keep it ` +
       `natural but keyword-rich ("I'm proficient in X, have strong Y skills...").${p2hint}\n` +
-      `3. Experience Story — one specific, brief example of relevant work; include a number ` +
+      `3. Experience Story: one specific, brief example of relevant work; include a number ` +
       `or outcome where possible.\n` +
-      `4. Why This Role — what specifically excites Lenin about THIS role; reference the JD.\n` +
-      `5. Close — availability/location if relevant, interest in discussing further; 2–3 ` +
+      `4. Why This Role: what specifically excites Lenin about THIS role; reference the JD.\n` +
+      `5. Close: availability/location if relevant, interest in discussing further; 2–3 ` +
       `sentences max.\n\n` +
       `Tone: human, use contractions (I'm, I've, don't). Never open with "I am writing to ` +
-      `express my interest in". Don't repeat the CV — add context. Under 400 words. ` +
+      `express my interest in". Don't repeat the CV; add context. Under 400 words. ` +
+      `Never use em-dashes (the — character); use commas, colons, or parentheses instead. ` +
       `Markdown only: paragraphs, line breaks, **bold**, *italic*.`,
   };
 }
@@ -173,11 +176,12 @@ export function buildAtsExperiencePrompt(input: AtsExperiencePromptInput): {
 
   const system =
     "You restructure Lenin Cuadra's REAL CV experience for a specific job. " +
-    "STRICT RULE: use ONLY the facts in the bullets given — never invent employers, " +
+    "STRICT RULE: use ONLY the facts in the bullets given; never invent employers, " +
     "roles, dates, metrics, tools, or skills. You MAY reword a bullet to incorporate the " +
     "job's exact terminology, but ONLY where that term genuinely applies to what the bullet " +
     "already says. If a JD term doesn't truthfully fit any bullet, leave it out. Keep every " +
-    "metric and proper noun intact. Output valid JSON only — no markdown, no commentary.";
+    "metric and proper noun intact. Never use em-dashes (the — character) in any text; use " +
+    "commas or colons instead. Output valid JSON only: no markdown, no commentary.";
 
   const jobsBlock = serializeExperience(experience);
 
@@ -232,7 +236,7 @@ export function buildValuesAlignmentPrompt(input: ValuesAlignmentPromptInput): {
     user:
       `A company lists these values: ${values.map((v) => `"${v}"`).join(", ")}. ` +
       `For each value, write ONE short sentence (≤ 20 words, ${langName}) pairing it with a ` +
-      `real, specific thing from Lenin's background above — a project, outcome, or way of ` +
+      `real, specific thing from Lenin's background above, such as a project, outcome, or way of ` +
       `working. Never invent; if nothing in the context genuinely fits a value, return an ` +
       `empty string for its evidence (Lenin will fill it). Return ONLY a JSON array like ` +
       `[{"value":"<the value>","evidence":"<sentence>"}], no markdown, no commentary.`,
@@ -287,7 +291,7 @@ export function buildCvSummaryPrompt(input: CvSummaryPromptInput): {
     system: `${VOICE_PREAMBLE}\n\n${context}${jdExtra}`,
     user:
       `Write the professional summary paragraph for Lenin Cuadra's CV for his application ` +
-      `to ${company} as "${role}". Write in ${langName}. Plain text only — no markdown, ` +
+      `to ${company} as "${role}". Write in ${langName}. Plain text only: no markdown, ` +
       `no bullet points, no headers, no labels. 2–3 sentences. First person. Lead with ` +
       `the most relevant proof point or credential from the context, naturally incorporate ` +
       `any JD keywords that truthfully apply, close with the distinctive value he brings ` +
@@ -303,14 +307,14 @@ export function buildScreeningAnswerPrompt(input: ScreeningAnswerPromptInput): {
   const { context, question, company, role } = input;
   const applicationLine =
     company || role
-      ? `This was asked by ${[company, role].filter(Boolean).join(" — ")}.`
+      ? `This was asked by ${[company, role].filter(Boolean).join(", ")}.`
       : "";
 
   return {
     system: `${VOICE_PREAMBLE}\n\n${context}`,
     user:
       `Draft an answer to this pre-screening question: "${question}" ${applicationLine} ` +
-      `Answer in the same language as the question. Plain text, no markdown, no greeting — ` +
+      `Answer in the same language as the question. Plain text, no markdown, no greeting: ` +
       `just the answer, as if typed directly into an application form. Keep it as short as the ` +
       `question warrants (a few sentences unless it clearly asks for more).`,
   };

@@ -153,7 +153,7 @@ export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditF
 
           <div className="space-y-1.5">
             <Label>Fecha</Label>
-            <DatePicker value={date} onChange={setDate} />
+            <DatePicker value={date} onChange={setDate} container={portalContainer} />
           </div>
 
           <div className="space-y-1.5">

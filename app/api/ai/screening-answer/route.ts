@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { buildContextBlock, buildScreeningAnswerPrompt } from "@/core/ai/prompt";
+import { stripEmDashes } from "@/core/ai/sanitize";
 import { DEFAULT_AI_MODEL, isAiModel } from "@/core/ai/models";
 import { readProfileBackground } from "@/lib/storage/profileContext";
 import { readSpecCache } from "@/lib/storage/specCache";
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
     const text = message.content.find((block) => block.type === "text");
     // Echo the model actually used — traceability for a paid call, and lets
     // the client confirm its selection was honored (not silently defaulted).
-    return NextResponse.json({ answer: text && "text" in text ? text.text.trim() : "", model });
+    return NextResponse.json({ answer: text && "text" in text ? stripEmDashes(text.text.trim()) : "", model });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Falló la generación con IA." },

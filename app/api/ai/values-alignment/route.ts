@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { buildContextBlock, buildValuesAlignmentPrompt } from "@/core/ai/prompt";
+import { stripEmDashes } from "@/core/ai/sanitize";
 import { DEFAULT_AI_MODEL, isAiModel } from "@/core/ai/models";
 import type { Language } from "@/core/types";
 import { readProfileBackground } from "@/lib/storage/profileContext";
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
       messages: [{ role: "user", content: user }],
     });
     const text = message.content.find((block) => block.type === "text");
-    const raw = text && "text" in text ? text.text : "";
+    const raw = text && "text" in text ? stripEmDashes(text.text) : "";
     return NextResponse.json({ alignments: parseResponse(raw, values), model });
   } catch (error) {
     return NextResponse.json(
