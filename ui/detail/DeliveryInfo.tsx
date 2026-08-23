@@ -1,13 +1,12 @@
 "use client";
 
-import { Download, ExternalLink, FilePlus2, FolderOpen } from "lucide-react";
-import { toast } from "sonner";
+import { Download, ExternalLink, FilePlus2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { COVER_LETTER_FILENAME } from "@/core/coverLetter/docx";
 import type { RegistryRow } from "@/core/registry/types";
 import { CV_FILENAME } from "@/core/zip";
-import { deliveryFileUrl, revealDelivery } from "@/lib/archive";
+import { deliveryFileUrl } from "@/lib/archive";
 
 /**
  * Metadata of an archived delivered file: language (from the folder,
@@ -54,8 +53,8 @@ export interface DeliveryInfoProps {
  * Where this application's deliverables live. Each archived file is one row
  * ("EN · CV", "EN · Carta") with two actions: open its Google Doc in Drive
  * (when the sink ran — replaces the old folder link) and re-download the
- * archived copy (data/cvs/ locally, Supabase Storage on a deploy). Legacy
- * rows without per-file archives keep the old zip/folder/doc-links fallback.
+ * archived copy (data/cvs/ locally, Supabase Storage on a deploy). Rows
+ * without per-file archives fall back to the old folder / doc-links.
  * A pending row (no CV yet) shows the "Generar CV" CTA instead.
  */
 export function DeliveryInfo({ row, onGenerateCv, onGenerateVariant }: DeliveryInfoProps) {
@@ -77,17 +76,8 @@ export function DeliveryInfo({ row, onGenerateCv, onGenerateVariant }: DeliveryI
     );
   }
 
-  if (files.length === 0 && !row.zipName && !row.driveFolder && docs.length === 0) return null;
-
-  async function reveal(name: string) {
-    try {
-      // null = revealed; a message = feature not available here (deploy) — info, not error.
-      const unavailable = await revealDelivery(name);
-      if (unavailable) toast.info(unavailable);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo abrir el Finder.");
-    }
-  }
+  if (files.length === 0 && !row.driveFolder && docs.length === 0 && !onGenerateVariant)
+    return null;
 
   return (
     <div className="space-y-2 rounded-lg border px-3 py-2">
@@ -134,28 +124,6 @@ export function DeliveryInfo({ row, onGenerateCv, onGenerateVariant }: DeliveryI
               </div>
             );
           })}
-        </div>
-      )}
-
-      {/* Legacy rows (pre per-file archive): the zip in data/cvs/, Finder-only. */}
-      {row.zipName && files.length === 0 && (
-        <div className="space-y-0.5">
-          <span className="text-xs text-muted-foreground">Zip archivado (data/cvs)</span>
-          <div className="flex items-start gap-2">
-            <span className="min-w-0 flex-1 font-mono text-xs break-all select-all">
-              {row.zipName}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-6 shrink-0"
-              onClick={() => reveal(row.zipName!)}
-              title="Mostrar en Finder"
-              aria-label={`Mostrar ${row.zipName} en Finder`}
-            >
-              <FolderOpen className="size-3.5" />
-            </Button>
-          </div>
         </div>
       )}
 
