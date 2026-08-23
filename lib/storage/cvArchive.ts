@@ -8,14 +8,6 @@ export const CV_ARCHIVE_DIR = path.join(process.cwd(), "data", "cvs");
 // One path segment: no separators, no leading dot — path traversal stays out.
 const SEGMENT_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
-// Legacy zip archives (pre per-file layout) still live flat in data/cvs/;
-// the Finder reveal keeps accepting their names.
-const ZIP_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*\.zip$/;
-
-export function isValidZipName(name: string): boolean {
-  return ZIP_NAME_RE.test(name) && !name.includes("..");
-}
-
 /**
  * An archive path is exactly `<folder>/<file>.docx`, both segments from a
  * strict allowlist (never trust the client): the delivery folder name plus the
