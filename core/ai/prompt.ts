@@ -237,7 +237,9 @@ export function buildValuesAlignmentPrompt(input: ValuesAlignmentPromptInput): {
       `A company lists these values: ${values.map((v) => `"${v}"`).join(", ")}. ` +
       `For each value, write ONE short sentence (≤ 20 words, ${langName}) pairing it with a ` +
       `real, specific thing from Lenin's background above, such as a project, outcome, or way of ` +
-      `working. Never invent; if nothing in the context genuinely fits a value, return an ` +
+      `working. Impersonal résumé voice — verb-first, NO first-person pronouns ("I", "my"), ` +
+      `matching the CV's bullet style (e.g. "Led user research that…"). ` +
+      `Never invent; if nothing in the context genuinely fits a value, return an ` +
       `empty string for its evidence (Lenin will fill it). Return ONLY a JSON array like ` +
       `[{"value":"<the value>","evidence":"<sentence>"}], no markdown, no commentary.`,
   };
@@ -292,7 +294,9 @@ export function buildCvSummaryPrompt(input: CvSummaryPromptInput): {
     user:
       `Write the professional summary paragraph for Lenin Cuadra's CV for his application ` +
       `to ${company} as "${role}". Write in ${langName}. Plain text only: no markdown, ` +
-      `no bullet points, no headers, no labels. 2–3 sentences. First person. Lead with ` +
+      `no bullet points, no headers, no labels. 2–3 sentences. Impersonal résumé voice — ` +
+      `NO first-person pronouns ("I", "my", "me"), matching the CV's existing summary style ` +
+      `(e.g. "6 years of experience shipping…"). Lead with ` +
       `the most relevant proof point or credential from the context, naturally incorporate ` +
       `any JD keywords that truthfully apply, close with the distinctive value he brings ` +
       `to this specific role. Never invent skills, projects, or metrics.`,

@@ -128,6 +128,23 @@ describe("fillMaster — slot injection (spike)", () => {
     expect(docXml).toContain("EXPERIENCE");
   });
 
+  it.each(["EN", "ES"] as const)(
+    "injects a Core Competencies line from the keywords slot after the summary (%s)",
+    async (lang) => {
+      const master = loadMaster(lang);
+      const links = buildTrackedLinks(TEST_SPEC, "0628r4");
+      const keywords = ["Design Systems", "User Research", "Figma"];
+      const filled = await fillMaster(master, links, { keywords });
+      const docXml = await readDocXml(filled);
+
+      const label = lang === "ES" ? "Competencias clave" : "Core Competencies";
+      expect(docXml).toContain(`${label}: Design Systems · User Research · Figma`);
+      // Injected, not replacing: the original summary and the rest survive.
+      expect(docXml).toContain(lang === "ES" ? "RESUMEN PROFESIONAL" : "PROFESSIONAL SUMMARY");
+      expect(docXml).toContain(lang === "ES" ? "EXPERIENCIA" : "EXPERIENCE");
+    },
+  );
+
   it("XML-escapes special characters in slot content", async () => {
     const master = loadMaster("EN");
     const links = buildTrackedLinks(TEST_SPEC, "0628r4");

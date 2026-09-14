@@ -42,7 +42,7 @@ const MODES: ModeOption[] = [
     value: "ats",
     label: "ATS máximo",
     description:
-      "Arma un CV nuevo desde cero para esta búsqueda: título, Core Competencies verbatim y Values Alignment. Requiere pegar la descripción.",
+      "Arma un CV nuevo desde cero para esta búsqueda: título, Core Competencies verbatim y Values Alignment. Requiere pegar y analizar la descripción.",
     icon: Target,
   },
 ];
@@ -97,7 +97,7 @@ export function StepMode({ data, set, hasJd = false }: StepProps & { hasJd?: boo
                 <p className="text-xs text-muted-foreground">{mode.description}</p>
                 {needsJd && (
                   <p className="text-[11px] text-amber-600 dark:text-amber-500">
-                    Necesitás pegar la descripción del puesto (paso Opcionales).
+                    Volvé a Opcionales, pegá la descripción del puesto y tocá “Analizar con IA”.
                   </p>
                 )}
               </div>
