@@ -5,6 +5,7 @@ import { Check, PenLine, Sparkles, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { CvMode } from "@/core/registry/types";
+import { JobDescriptionFields } from "./JobDescriptionFields";
 import type { StepProps } from "./StepCompany";
 
 interface ModeOption {
@@ -53,7 +54,7 @@ const MODES: ModeOption[] = [
  */
 export function StepMode({ data, set, hasJd = false }: StepProps & { hasJd?: boolean }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <p className="text-xs text-muted-foreground">
         Cómo se arma el cuerpo del CV. Determina cuánto se adapta a la búsqueda.
       </p>
@@ -97,13 +98,36 @@ export function StepMode({ data, set, hasJd = false }: StepProps & { hasJd?: boo
                 <p className="text-xs text-muted-foreground">{mode.description}</p>
                 {needsJd && (
                   <p className="text-[11px] text-amber-600 dark:text-amber-500">
-                    Volvé a Opcionales, pegá la descripción del puesto y tocá “Analizar con IA”.
+                    Analizá la búsqueda abajo para habilitarlo.
                   </p>
                 )}
               </div>
             </button>
           );
         })}
+      </div>
+
+      {/*
+        Inline JD capture in the Modo step. Analyze the search right here to
+        unlock ATS máximo and power the adapted modes — and re-analyze anytime —
+        without navigating back to Opcionales (shared wizard state). The URL row
+        is omitted (it lives in Opcionales); the paste+analyze path is what gates
+        the modes. Kept visible after analyzing so the basis stays editable.
+      */}
+      <div className="space-y-3 rounded-lg border border-dashed p-3">
+        <p className="text-xs text-muted-foreground">
+          {hasJd ? (
+            <>Búsqueda analizada — el CV se adapta a este puesto. Editá el texto para volver a analizar.</>
+          ) : (
+            <>
+              Pegá la descripción del puesto y tocá{" "}
+              <span className="font-medium text-foreground">Analizar con IA</span> para habilitar{" "}
+              <span className="font-medium text-foreground">ATS máximo</span> y adaptar el CV
+              (Adaptado con IA / Copiar la búsqueda).
+            </>
+          )}
+        </p>
+        <JobDescriptionFields data={data} set={set} showUrl={false} />
       </div>
     </div>
   );
