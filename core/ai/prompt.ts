@@ -107,13 +107,23 @@ export function buildCoverLetterPrompt(input: CoverLetterPromptInput): {
     ].filter((k) => k.trim()).slice(0, 12);
     if (kws.length > 0) {
       p2hint =
-        ` For paragraph 2, prioritise these exact terms from the JD (use them verbatim where they apply): ` +
+        ` For paragraph 2, prioritise these exact terms from the JD (use them verbatim where they apply; ` +
+        `if a term is in another language than ${languageName}, use its natural ${languageName} ` +
+        `equivalent instead): ` +
         kws.join(", ") + `.`;
     }
   }
 
+  // The context (job posting, pasted notes, JD keywords) is often in another
+  // language than the CV; without a hard rule the model mirrors the context.
+  const languageRule =
+    `OUTPUT LANGUAGE: write the ENTIRE letter (greeting, every paragraph, sign-off) in ` +
+    `${languageName}, regardless of the language of the context, the job posting, or the ` +
+    `keywords below. Translate any JD term that has a natural ${languageName} equivalent; ` +
+    `keep tool and product names as-is.`;
+
   return {
-    system: `${VOICE_PREAMBLE}\n\n${context}`,
+    system: `${VOICE_PREAMBLE}\n\n${languageRule}\n\n${context}`,
     user:
       `Write the body of a cover letter (greeting through sign-off, no letterhead) for an ` +
       `application to ${company} for the role "${role}". ${greeting} Write in ${languageName}. ` +
@@ -130,7 +140,8 @@ export function buildCoverLetterPrompt(input: CoverLetterPromptInput): {
       `Tone: human, use contractions (I'm, I've, don't). Never open with "I am writing to ` +
       `express my interest in". Don't repeat the CV; add context. Under 400 words. ` +
       `Never use em-dashes (the — character); use commas, colons, or parentheses instead. ` +
-      `Markdown only: paragraphs, line breaks, **bold**, *italic*.`,
+      `Markdown only: paragraphs, line breaks, **bold**, *italic*.\n\n` +
+      `Reminder: the letter must be written entirely in ${languageName}.`,
   };
 }
 
