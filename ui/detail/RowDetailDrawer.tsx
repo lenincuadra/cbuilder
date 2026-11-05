@@ -14,6 +14,7 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -50,6 +51,7 @@ import { ScreeningNewForm } from "./ScreeningNewForm";
 import { ScreeningSection } from "./ScreeningSection";
 import { ScreeningSuggestForm } from "./ScreeningSuggestForm";
 import { MilestoneTimeline } from "./MilestoneTimeline";
+import { MoveToGroupMenu } from "./MoveToGroupMenu";
 import { TrackedLinks } from "./TrackedLinks";
 
 /** Which panel tab the drawer opens on. */
@@ -81,6 +83,8 @@ export interface RowDetailDrawerProps {
   onGenerateVariant?: (row: RegistryRow) => void;
   /** Shared screening-questions bank (the Preguntas section reads/writes it). */
   screening: UseScreening;
+  /** Existing group names, for the edit form's Grupo combobox. */
+  groups?: string[];
   /** Cover letter templates, for the post-hoc "Generar cover letter" takeover. */
   templates: CoverLetterTemplate[];
   /** Tab to show when the panel opens. */
@@ -121,6 +125,7 @@ export function RowDetailDrawer({
   onGenerateCv,
   onGenerateVariant,
   screening,
+  groups = [],
   templates,
   initialTab = "detalles",
   position,
@@ -187,7 +192,17 @@ export function RowDetailDrawer({
                 >
                   <EllipsisVertical className="size-4" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" container={drawerNode}>
+                <DropdownMenuContent align="end" container={drawerNode} className="w-auto min-w-44">
+                  <MoveToGroupMenu
+                    row={row}
+                    groups={groups}
+                    container={drawerNode}
+                    onMove={async (group) => {
+                      if (group === (row.group?.trim() ?? "")) return;
+                      await onUpdate(row.code, { group: group || undefined });
+                      toast.success(group ? `Movida a «${group}».` : "Quitada del grupo.");
+                    }}
+                  />
                   <DropdownMenuItem
                     onClick={async () => {
                       // Archiving moves the row out of the current view, so close.
@@ -302,6 +317,7 @@ export function RowDetailDrawer({
               // body, Cancelar/Guardar pinned in the footer.
               <RowEditForm
                 row={row}
+                groups={groups}
                 portalContainer={drawerNode}
                 onCancel={() => setMode({ kind: "view" })}
                 onSave={async (fields) => {

@@ -180,19 +180,29 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
   columna; las celdas largas (Empresa, Rol, Canal) **truncan**. `Rol` va angosto (~21%).
   Solo **por debajo de 640px (sm)** se reactiva el scroll horizontal (`min-w`) para que
   las columnas no queden ilegibles. (Reemplaza la regla vieja "si no entran, scroll".)
-- **Filtros (dos dimensiones ortogonales, arriba de la tabla)**:
-  (1) archivado — **Vigentes** (no archivadas) / **Archivado**, con `SegmentedControl`;
-  (2) estado — Todos / Borrador / Activo / Rechazado, como **dropdown con icono de embudo**
+- **Secciones (grupos) en la misma tabla**: las filas se parten en secciones colapsables —
+  los **grupos del usuario** (alfabético), después **Sin grupo**, y **Archivado** siempre al
+  final, cerrado por defecto (`core/registry/groups.ts`). El encabezado es una fila
+  full-width (chevron + nombre + `(n)`); el estado abierto/cerrado se recuerda por browser
+  (localStorage). Sin grupos ni archivadas no hay encabezados (la tabla se ve plana). Las
+  filas archivadas van en `text-muted-foreground`. Prev/next del panel recorre el orden
+  visible (secciones cerradas excluidas). Se gestionan desde el botón **Grupos** (arriba a la
+  derecha, donde estaba Vigentes/Archivado) → drawer manager lista ↔ form (`ui/GroupsButton.tsx`,
+  patrón `PanelCard`), o fila por fila: **⋮ del panel → "Mover a grupo ›"** (submenú
+  `ui/detail/MoveToGroupMenu.tsx`: input "Buscar o crear un grupo" que filtra + "Crear «…»",
+  grupos con check en el actual — en hover el check pasa a × + "Quitar" y el click la saca
+  del grupo; no hay ítem "Quitar" aparte), o desde Editar con un **Combobox** de
+  shadcn (`ui/GroupCombobox.tsx`).
+- **Filtro de estado (arriba de la tabla)**: Todos / Borrador / Activo / Rechazado, como **dropdown con icono de embudo**
   (`ui/StatusFilterDropdown.tsx`): botón siempre icon-only; con filtro activo aparece **al
   lado** un badge coloreado (paleta de `StatusToggle`) con una `X`, y clickearlo **quita el
-  filtro** (vuelve a Todos); items `DropdownMenuCheckboxItem` con icono. Se combinan. Ojo
-  con la semántica: "Vigentes" ≠
-  estado "Activo" (por eso no se llama "Activas"). **Borrador** es system-derived (mirror de
+  filtro** (vuelve a Todos); items `DropdownMenuCheckboxItem` con icono. Aplica dentro de
+  todas las secciones (una sección sin filas que matcheen se oculta). **Borrador** es system-derived (mirror de
   `cvPending`) — `StatusToggle` lo renderiza como badge no interactivo (sin toggle manual),
   distinto de Activo/Rechazado.
 - **Todas las vistas comparten exactamente la misma tabla**: misma estructura, columnas y
-  comportamiento; lo único que cambia es qué filas se muestran (filtradas por `archived` +
-  `status` en la página). No duplicar componentes ni variar columnas entre vistas.
+  comportamiento; lo único que cambia es qué filas se muestran (filtradas por `status` en la
+  página y partidas en secciones por `group`/`archived`). No duplicar componentes ni variar columnas entre vistas.
 - **Fila clickeable**: abre el panel de detalle en el tab **Detalles**. Click en un ícono
   de Seguimiento abre su tab explícito (`notas` / `updates`). El badge de Estado y los
   íconos hacen `stopPropagation`; el resto de la celda cae al click del row. La navegación
@@ -223,9 +233,8 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
   tiene call-to-action (el link "Agregar" se **quitó**: solo abría Notas, un slice angosto del
   seguimiento, y duplicaba el click de la propia fila). Orden fijo: primero los indicadores de
   **contenido** — sticky-note (hay `notes`; click abre el tab **Notas**, único que hace
-  `stopPropagation`) y 🚩 (algún update flaggeado) —, después los de **estado de la fila**
-  (tooltip, no clickeables): `ClockAlert` ámbar (sin actividad 2+ semanas, `core/staleness.ts`)
-  y `FileClock` muted (CV pendiente de generar — el CTA "Generar CV" vive en la card Entrega del
+  `stopPropagation`) y 🚩 (algún update flaggeado) —, después el de **estado de la fila**
+  (tooltip, no clickeable): `FileClock` muted (CV pendiente de generar — el CTA "Generar CV" vive en la card Entrega del
   panel). Si la fila no tiene ninguno, la celda queda **vacía** y el click cae al row (abre
   Detalles) — que es también cómo se agregan notas/actualizaciones. Ref: `ui/detail/SeguimientoCell.tsx`.
 - Referencias: `ui/RegistryTable.tsx`, `ui/detail/*`.

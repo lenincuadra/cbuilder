@@ -187,6 +187,12 @@ export interface RegistryRow {
   /** Archived = moved out of the active searches view. Independent of status. */
   archived?: boolean;
   /**
+   * User-defined group (one per row) — the table renders one collapsible
+   * section per group (core/registry/groups.ts). Absent = "Sin grupo".
+   * Archived rows keep it, so unarchiving returns them to their group.
+   */
+  group?: string;
+  /**
    * Process registered but no CV generated yet (e.g. a recruiter reached out).
    * The code is already reserved; cleared when the CV is generated later.
    * Absent on rows created by a generation (they always have a CV).

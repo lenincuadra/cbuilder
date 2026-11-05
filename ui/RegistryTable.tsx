@@ -1,7 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { Crosshair, Dot, HeartHandshake, Inbox, Send, type LucideIcon } from "lucide-react";
+import { Fragment, useEffect, useState } from "react";
+import {
+  ChevronDown,
+  Crosshair,
+  Dot,
+  HeartHandshake,
+  Inbox,
+  Send,
+  type LucideIcon,
+} from "lucide-react";
 
 import {
   Empty,
@@ -20,6 +28,7 @@ import {
 } from "@/components/ui/table";
 import type { CoverLetterTemplate } from "@/core/coverLetter/types";
 import { formatDateShort } from "@/core/dates";
+import { buildSections, type RegistrySection } from "@/core/registry/groups";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { profileLabel } from "@/core/spec/profiles";
 import type { LinkSpec } from "@/core/spec/types";
@@ -35,9 +44,43 @@ import { StatusToggle } from "@/ui/StatusToggle";
 import type { UseScreening } from "@/ui/useScreening";
 import { useSpec } from "@/ui/useSpec";
 
+/** Remembered open/closed state per section key (per-browser convenience). */
+const SECTIONS_STORAGE_KEY = "cbuilder.registry.sections";
+
+function useSectionState() {
+  const [state, setState] = useState<Record<string, boolean>>({});
+  // Read after mount (never during SSR) so the first render matches the server.
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(SECTIONS_STORAGE_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration from storage
+      if (stored) setState(JSON.parse(stored) as Record<string, boolean>);
+    } catch {
+      // Storage unavailable: every section falls back to its default.
+    }
+  }, []);
+  function set(key: string, open: boolean) {
+    setState((current) => {
+      const next = { ...current, [key]: open };
+      try {
+        window.localStorage.setItem(SECTIONS_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // Not persisted; still applies for this session.
+      }
+      return next;
+    });
+  }
+  return [state, set] as const;
+}
+
 /**
- * Flat table, fixed layout: columns truncate to fit the container, so there is
- * no horizontal scroll at normal widths. Seguimiento is always last. Foco and
+ * Sectioned table, fixed layout: rows are split into collapsible sections —
+ * user groups, then Sin grupo, then Archivado (closed by default) — see
+ * core/registry/groups.ts. With no groups and nothing archived there are no
+ * section headers at all (looks like the plain table).
+ *
+ * Columns truncate to fit the container, so there is no horizontal scroll at
+ * normal widths. Seguimiento is always last. Foco and
  * Canal are icon-only so they stay narrow; the freed width goes to
  * Empresa/Rol/Seguimiento. Below 640px a min-width re-enables scroll so
  * columns stay legible.
@@ -78,9 +121,8 @@ export interface RegistryTableProps {
   /**
    * Every CV ever sent — count + funnel rank per row (`docs/animations.md`
    * §2 "Modo funnel"), computed by the caller from the *unfiltered* rows
-   * (not `rows` above, which is already scoped to the current
-   * Vigentes/Archivado tab). Feeds the "flecha a la diana" scene shown
-   * while `loading` is true (idle, no arrows yet) and animates in once
+   * (not `rows` above, which is already scoped to the status filter).
+   * Feeds the "flecha a la diana" scene shown while `loading` is true (idle, no arrows yet) and animates in once
    * real data lands — one continuous scene, not a swap between two
    * different loading animations. Omit either to skip straight to the
    * empty/rows state once loading finishes.
@@ -103,6 +145,8 @@ export interface RegistryTableProps {
    * toast). The nonce distinguishes repeated requests for the same code.
    */
   openRequest?: { code: string; nonce: number } | null;
+  /** Existing group names (all rows), for the detail panel's Grupo combobox. */
+  groups?: string[];
 }
 
 /** Tooltip for the focus indicator: the profile's label once the spec is loaded, its raw id until then. */
@@ -123,6 +167,7 @@ export function RegistryTable({
   templates,
   emptyMessage,
   openRequest,
+  groups,
 }: RegistryTableProps) {
   const { spec } = useSpec();
   const [detailCode, setDetailCode] = useState<string | null>(null);
@@ -138,8 +183,16 @@ export function RegistryTable({
   const [revealDone, setRevealDone] = useState(false);
   const showingReveal = !revealDone && (loading || (totalSentCount ?? 0) > 0);
   const [detailTab, setDetailTab] = useState<DetailTab>("detalles");
+  const [sectionState, setSectionOpen] = useSectionState();
+  const sections = buildSections(rows);
+  // Headers only once there's something to separate (a group or an archived row).
+  const showHeaders = sections.some((section) => section.kind !== "ungrouped");
+  const isOpen = (section: RegistrySection) =>
+    !showHeaders || (sectionState[section.key] ?? section.kind !== "archived");
+  // Rows in display order (collapsed sections excluded) — drives prev/next in the panel.
+  const orderedRows = sections.flatMap((section) => (isOpen(section) ? section.rows : []));
   const detailRow = detailCode ? (rows.find((row) => row.code === detailCode) ?? null) : null;
-  const detailIndex = detailCode ? rows.findIndex((row) => row.code === detailCode) : -1;
+  const detailIndex = detailCode ? orderedRows.findIndex((row) => row.code === detailCode) : -1;
 
   function openDetail(code: string, tab: DetailTab = "detalles") {
     setDetailCode(code);
@@ -159,7 +212,7 @@ export function RegistryTable({
   // Re-passing the last requested tab keeps the drawer's initialTab prop
   // unchanged, so it holds whatever tab the user is currently on.
   function goToRow(index: number) {
-    const target = rows[index];
+    const target = orderedRows[index];
     if (target) openDetail(target.code, detailTab);
   }
 
@@ -198,7 +251,9 @@ export function RegistryTable({
                           title={column.label}
                           aria-label={column.label}
                         >
-                          <Icon className={cn("size-4", column.iconClass ?? "text-muted-foreground")} />
+                          <Icon
+                            className={cn("size-4", column.iconClass ?? "text-muted-foreground")}
+                          />
                         </span>
                       ) : (
                         column.label
@@ -212,7 +267,10 @@ export function RegistryTable({
           <TableBody>
             {showingReveal ? (
               <TableRow>
-                <TableCell colSpan={COLUMNS.length} className="py-8 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={COLUMNS.length}
+                  className="py-8 text-center text-muted-foreground"
+                >
                   <div className="mx-auto w-32 sm:w-52 lg:w-64">
                     <ArrowToTarget
                       count={loading ? 0 : (totalSentCount ?? 0)}
@@ -233,83 +291,120 @@ export function RegistryTable({
                       </EmptyMedia>
                       <EmptyTitle>No hay aplicaciones</EmptyTitle>
                       <EmptyDescription>
-                        {emptyMessage ?? "Registrá tu primera aplicación desde el panel de la derecha."}
+                        {emptyMessage ??
+                          "Registrá tu primera aplicación desde el panel de la derecha."}
                       </EmptyDescription>
                     </EmptyHeader>
                   </Empty>
                 </TableCell>
               </TableRow>
             ) : (
-              rows.map((row) => (
-                <TableRow
-                  key={row.code}
-                  onClick={() => openDetail(row.code)}
-                  className="cursor-pointer"
-                >
-                  <TableCell className="text-center">
-                    <ReachToggle
-                      reach={row.reach}
-                      onSetReach={(reach) => onUpdate(row.code, { reach })}
-                    />
-                  </TableCell>
-                  <TableCell className="truncate">
-                    <CodeCell code={row.code} />
-                  </TableCell>
-                  <TableCell className="pr-0 text-right text-foreground">
-                    <span
-                      className="inline-flex"
-                      title={row.focus ? focusTooltip(row.focus, spec) : "Sin foco"}
-                      aria-label={row.focus ? focusTooltip(row.focus, spec) : "Sin foco"}
-                    >
-                      {row.focus ? (
-                        <FocusIcon focus={row.focus} className="size-4" />
-                      ) : (
-                        <Dot className="size-4" />
-                      )}
-                    </span>
-                  </TableCell>
-                  <TableCell className="truncate font-medium">
-                    {row.company ? (
-                      row.company
-                    ) : row.who ? (
-                      <span
-                        className="font-normal italic text-muted-foreground"
-                        title={`Contacto: ${row.who} · sin empresa`}
-                      >
-                        {row.who}
-                      </span>
-                    ) : (
-                      <span className="font-normal text-muted-foreground">Sin empresa</span>
+              sections.map((section) => {
+                const open = isOpen(section);
+                return (
+                  <Fragment key={section.key}>
+                    {showHeaders && (
+                      <TableRow className="bg-muted/40 hover:bg-muted/40">
+                        <TableCell colSpan={COLUMNS.length} className="p-0">
+                          <button
+                            type="button"
+                            aria-expanded={open}
+                            onClick={() => setSectionOpen(section.key, !open)}
+                            className="flex w-full items-center gap-2 px-2 py-2 text-left text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <ChevronDown
+                              className={cn(
+                                "size-4 text-muted-foreground transition-transform",
+                                !open && "-rotate-90",
+                              )}
+                            />
+                            <span className="truncate">{section.label}</span>
+                            <span className="font-normal text-muted-foreground tabular-nums">
+                              ({section.rows.length})
+                            </span>
+                          </button>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </TableCell>
-                  <TableCell className="truncate" title={row.role}>
-                    {row.role}
-                  </TableCell>
-                  <TableCell className="text-center text-muted-foreground">
-                    {row.channel ? (
-                      <span
-                        className="inline-flex justify-center"
-                        title={row.channel}
-                        aria-label={row.channel}
-                      >
-                        <ChannelIcon channel={row.channel} />
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell className="truncate tabular-nums">{formatDateShort(row.date)}</TableCell>
-                  <TableCell>
-                    <StatusToggle
-                      status={row.status}
-                      onSetStatus={(status) => onUpdate(row.code, { status })}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <SeguimientoCell row={row} onOpen={(tab) => openDetail(row.code, tab)} />
-                  </TableCell>
-                </TableRow>
-              ))
+                    {open &&
+                      section.rows.map((row) => (
+                        <TableRow
+                          key={row.code}
+                          onClick={() => openDetail(row.code)}
+                          className={cn("cursor-pointer", row.archived && "text-muted-foreground")}
+                        >
+                          <TableCell className="text-center">
+                            <ReachToggle
+                              reach={row.reach}
+                              onSetReach={(reach) => onUpdate(row.code, { reach })}
+                            />
+                          </TableCell>
+                          <TableCell className="truncate">
+                            <CodeCell code={row.code} />
+                          </TableCell>
+                          <TableCell className="pr-0 text-right text-foreground">
+                            <span
+                              className="inline-flex"
+                              title={row.focus ? focusTooltip(row.focus, spec) : "Sin foco"}
+                              aria-label={row.focus ? focusTooltip(row.focus, spec) : "Sin foco"}
+                            >
+                              {row.focus ? (
+                                <FocusIcon focus={row.focus} className="size-4" />
+                              ) : (
+                                <Dot className="size-4" />
+                              )}
+                            </span>
+                          </TableCell>
+                          <TableCell className="truncate font-medium">
+                            {row.company ? (
+                              row.company
+                            ) : row.who ? (
+                              <span
+                                className="font-normal italic text-muted-foreground"
+                                title={`Contacto: ${row.who} · sin empresa`}
+                              >
+                                {row.who}
+                              </span>
+                            ) : (
+                              <span className="font-normal text-muted-foreground">Sin empresa</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="truncate" title={row.role}>
+                            {row.role}
+                          </TableCell>
+                          <TableCell className="text-center text-muted-foreground">
+                            {row.channel ? (
+                              <span
+                                className="inline-flex justify-center"
+                                title={row.channel}
+                                aria-label={row.channel}
+                              >
+                                <ChannelIcon channel={row.channel} />
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                          <TableCell className="truncate tabular-nums">
+                            {formatDateShort(row.date)}
+                          </TableCell>
+                          <TableCell>
+                            <StatusToggle
+                              status={row.status}
+                              onSetStatus={(status) => onUpdate(row.code, { status })}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <SeguimientoCell
+                              row={row}
+                              onOpen={(tab) => openDetail(row.code, tab)}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </Fragment>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -335,12 +430,13 @@ export function RegistryTable({
             : undefined
         }
         screening={screening}
+        groups={groups}
         templates={templates}
         initialTab={detailTab}
         position={detailIndex + 1}
-        total={rows.length}
+        total={orderedRows.length}
         hasPrev={detailIndex > 0}
-        hasNext={detailIndex >= 0 && detailIndex < rows.length - 1}
+        hasNext={detailIndex >= 0 && detailIndex < orderedRows.length - 1}
         onPrev={() => goToRow(detailIndex - 1)}
         onNext={() => goToRow(detailIndex + 1)}
       />

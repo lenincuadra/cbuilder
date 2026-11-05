@@ -12,8 +12,11 @@ docs/*tracking-registry*.md
 docs/model-selection.md
 # Misc personal assets — not part of the app.
 /assets/interesting-stuffs/
+/assets/illustrations/animation-process/
 # Personal job-hunt reference material — private strategy docs.
 /docs/job-strategy/
+# Portfolio case study — personal content, not part of the app.
+/docs/case-study-ai-feature.md
 # Claude.ai skill build artifacts: copies of the source pack + the zip.
 # Only SKILL.md is tracked — see docs/claude-ai/README.md.
 /docs/claude-ai/skill/cv-materials/background.md

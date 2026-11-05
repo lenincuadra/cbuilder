@@ -52,6 +52,8 @@ describe("supabase row mapping", () => {
     expect(editableToDb({ notes: undefined })).toEqual({ notes: null });
     expect(editableToDb({ notes: "x", status: "Activo" })).toEqual({ notes: "x", status: "Activo" });
     expect(editableToDb({ archived: true })).toEqual({ archived: true });
+    expect(editableToDb({ group: "Fintech" })).toEqual({ search_group: "Fintech" });
+    expect(editableToDb({ group: undefined })).toEqual({ search_group: null });
     const updates = [{ at: "2026-06-28T13:00:00.000Z", message: "ok" }];
     expect(editableToDb({ updates })).toEqual({ updates });
     const milestones = { responded: "2026-06-30" };

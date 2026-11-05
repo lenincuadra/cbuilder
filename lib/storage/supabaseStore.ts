@@ -44,6 +44,7 @@ interface RegistryRowDb {
   updates: StatusUpdate[] | null;
   milestones: Milestones | null;
   archived: boolean | null;
+  search_group: string | null;
   cv_pending: boolean | null;
   delivery_files: string[] | null;
   cv_mode: string | null;
@@ -79,6 +80,7 @@ export function dbToRow(db: RegistryRowDb): RegistryRow {
     updates: db.updates ?? undefined,
     milestones: db.milestones ?? undefined,
     archived: db.archived ?? undefined,
+    group: db.search_group ?? undefined,
     // false (the column default, also every pre-existing row) maps back to
     // "absent", so rows with a CV keep their original shape.
     cvPending: db.cv_pending ? true : undefined,
@@ -120,6 +122,7 @@ export function rowToDb(row: RegistryRow): RegistryRowDb {
     updates: row.updates ?? [],
     milestones: row.milestones ?? null,
     archived: row.archived ?? false,
+    search_group: row.group ?? null,
     cv_pending: row.cvPending ?? false,
     delivery_files: row.deliveryFiles ?? null,
     cv_mode: row.cvMode ?? null,
@@ -154,6 +157,7 @@ export function editableToDb(fields: EditableFields): Partial<RegistryRowDb> {
   if ("updates" in fields) out.updates = fields.updates ?? [];
   if ("milestones" in fields) out.milestones = fields.milestones ?? null;
   if ("archived" in fields) out.archived = fields.archived ?? false;
+  if ("group" in fields) out.search_group = fields.group ?? null;
   if ("cvPending" in fields) out.cv_pending = fields.cvPending ?? false;
   if ("deliveryFiles" in fields) out.delivery_files = fields.deliveryFiles ?? null;
   if ("cvMode" in fields) out.cv_mode = fields.cvMode ?? null;

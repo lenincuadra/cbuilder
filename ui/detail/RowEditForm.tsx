@@ -19,6 +19,7 @@ import {
 } from "@/core/registry/types";
 import { languageLabel } from "@/core/types";
 import { DrawerFormFooter } from "@/ui/DrawerFormFooter";
+import { GroupCombobox } from "@/ui/GroupCombobox";
 import { IconSelect } from "@/ui/IconSelect";
 import { REACH_EDIT_OPTIONS, REACH_OMIT } from "@/ui/reachMeta";
 import { DatePicker } from "@/ui/wizard/DatePicker";
@@ -40,6 +41,8 @@ export interface RowEditFormProps {
   row: RegistryRow;
   onSave: (fields: EditableFields) => void | Promise<void>;
   onCancel: () => void;
+  /** Existing group names (Grupo combobox options). */
+  groups?: string[];
   /** Node the Select popup portals into (the drawer) so it stays in its focus/pe scope. */
   portalContainer?: HTMLElement | null;
 }
@@ -49,7 +52,7 @@ export interface RowEditFormProps {
  * Takes over the whole drawer below the header: fields in the scrollable
  * DrawerBody, Cancelar/Guardar pinned in the DrawerFooter.
  */
-export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditFormProps) {
+export function RowEditForm({ row, onSave, onCancel, groups = [], portalContainer }: RowEditFormProps) {
   const [company, setCompany] = useState(row.company);
   const [role, setRole] = useState(row.role);
   const [channel, setChannel] = useState<Channel | "">(row.channel ?? "");
@@ -59,6 +62,7 @@ export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditF
   const [who, setWho] = useState(row.who ?? "");
   const [jobUrl, setJobUrl] = useState(row.jobUrl ?? "");
   const [jobContext, setJobContext] = useState(row.jobContext ?? "");
+  const [group, setGroup] = useState(row.group ?? "");
   const [saving, setSaving] = useState(false);
 
   // A process is identified by empresa OR contacto — empresa becomes required
@@ -82,6 +86,7 @@ export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditF
         who: cleaned(who),
         jobUrl: cleaned(jobUrl),
         jobContext: cleaned(jobContext),
+        group: cleaned(group),
         // language is intentionally not editable: the CV is already generated.
       });
     } finally {
@@ -103,6 +108,17 @@ export function RowEditForm({ row, onSave, onCancel, portalContainer }: RowEditF
             <p className="text-xs text-muted-foreground">
               Empresa o contacto (al menos uno). Hace falta para generar el CV.
             </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-group">Grupo</Label>
+            <GroupCombobox
+              id="edit-group"
+              value={group}
+              onChange={setGroup}
+              groups={groups}
+              container={portalContainer}
+            />
           </div>
 
           <div className="space-y-1.5">

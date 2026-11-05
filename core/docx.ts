@@ -42,6 +42,13 @@ export interface ContentSlots {
    * formatting (font, weight, color, spacing) is preserved.
    */
   summary?: string;
+  /**
+   * Verbatim JD keywords (Modo 3). Injected as a "Core Competencies: A · B · C"
+   * line right after the Professional Summary, cloning its formatting. These are
+   * the exact terms Lenin verified he has — the whole point of Modo 3 is that
+   * they land in the document (ATS match), not just the title.
+   */
+  keywords?: string[];
 }
 
 /**
@@ -81,6 +88,21 @@ function replaceSummaryText(paraXml: string, newText: string): string {
 }
 
 /**
+ * Build a "Core Competencies: A · B · C" paragraph, cloning the Professional
+ * Summary paragraph's properties/run formatting so the injected line matches the
+ * master's body style. Appended after the summary (Modo 3 — verbatim keywords).
+ */
+function buildKeywordsParagraph(summaryParaXml: string, keywords: string[], isES: boolean): string {
+  const pPrMatch = summaryParaXml.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
+  const pPr = pPrMatch ? pPrMatch[0] : "";
+  const rPrMatch = summaryParaXml.match(/<w:rPr>([\s\S]*?)<\/w:rPr>/);
+  const rPr = rPrMatch ? `<w:rPr>${rPrMatch[1]}</w:rPr>` : "";
+  const label = isES ? "Competencias clave" : "Core Competencies";
+  const line = `${label}: ${keywords.join(" · ")}`;
+  return `<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${xmlEscapeText(line)}</w:t></w:r></w:p>`;
+}
+
+/**
  * Walk the document XML paragraph by paragraph and inject the provided slots.
  *
  * Identification strategy (no markers needed in the master):
@@ -109,16 +131,24 @@ function applySlots(docXml: string, slots: ContentSlots): string {
       .map((t) => t.replace(/<w:t[^>]*>|<\/w:t>/g, ""))
       .join("");
 
+    const hasKeywords = !!slots.keywords && slots.keywords.length > 0;
     if (slots.title && !titleApplied && para.includes(`w:val="${TITLE_COLOR}"`)) {
       para = replaceTitleRuns(para, slots.title);
       titleApplied = true;
     } else if (
-      slots.summary &&
+      (slots.summary || hasKeywords) &&
       !summaryApplied &&
       SUMMARY_HEADER_RE.test(prevParaText) &&
       texts.trim()
     ) {
-      para = replaceSummaryText(para, slots.summary);
+      // This is the summary paragraph (first non-empty after the section header).
+      const summaryPara = slots.summary ? replaceSummaryText(para, slots.summary) : para;
+      const isES = /RESUMEN PROFESIONAL/i.test(prevParaText);
+      // Append the verbatim keyword line right after the summary, so the exact
+      // JD terms Lenin verified actually appear in the document (Modo 3).
+      para = hasKeywords
+        ? summaryPara + buildKeywordsParagraph(para, slots.keywords!, isES)
+        : summaryPara;
       summaryApplied = true;
     }
 
@@ -220,7 +250,7 @@ export async function fillMaster(
 
   // Slot injection for CV tailoring (modes 2/3). Only runs when slots are provided;
   // mode 1 (base) leaves the document.xml completely untouched.
-  if (slots && (slots.title || slots.summary)) {
+  if (slots && (slots.title || slots.summary || (slots.keywords && slots.keywords.length > 0))) {
     const docFile = zip.file("word/document.xml");
     if (!docFile) {
       throw new Error("Master is missing word/document.xml; cannot inject content slots.");
