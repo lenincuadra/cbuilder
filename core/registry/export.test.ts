@@ -24,7 +24,7 @@ describe("rowsToCsv", () => {
     const csv = rowsToCsv(rows, { focusLabel: (id) => `Perfil ${id}` });
     const lines = csv.trim().split("\n");
     expect(lines[0]).toBe(
-      "Código,Empresa,Rol,Fecha,Canal,Foco,Estado,Archivado,Portfolio,LinkedIn,GitHub",
+      "Código,Empresa,Rol,Fecha,Canal,Foco,Estado,Grupo,Archivado,Portfolio,LinkedIn,GitHub",
     );
     expect(lines[1]).toContain('"Acme, Inc."'); // comma quoted
     expect(lines[1]).toContain("Perfil payments"); // focus label applied

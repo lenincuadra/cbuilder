@@ -25,6 +25,7 @@ function columns(opts: ExportOptions): Column[] {
     { header: "Canal", value: (r) => r.channel ?? "" },
     { header: "Foco", value: (r) => (r.focus ? focus(r.focus) : "") },
     { header: "Estado", value: (r) => r.status },
+    { header: "Grupo", value: (r) => r.group ?? "" },
     { header: "Archivado", value: (r) => (r.archived ? "sí" : "no") },
     { header: "Portfolio", value: (r) => r.links?.portfolio ?? "" },
     { header: "LinkedIn", value: (r) => r.links?.linkedin ?? "" },

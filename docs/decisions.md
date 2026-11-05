@@ -10,6 +10,24 @@ en `docs/DESIGN.md`; las reglas inviolables resumidas, en `CLAUDE.md`.
 
 ---
 
+## Grupos: secciones colapsables en la tabla; Archivado pasa a ser una sección
+**Decisión**: grupos **personalizados** ("Espero respuesta", "Fintech"…), **uno por fila**
+(`row.group`; columna `search_group` en Supabase — `group` es palabra reservada en SQL),
+renderizados como secciones colapsables de la misma tabla. Orden: grupos (alfabético) →
+Sin grupo → **Archivado** (siempre al final, cerrado por defecto). Se quitó el toggle
+Vigentes/Archivado (y `SegmentedControl`, que solo usaba eso); en su lugar va el botón
+**Grupos** que abre un manager en drawer (patrón `PanelCard`). Por fila, el grupo se asigna
+desde Editar con el **Combobox** de shadcn (instalado para esto).
+**Contexto/razón**: se evaluó si Archivado quedaba deprecado. No: cubre un caso distinto —
+búsquedas viejas que ya no importan pero se quieren conservar en el registro — así que se
+mantiene el flag `archived`, solo cambia cómo se muestra (sección, no vista aparte).
+Archivado manda sobre el grupo pero **no lo borra**: desarchivar devuelve la fila a su grupo.
+Uno-por-fila (no etiquetas) porque una fila en varias secciones aparecería repetida.
+Grupos **derivados** (sin tabla propia): un grupo existe mientras alguna fila lo lleve —
+cero infraestructura extra. Orden "grupos arriba" elegido por Lenin tras ver un mockup.
+**Funnel**: no se ve afectado — `FunnelCard` y la animación usan todas las filas.
+
+
 ## Se quita el link "Agregar" de la celda Seguimiento (2026-08-07)
 **Decisión**: la celda de la columna **Seguimiento** deja de mostrar el link "Agregar" (el
 empty state que abría el tab Notas). Pasa a ser un **resumen read-only de solo íconos**:

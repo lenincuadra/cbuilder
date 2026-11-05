@@ -51,6 +51,9 @@ La regla de oro: **cv-builder ESCRIBE los links, el portfolio los RECIBE.** El
     además `byStatus` (desglose por Estado: accepted/active/rejected/draft) para
     apilar/colorear las barras.
   - `registry/types.ts`, `notes/types.ts` — modelos + interfaces de storage.
+  - `registry/groups.ts` — secciones de la tabla: `buildSections(rows)` (grupos del usuario
+    alfabético → Sin grupo → Archivado) y `groupNames`. Los grupos son derivados de
+    `row.group` (sin tabla propia: un grupo existe mientras alguna fila lo lleve).
 - **`ui/`** — componentes React (la tabla, el wizard, el drawer, los cards).
 - **`lib/`** — pegamento con el navegador/servidor: storage, descarga, sinks
   (`archive.ts`, `gdocs.ts`), carga de masters (`masters.ts`).

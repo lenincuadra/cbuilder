@@ -81,6 +81,8 @@ export interface RowDetailDrawerProps {
   onGenerateVariant?: (row: RegistryRow) => void;
   /** Shared screening-questions bank (the Preguntas section reads/writes it). */
   screening: UseScreening;
+  /** Existing group names, for the edit form's Grupo combobox. */
+  groups?: string[];
   /** Cover letter templates, for the post-hoc "Generar cover letter" takeover. */
   templates: CoverLetterTemplate[];
   /** Tab to show when the panel opens. */
@@ -121,6 +123,7 @@ export function RowDetailDrawer({
   onGenerateCv,
   onGenerateVariant,
   screening,
+  groups = [],
   templates,
   initialTab = "detalles",
   position,
@@ -302,6 +305,7 @@ export function RowDetailDrawer({
               // body, Cancelar/Guardar pinned in the footer.
               <RowEditForm
                 row={row}
+                groups={groups}
                 portalContainer={drawerNode}
                 onCancel={() => setMode({ kind: "view" })}
                 onSave={async (fields) => {

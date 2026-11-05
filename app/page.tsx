@@ -12,6 +12,7 @@ import {
   type PendingRowInput,
 } from "@/core/generateCv";
 import { funnelRanksFor } from "@/core/funnel";
+import { groupNames } from "@/core/registry/groups";
 import type { EditableFields, RegistryRow } from "@/core/registry/types";
 import { CV_FILENAME } from "@/core/zip";
 import { archiveDeliveryFiles, type DeliveryFile } from "@/lib/archive";
@@ -25,12 +26,12 @@ import { ExportButton } from "@/ui/ExportButton";
 import { FunnelCard } from "@/ui/FunnelCard";
 import { GenerateCard } from "@/ui/GenerateCard";
 import { GeneralNotesCard } from "@/ui/GeneralNotesCard";
+import { GroupsButton } from "@/ui/GroupsButton";
 import { PendingCvDrawer } from "@/ui/PendingCvDrawer";
 import { PortfolioCvCard } from "@/ui/PortfolioCvCard";
 import { ScreeningCard } from "@/ui/ScreeningCard";
 import { StableLinksCard } from "@/ui/StableLinksCard";
 import { RegistryTable } from "@/ui/RegistryTable";
-import { SegmentedControl, type SegmentedOption } from "@/ui/SegmentedControl";
 import { StatusFilterDropdown, type StatusFilter } from "@/ui/StatusFilterDropdown";
 import { useCoverLetterTemplates } from "@/ui/useCoverLetterTemplates";
 import { useRegistry } from "@/ui/useRegistry";
@@ -38,18 +39,16 @@ import { useScreening } from "@/ui/useScreening";
 import { useSpec } from "@/ui/useSpec";
 import type { WizardData } from "@/ui/wizard/types";
 
-type ArchiveView = "vigentes" | "archivado";
-
 export default function Home() {
-  const { rows, loading, add, update, remove } = useRegistry();
+  const { rows, loading, add, update, updateMany, remove } = useRegistry();
   const { spec } = useSpec();
   // One shared instance: the manager card edits it, the wizard reads it — in sync.
   const coverLetters = useCoverLetterTemplates();
   // Same discipline for the questions bank: the card and the drawer tab share it.
   const screening = useScreening();
   const [generating, setGenerating] = useState(false);
-  // Two orthogonal filters: archived-or-not (view) and status.
-  const [view, setView] = useState<ArchiveView>("vigentes");
+  // Status filter; archived rows are a collapsible section of the table now
+  // (core/registry/groups.ts), not a separate view.
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos");
   // External "open this row's detail panel" request (generation toast CTA).
   const [openRequest, setOpenRequest] = useState<{ code: string; nonce: number } | null>(null);
@@ -63,48 +62,25 @@ export default function Home() {
 
   const matchesStatus = (row: RegistryRow) =>
     statusFilter === "todos" || row.status === statusFilter;
-  const vigentes = rows.filter((row) => !row.archived);
-  const archivados = rows.filter((row) => row.archived);
-  const bucket = view === "archivado" ? archivados : vigentes;
-  const visibleRows = bucket.filter(matchesStatus);
+  const visibleRows = rows.filter(matchesStatus);
 
   // For the "flecha a la diana" reveal (RegistryTable, right after loading):
-  // every CV ever sent, not just the current Vigentes/Archivado tab — scope
+  // every CV ever sent, not just the status-filtered rows — scope
   // "all" per docs/animations.md §2 ("toda flecha que voló alguna vez").
   const sentRows = rows.filter((row) => !row.cvPending);
   const sentFunnelRanks = funnelRanksFor(sentRows);
 
-  // Counts reflect the current status filter, so a toggle shows what you'd see.
-  const viewOptions: SegmentedOption<ArchiveView>[] = [
-    {
-      value: "vigentes",
-      label: (
-        <>
-          Vigentes{" "}
-          <span className="text-muted-foreground tabular-nums">
-            ({vigentes.filter(matchesStatus).length})
-          </span>
-        </>
-      ),
-    },
-    {
-      value: "archivado",
-      label: (
-        <>
-          Archivado{" "}
-          <span className="text-muted-foreground tabular-nums">
-            ({archivados.filter(matchesStatus).length})
-          </span>
-        </>
-      ),
-    },
-  ];
   async function handleUpdate(code: string, fields: EditableFields) {
     try {
       await update(code, fields);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo actualizar la fila.");
     }
+  }
+
+  /** Group manager save: many rows at once; errors surface in the manager form. */
+  async function handleUpdateMany(changes: { code: string; fields: EditableFields }[]) {
+    await updateMany(changes);
   }
 
   async function handleDelete(code: string) {
@@ -118,7 +94,6 @@ export default function Home() {
 
   /** Open a freshly generated row's panel: reset filters so the row is visible. */
   function openGeneratedRow(code: string) {
-    setView("vigentes");
     setStatusFilter("todos");
     setOpenRequest({ code, nonce: Date.now() });
   }
@@ -370,17 +345,12 @@ export default function Home() {
         {/* Registro: protagonista, ancho, con scroll horizontal propio. */}
         <section className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            {/* Estado + export a la izquierda; Vigentes/Archivado a la derecha. */}
+            {/* Estado + export a la izquierda; Grupos (manager drawer) a la derecha. */}
             <div className="flex items-center gap-2">
               <StatusFilterDropdown value={statusFilter} onChange={setStatusFilter} />
               <ExportButton rows={rows} />
             </div>
-            <SegmentedControl
-              aria-label="Archivadas o no"
-              value={view}
-              onChange={setView}
-              options={viewOptions}
-            />
+            <GroupsButton rows={rows} onSave={handleUpdateMany} />
           </div>
           <RegistryTable
             rows={visibleRows}
@@ -394,6 +364,7 @@ export default function Home() {
             screening={screening}
             templates={coverLetters.templates}
             openRequest={openRequest}
+            groups={groupNames(rows)}
             emptyMessage={
               statusFilter !== "todos"
                 ? `No hay ${
@@ -404,10 +375,8 @@ export default function Home() {
                         : statusFilter === "Rechazado"
                           ? "rechazadas"
                           : "borradores"
-                  } en ${view === "archivado" ? "Archivado" : "Vigentes"}.`
-                : view === "archivado"
-                  ? "No hay búsquedas archivadas."
-                  : "Registrá tu primera aplicación desde el panel de la derecha."
+                  }.`
+                : "Registrá tu primera aplicación desde el panel de la derecha."
             }
           />
         </section>

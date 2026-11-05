@@ -26,6 +26,7 @@ cambiar un flow visible al usuario, actualizá su tabla acá.
 | [Marcar hitos del proceso](#11-marcar-hitos-del-proceso) | Seguimiento |
 | [Embudo AARRR](#12-embudo-aarrr) | Analítica |
 | [Actualizar el CV del portafolio](#13-actualizar-el-cv-del-portafolio) | CV genérico |
+| [Agrupar búsquedas](#14-agrupar-búsquedas) | Registro |
 
 ## Nueva aplicación (generar un CV)
 
@@ -220,3 +221,19 @@ portafolio"](architecture.md#cv-genérico-del-portafolio).
 | 2 | Click → drawer con una fila por idioma (EN/ES): master actual vs. publicada, estado al día/desactualizado | `usePortfolioCv` lee `data/portfolio-cv.json` / tabla `portfolio_cv` |
 | 3 | **"Generar EN/ES"** → descarga `Lenin_Cuadra_CV_{EN,ES}.docx` con los 3 links `web-cv` horneados | `generatePortfolioCv` (`buildTrackedLinks("web-cv")` + `fillMaster`) client-side; sin fila de registro, sin código nuevo |
 | 4 | Subir ese `.docx` al portafolio (manual, otro repo) → **"Marcar publicado v{N}"** | `setPublished(idioma, MASTER_VERSION)`; limpia el aviso de desactualizado |
+
+## 14. Agrupar búsquedas
+
+Secciones colapsables de la tabla del registro (grupos propios + Archivado). Detalle de UI en
+[`DESIGN.md` → "Tabla del registro"](DESIGN.md); por qué, en
+[`decisions.md` → "Grupos"](decisions.md).
+
+| # | Acción Hecha | Dónde/Qué sucede por detrás |
+|---|---|---|
+| 1 | Botón **Grupos** (arriba a la derecha de la tabla) → drawer con los grupos y sus conteos | `GroupsButton` (patrón `PanelCard`); `groupNames(rows)` sobre todas las filas |
+| 2 | **Nuevo grupo** → nombre + checklist de búsquedas vigentes → **Crear grupo** | Un `update({ group })` por fila marcada (`updateMany`, un solo reload). Marcar una que ya tenía otro grupo la mueve |
+| 3 | Click en un grupo → renombrar / sumar / sacar búsquedas | Renombrar arrastra también sus archivadas; las desmarcadas quedan `group: undefined` (Sin grupo) |
+| 4 | Papelera en un grupo → confirmar | Quita `group` de sus filas; las búsquedas no se borran |
+| 5 | Alternativa por fila: detalle → **Editar** → **Grupo** (combobox: elegir o "Crear «…»") → Guardar | `RowEditForm` → `update(code, { group })` |
+| 6 | Click en el encabezado de una sección → colapsa/expande | Estado por browser en localStorage; Archivado arranca cerrado |
+| 7 | Archivar una fila (⋮ del detalle) | Pasa a la sección Archivado conservando su `group`; desarchivar la devuelve a su grupo |

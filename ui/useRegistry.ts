@@ -9,6 +9,8 @@ export interface UseRegistry {
   loading: boolean;
   add: (row: RegistryRow) => Promise<void>;
   update: (code: string, fields: EditableFields) => Promise<void>;
+  /** Apply several row updates (e.g. a group save), reloading once at the end. */
+  updateMany: (changes: { code: string; fields: EditableFields }[]) => Promise<void>;
   remove: (code: string) => Promise<void>;
   reload: () => Promise<void>;
 }
@@ -55,6 +57,17 @@ export function useRegistry(): UseRegistry {
     [reload],
   );
 
+  const updateMany = useCallback(
+    async (changes: { code: string; fields: EditableFields }[]) => {
+      try {
+        for (const { code, fields } of changes) await getRegistryStore().update(code, fields);
+      } finally {
+        await reload();
+      }
+    },
+    [reload],
+  );
+
   const remove = useCallback(
     async (code: string) => {
       await getRegistryStore().remove(code);
@@ -63,5 +76,5 @@ export function useRegistry(): UseRegistry {
     [reload],
   );
 
-  return { rows, loading, add, update, remove, reload };
+  return { rows, loading, add, update, updateMany, remove, reload };
 }
