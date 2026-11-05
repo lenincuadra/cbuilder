@@ -1153,7 +1153,10 @@ y sería engañoso) — el idioma se muestra read-only en el form. Editar **solo
 registro** (no regenera el `.docx` ya generado). `EditableFields` = todo `RegistryRow`
 menos `code`/`createdAt`. Form en `ui/detail/RowEditForm.tsx`.
 
-## Alerta de inactividad (clock-alert amber, 14 días)
+## Alerta de inactividad (clock-alert amber, 14 días) — QUITADA
+> **Quitada (2026-11).** El `ClockAlert` ámbar se eliminó de la celda de Seguimiento junto
+> con `core/staleness.ts`, a pedido de Lenin. Lo de abajo queda como registro histórico.
+
 Si una fila lleva **14+ días sin actividad**, la celda de Seguimiento muestra un
 `clock-alert` en amber (`text-amber-500`) con tooltip ("pedí feedback o cerrá la
 búsqueda"). El contador es desde la **última actividad**: la última actualización de

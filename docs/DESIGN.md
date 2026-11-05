@@ -223,9 +223,8 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
   tiene call-to-action (el link "Agregar" se **quitó**: solo abría Notas, un slice angosto del
   seguimiento, y duplicaba el click de la propia fila). Orden fijo: primero los indicadores de
   **contenido** — sticky-note (hay `notes`; click abre el tab **Notas**, único que hace
-  `stopPropagation`) y 🚩 (algún update flaggeado) —, después los de **estado de la fila**
-  (tooltip, no clickeables): `ClockAlert` ámbar (sin actividad 2+ semanas, `core/staleness.ts`)
-  y `FileClock` muted (CV pendiente de generar — el CTA "Generar CV" vive en la card Entrega del
+  `stopPropagation`) y 🚩 (algún update flaggeado) —, después el de **estado de la fila**
+  (tooltip, no clickeable): `FileClock` muted (CV pendiente de generar — el CTA "Generar CV" vive en la card Entrega del
   panel). Si la fila no tiene ninguno, la celda queda **vacía** y el click cae al row (abre
   Detalles) — que es también cómo se agregan notas/actualizaciones. Ref: `ui/detail/SeguimientoCell.tsx`.
 - Referencias: `ui/RegistryTable.tsx`, `ui/detail/*`.
