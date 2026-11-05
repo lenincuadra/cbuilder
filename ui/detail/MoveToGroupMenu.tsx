@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Check, FolderInput, FolderMinus, Plus } from "lucide-react";
+import { Check, FolderInput, Plus, X } from "lucide-react";
 
 import {
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -30,8 +29,10 @@ export interface MoveToGroupMenuProps {
 /**
  * "Mover a grupo ›" submenu for the row's actions menu: a text field on top
  * that filters the existing groups and offers "Crear «…»" for a new name
- * (Enter picks the first option), then the groups (current one checked), and
- * "Quitar del grupo" when the row has one. One group per row.
+ * (Enter picks the first option), then the groups. The current group is
+ * checked; hovering/highlighting it swaps the check for an × + "Quitar", and
+ * clicking it removes the row from the group (no separate remove item).
+ * One group per row.
  */
 export function MoveToGroupMenu({ row, groups, onMove, container }: MoveToGroupMenuProps) {
   const [query, setQuery] = useState("");
@@ -70,23 +71,30 @@ export function MoveToGroupMenu({ row, groups, onMove, container }: MoveToGroupM
             <span className="truncate">Crear «{typed}»</span>
           </DropdownMenuItem>
         )}
-        {matches.map((group) => (
-          <DropdownMenuItem key={group} onClick={() => onMove(group)}>
-            {group === current ? <Check /> : <span className="size-4" />}
-            <span className="truncate">{group}</span>
-          </DropdownMenuItem>
-        ))}
+        {matches.map((group) =>
+          group === current ? (
+            <DropdownMenuItem
+              key={group}
+              className="group/current"
+              title="Quitar del grupo"
+              onClick={() => onMove("")}
+            >
+              <Check className="group-data-highlighted/current:hidden" />
+              <X className="hidden group-data-highlighted/current:block" />
+              <span className="truncate">{group}</span>
+              <span className="ml-auto hidden pl-2 text-xs text-muted-foreground group-data-highlighted/current:inline">
+                Quitar
+              </span>
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem key={group} onClick={() => onMove(group)}>
+              <span className="size-4" />
+              <span className="truncate">{group}</span>
+            </DropdownMenuItem>
+          ),
+        )}
         {!canCreate && matches.length === 0 && (
           <p className="px-1.5 py-1 text-xs text-muted-foreground">Escribí un nombre para crear uno.</p>
-        )}
-        {current !== "" && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onMove("")}>
-              <FolderMinus />
-              Quitar del grupo
-            </DropdownMenuItem>
-          </>
         )}
       </DropdownMenuSubContent>
     </DropdownMenuSub>

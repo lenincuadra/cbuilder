@@ -190,7 +190,8 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
   derecha, donde estaba Vigentes/Archivado) → drawer manager lista ↔ form (`ui/GroupsButton.tsx`,
   patrón `PanelCard`), o fila por fila: **⋮ del panel → "Mover a grupo ›"** (submenú
   `ui/detail/MoveToGroupMenu.tsx`: input "Buscar o crear un grupo" que filtra + "Crear «…»",
-  grupos con check en el actual, "Quitar del grupo"), o desde Editar con un **Combobox** de
+  grupos con check en el actual — en hover el check pasa a × + "Quitar" y el click la saca
+  del grupo; no hay ítem "Quitar" aparte), o desde Editar con un **Combobox** de
   shadcn (`ui/GroupCombobox.tsx`).
 - **Filtro de estado (arriba de la tabla)**: Todos / Borrador / Activo / Rechazado, como **dropdown con icono de embudo**
   (`ui/StatusFilterDropdown.tsx`): botón siempre icon-only; con filtro activo aparece **al
