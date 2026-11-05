@@ -188,8 +188,10 @@ empuja abajo, 1 apilada en mobile. Una card nueva entra sola al grid.
   filas archivadas van en `text-muted-foreground`. Prev/next del panel recorre el orden
   visible (secciones cerradas excluidas). Se gestionan desde el botón **Grupos** (arriba a la
   derecha, donde estaba Vigentes/Archivado) → drawer manager lista ↔ form (`ui/GroupsButton.tsx`,
-  patrón `PanelCard`), o fila por fila desde Editar con un **Combobox** de shadcn
-  (`ui/GroupCombobox.tsx`, crea grupos con "Crear «…»").
+  patrón `PanelCard`), o fila por fila: **⋮ del panel → "Mover a grupo ›"** (submenú
+  `ui/detail/MoveToGroupMenu.tsx`: input "Buscar o crear un grupo" que filtra + "Crear «…»",
+  grupos con check en el actual, "Quitar del grupo"), o desde Editar con un **Combobox** de
+  shadcn (`ui/GroupCombobox.tsx`).
 - **Filtro de estado (arriba de la tabla)**: Todos / Borrador / Activo / Rechazado, como **dropdown con icono de embudo**
   (`ui/StatusFilterDropdown.tsx`): botón siempre icon-only; con filtro activo aparece **al
   lado** un badge coloreado (paleta de `StatusToggle`) con una `X`, y clickearlo **quita el

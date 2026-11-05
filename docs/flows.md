@@ -234,6 +234,7 @@ Secciones colapsables de la tabla del registro (grupos propios + Archivado). Det
 | 2 | **Nuevo grupo** → nombre + checklist de búsquedas vigentes → **Crear grupo** | Un `update({ group })` por fila marcada (`updateMany`, un solo reload). Marcar una que ya tenía otro grupo la mueve |
 | 3 | Click en un grupo → renombrar / sumar / sacar búsquedas | Renombrar arrastra también sus archivadas; las desmarcadas quedan `group: undefined` (Sin grupo) |
 | 4 | Papelera en un grupo → confirmar | Quita `group` de sus filas; las búsquedas no se borran |
-| 5 | Alternativa por fila: detalle → **Editar** → **Grupo** (combobox: elegir o "Crear «…»") → Guardar | `RowEditForm` → `update(code, { group })` |
+| 5 | Por fila: detalle → **⋮ → Mover a grupo ›** → elegir uno, o escribir y **"Crear «…»"** (Enter toma la primera opción); "Quitar del grupo" si ya tiene | `MoveToGroupMenu` → `update(code, { group })` + toast |
+| 5b | Alternativa por fila: detalle → **Editar** → **Grupo** (combobox: elegir o "Crear «…»") → Guardar | `RowEditForm` → `update(code, { group })` |
 | 6 | Click en el encabezado de una sección → colapsa/expande | Estado por browser en localStorage; Archivado arranca cerrado |
 | 7 | Archivar una fila (⋮ del detalle) | Pasa a la sección Archivado conservando su `group`; desarchivar la devuelve a su grupo |
